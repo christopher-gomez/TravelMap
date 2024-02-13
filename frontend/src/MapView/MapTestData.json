@@ -1,0 +1,83 @@
+[
+  {
+    "title": "Hilton Tokyo Bay",
+    "position": { "lat": 35.6270749, "lng": 139.8739812 },
+    "icon": "🏨",
+    "description": "A luxurious stay with a stunning view of Tokyo Bay, ideal for families visiting Disneyland.",
+    "dateToVisit": "2024-06-14",
+    "dayOfTrip": 1,
+    "timeOfDay": "Check-in: After 3 PM"
+  },
+  {
+    "title": "Tokyo Tower",
+    "position": { "lat": 35.6585805, "lng": 139.7454329 },
+    "icon": "🗼",
+    "description": "A symbol of Japan's post-war rebirth as a major economic power, Tokyo Tower offers breathtaking views from its observation decks and serves as a cultural attraction featuring various exhibitions and historical displays.",
+    "dateToVisit": "2024-04-10",
+    "dayOfTrip": 2,
+    "timeOfDay": "Best viewed: Evening for city lights"
+  },
+  {
+    "title": "Senso-ji Temple",
+    "position": { "lat": 35.714765, "lng": 139.796655 },
+    "icon": "⛩️",
+    "description": "Tokyo's oldest temple, offering a rich history and a bustling market.",
+    "dateToVisit": "2024-06-15",
+    "dayOfTrip": 2,
+    "timeOfDay": "Morning"
+  },
+  {
+    "title": "Sukiyabashi Jiro",
+    "position": { "lat": 35.672114, "lng": 139.770825 },
+    "icon": "🍣",
+    "description": "The renowned sushi restaurant run by Chef Jiro Ono, known from the documentary 'Jiro Dreams of Sushi'.",
+    "dateToVisit": "2024-06-15",
+    "dayOfTrip": 2,
+    "timeOfDay": "Lunch"
+  },
+  {
+    "title": "Tokyo Disneyland",
+    "position": { "lat": 35.632207, "lng": 139.880394 },
+    "icon": "🎡",
+    "description": "The famous theme park providing entertainment for all ages with its various attractions and shows.",
+    "dateToVisit": "2024-06-16",
+    "dayOfTrip": 3,
+    "timeOfDay": "All Day"
+  },
+  {
+    "title": "Shinjuku Gyoen National Garden",
+    "position": { "lat": 35.685175, "lng": 139.710388 },
+    "icon": "🌳",
+    "description": "A large park and garden in Shinjuku and Shibuya, offering serene landscapes and traditional tea houses.",
+    "dateToVisit": "2024-06-17",
+    "dayOfTrip": 4,
+    "timeOfDay": "Morning"
+  },
+  {
+    "title": "Robot Restaurant",
+    "position": { "lat": 35.694883, "lng": 139.70281 },
+    "icon": "🤖",
+    "description": "An entertainment hub in Shinjuku known for its robot-themed performances.",
+    "dateToVisit": "2024-06-17",
+    "dayOfTrip": 4,
+    "timeOfDay": "Evening"
+  },
+  {
+    "title": "Tsukiji Outer Market",
+    "position": { "lat": 35.665489, "lng": 139.770657 },
+    "icon": "🍤",
+    "description": "A bustling market famous for fresh seafood and traditional Japanese culinary experiences.",
+    "dateToVisit": "2024-06-18",
+    "dayOfTrip": 5,
+    "timeOfDay": "Morning"
+  },
+  {
+    "title": "Tokyo Skytree",
+    "position": { "lat": 35.710063, "lng": 139.8107 },
+    "icon": "🗼",
+    "description": "The tallest structure in Japan offering panoramic views of Tokyo and beyond.",
+    "dateToVisit": "2024-06-20",
+    "dayOfTrip": 7,
+    "timeOfDay": "Afternoon"
+  }
+]
