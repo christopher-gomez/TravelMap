@@ -13,7 +13,6 @@ import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import "./OverlayStyles.css";
 // import fetchNotionPage from "../util/api";
 
-// const NOTION_API_KEY = ;
 const OVERRIDE_ICONS = {
   "Tokyo Tower": { url: TokyoTowerIcon, scaledSize: [80, 80], offsetY: -2 },
   "Hilton Tokyo Bay": { url: HiltonIcon, scaledSize: [70, 70], offsetY: -12 },
