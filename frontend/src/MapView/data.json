@@ -1,0 +1,142 @@
+[
+  {
+    "activity": "Arrive in Tokyo, Japan",
+    "id": "652d3bbc-6b01-4427-b13c-70698dba0a0a",
+    "location": "[[35.55077019523784, 139.77929579052446], [35.770378117397, 140.3843214790896]]"
+  },
+  {
+    "activity": "Disney Sea",
+    "id": "7cd51447-b7d9-4cc8-bda2-c72abfe3178f",
+    "location": "35.6267108, 139.8850779"
+  },
+  {
+    "activity": "Pokémon Center - Nihonbashi",
+    "id": "08be2590-9b63-47dc-b1b1-60ba79c15770",
+    "location": "35.6802902, 139.7742695"
+  },
+  {
+    "activity": "teamLab Planets",
+    "id": "e467e860-4deb-44e5-87d7-b2a0a5df8d31",
+    "location": "35.6491207, 139.7897739"
+  },
+  {
+    "activity": "Shiro Hige Cream Puff Factory",
+    "id": "548da033-2cff-442f-9d3c-322b23850923",
+    "location": "35.658963320926155, 139.6627495270072"
+  },
+  {
+    "activity": "Shinjuku (Godzilla statue, 3D cat billboard)",
+    "id": "3f8524c5-ecad-456c-ad8a-2830e794a8f0",
+    "location": "35.6926379, 139.7008083"
+  },
+  {
+    "activity": "Shibuya",
+    "id": "9708a3bc-5356-4ccc-9fc0-e49839b503ab",
+    "location": "35.6619707, 139.703795"
+  },
+  {
+    "activity": "Disney Tokyo Evening only",
+    "id": "e48e5441-417d-4f48-9d6f-854acc97a3db",
+    "location": "35.6328964, 139.8803943"
+  },
+  {
+    "activity": "Flippers",
+    "id": "be6cead6-94d6-4b29-a6e9-32eb98c9764f",
+    "location": "[[35.67064071860743, 139.70025688471546], [35.669910316054256, 139.66744035937498], [35.614380170696236, 139.67013760803312]]"
+  },
+  {
+    "activity": "Shibuya sky (reserve before)",
+    "id": "a22f7e27-7730-49a4-8a8a-11cfb6faa831",
+    "location": "35.6584466, 139.7021636"
+  },
+  {
+    "activity": "Golden gai karaoke bar",
+    "id": "e95bbb6f-c8b0-4c02-adbe-f07b2e33b7b6",
+    "location": "35.6941118, 139.7047611"
+  },
+  {
+    "activity": "Megura river",
+    "id": "0fc92104-971d-48bc-b6d2-d7e70005e02f",
+    "location": "35.63196328608034, 139.7166793305288"
+  },
+  {
+    "activity": "Takeshita street",
+    "id": "ebf9066d-a425-447d-9116-59a52c6f2a72",
+    "location": "35.6715615, 139.7032035"
+  },
+  {
+    "activity": "Yoyogi park",
+    "id": "ef45d08c-cc9b-4fab-aced-31016cc10dd0",
+    "location": "35.6700649, 139.6949656"
+  },
+  {
+    "activity": "Pikachu cafe (sunshine city)",
+    "id": "0afda129-610e-4f86-8848-b9ab8408a8b1",
+    "location": "35.7289709, 139.7195415"
+  },
+  {
+    "activity": "Harajuki",
+    "id": "2fc1256f-91e2-4c6c-9367-253844ed08f3",
+    "location": "35.671764572874054, 139.70295721194157"
+  },
+  {
+    "activity": "Katsumidori seibu shibuya (revolving sushi)",
+    "id": "55f44f72-1fb0-4d5a-b376-e39d68562482",
+    "location": "35.6602148, 139.7005026"
+  },
+  {
+    "activity": "ippudo ramen",
+    "id": "69c7604c-cc7e-4f5d-aba0-bc62732b1359",
+    "location": "35.64876760225704, 139.71322944077545"
+  },
+  {
+    "activity": "Tsujihan",
+    "id": "12cdd844-07c2-4a3d-973b-1b08e2773dcd",
+    "location": "35.7013062, 139.7407466"
+  },
+  {
+    "activity": "Ginza (Shopping)",
+    "id": "a09acd27-cde6-4b38-bdd6-73f3deb49690",
+    "location": "35.6696347,139.7603892"
+  },
+  {
+    "activity": "Monkey cart",
+    "id": "94072643-6ced-4594-9982-9eb31f99ac42",
+    "location": "35.7050305, 139.8160053"
+  },
+  {
+    "activity": "Cup of noodles museum",
+    "id": "38233056-b551-4703-b7aa-5caf3793bb1d",
+    "location": "35.4554755, 139.6388669"
+  },
+  {
+    "activity": "Family mart (convenient store)",
+    "id": "67b5f785-85b0-4af4-b959-78117e6bda8d",
+    "location": "35.67184301499128, 139.70321470397866"
+  },
+  {
+    "activity": "Tsukiji outer market",
+    "id": "140a80d3-fff9-42dd-894a-8d5bad6d8896",
+    "location": "35.6649974, 139.7698163"
+  },
+  {
+    "activity": "Kura sushi",
+    "id": "5d5ac887-2ac3-4bc0-ac14-b6fe011ca437",
+    "location": "[[35.67028109260677, 139.7062614948195], [35.661006775587936, 139.6996525325339], [35.69586704026522, 139.69913754845967], [35.628272710347126, 139.74011642567427], [35.64270444467106, 139.63110262574193], [35.68854425938076, 139.87984440454568], [35.66222174268249, 139.87924433871555]]"
+  },
+  {
+    "activity": "Shibuya - (Nintendo store, mega don quijote)",
+    "id": "d0052f56-53c3-4f28-b497-467722c96c2f",
+    "location": "35.6605137, 139.6978782"
+  },
+  {
+    "activity": "Egg baby cafe (lunch)",
+    "id": "f1a4a0c0-33ae-4c03-bb55-7f93d29c4a1f",
+    "location": "35.7051986, 139.7742986"
+  },
+  {
+    "activity": "Gotokuji Temple - Setagaya (Buddhist temple)",
+    "id": "fcbb1dda-31ff-4806-a3a5-69ad693c23f6",
+    "location": "35.6488124, 139.647481"
+  }
+]

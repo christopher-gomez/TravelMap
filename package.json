@@ -7,17 +7,27 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "create-env": "printenv > .env && node ./createEnv.js",
     "build": "node ./build.js",
-    "start": "node ./index.js"
+    "start": "node ./index.js",
+    "start-dev-server": "nodemon index.js",
+    "start-dev-client": "cd frontend && npm start",
+    "start-dev": "concurrently \"npm run start-dev-server\" \"npm run start-dev-client\""
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@notionhq/client": "^2.2.14",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.3",
     "express": "^4.18.2",
     "fs-extra": "^11.2.0",
     "morgan": "^1.10.0",
+    "request": "^2.88.2",
+    "request-promise-native": "^1.0.9",
     "serve-static": "^1.15.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.3"
   }
 }
