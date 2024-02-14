@@ -10,7 +10,7 @@ steps:
     - 'GOOGLE_MAPS_API_KEY=${_GOOGLE_MAPS_API_KEY}'
     - 'NOTION_TOKEN=${_NOTION_TOKEN}'
     - 'FAMILY_NOTION_DATABASE_ID=${_FAMILY_NOTION_DATABASE_ID}'
-    - 'FAMILY_NOTION_PAGE_ID'=${_FAMILY_NOTION_PAGE_ID}'
+    - 'FAMILY_NOTION_PAGE_ID=${_FAMILY_NOTION_PAGE_ID}'
 - name: node:16.0.0
   entrypoint: npm
   args: ["run", "build"]
