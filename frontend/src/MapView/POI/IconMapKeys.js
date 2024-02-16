@@ -26,6 +26,8 @@ import ShinjukuIcon from '../../Assets/shinjuku.png';
 import RobotRestaurantIcon from '../../Assets/robot-restaurant.png';
 import ShiroHigeIcon from '../../Assets/shiro-hige.png';
 import AirportIcon from '../../Assets/airport.png';
+import RollerCoasterIcon from '../../Assets/rollercoaster.png';
+import WaterParkIcon from '../../Assets/water-park.png';
 
 export default {
     temple: {
@@ -166,6 +168,16 @@ export default {
     airport: {
         url: AirportIcon,
         scaledSize: [80, 80],
+        offsetY: -5,
+    },
+    rollerCoaster: {
+        url: RollerCoasterIcon,
+        scaledSize: [70, 70],
+        offsetY: -5,
+    },
+    waterPark: {
+        url: WaterParkIcon,
+        scaledSize: [70, 70],
         offsetY: -5,
     },
 };
