@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import ReactDOM from "react-dom";
 import GoogleMapReact from "google-map-react";
 // import testData from "./MapTestData.json";
 import mapStyles from "./MapStyles.json";
@@ -7,26 +6,21 @@ import mapStyles from "./MapStyles.json";
 import TokyoTowerIcon from "../Assets/tokyo-tower-icon-alpha.png";
 import HiltonIcon from "../Assets/hilton-tokyo-bay-icon.png";
 import TempleIcon from "../Assets/senso-ji-temple.png";
+import RamenIcon from "../Assets/ramen.png";
+import SushiIcon from "../Assets/sushi.png";
+import JiroIcon from "../Assets/jiro.png";
+import SkytreeIcon from "../Assets/skytree.png";
+
 // import CustomMarker from "./CustomMarker";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
-import "./OverlayStyles.css";
 import { queryDatabase, updatePage } from "../Api/Notion";
 import { TOKYO_QUERY } from "./NotionMapQueryParams";
 import { getGoogleMapsApiKey } from "../Api/Maps";
-
-const ICON_KEYS = {
-  temple: {
-    url: TempleIcon,
-    scaledSize: [50, 50],
-    offsetY: -7,
-  },
-  tokyoTower: {
-    url: TokyoTowerIcon,
-    scaledSize: [80, 80],
-    offsetY: -2,
-  },
-};
+import CustomOverlayContainerFactory from "./POI/CustomOverlayContainerClass";
+import POILabel from "./POI/POILabel";
+import ICON_KEYS from "./POI/IconMapKeys";
+import POIDetails from "./POI/POIDetails";
 
 // import {
 //   findLocationLngLat,
@@ -36,13 +30,7 @@ const ICON_KEYS = {
 
 // import PlacesData from "./data.json";
 
-const OVERRIDE_ICONS = {
-  "Tokyo Tower": { url: TokyoTowerIcon, scaledSize: [80, 80], offsetY: -2 },
-  "Hilton Tokyo Bay": { url: HiltonIcon, scaledSize: [70, 70], offsetY: -12 },
-  "Senso-ji Temple": { url: TempleIcon, scaledSize: [70, 70], offsetY: -7 },
-};
-
-const OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL = 14;
+const OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL = 100;
 
 const MapView = () => {
   const defaultProps = {
@@ -155,6 +143,15 @@ const MapView = () => {
               item.properties.mapIconKey.rich_text.length > 0
                 ? item.properties.mapIconKey.rich_text[0].plain_text
                 : null,
+            priority: item.properties.mapIconPriority.number ?? 0,
+            description:
+              item.properties.Description.rich_text.length > 0
+                ? item.properties.Description.rich_text[0].plain_text
+                : "",
+            tags:
+              item.properties.Tags.multi_select.length > 0
+                ? item.properties.Tags.multi_select.map((tag) => tag.name)
+                : null,
           });
         });
       } catch (error) {
@@ -165,9 +162,18 @@ const MapView = () => {
           title: item.properties.Activity.title[0].plain_text,
           position: { lat: location[0], lng: location[1] },
           icon:
-              item.properties.mapIconKey.rich_text.length > 0
-                ? item.properties.mapIconKey.rich_text[0].plain_text
-                : null,
+            item.properties.mapIconKey.rich_text.length > 0
+              ? item.properties.mapIconKey.rich_text[0].plain_text
+              : null,
+          priority: item.properties.mapIconPriority.number ?? 0,
+          description:
+            item.properties.Description.rich_text.length > 0
+              ? item.properties.Description.rich_text[0].plain_text
+              : "",
+          tags:
+            item.properties.Tags.multi_select.length > 0
+              ? item.properties.Tags.multi_select.map((tag) => tag.name)
+              : null,
         });
       }
     });
@@ -214,13 +220,17 @@ const MapView = () => {
                 ),
               }
             : null,
-        isImportant: item.title in OVERRIDE_ICONS,
+        priority: item.priority,
       });
+
+      if (item.icon && item.icon in ICON_KEYS) marker["iconKey"] = item.icon;
+
       marker["info"] = item.title;
+      marker["description"] = item.description;
+      marker["tags"] = item.tags;
       markers.push(marker);
 
       const overlay = createOverlay({
-        maps,
         marker: item,
         type: "title",
         offsetY:
@@ -238,8 +248,11 @@ const MapView = () => {
     setOverlays(overlays);
   };
 
+  const CustomOverlayFactory = useRef(null);
+
   useEffect(() => {
     if (itineraryData !== null && map !== undefined && maps !== undefined) {
+      CustomOverlayFactory.current = new CustomOverlayContainerFactory(maps);
       const places = parseItineraryDataLocations(itineraryData);
       createMarkers(places, map, maps);
       // createMarkers(itineraryData);
@@ -254,6 +267,26 @@ const MapView = () => {
 
       if (!isMarkerVisible) {
         setFocusedMarker(null);
+      }
+    }
+
+    if (focusedClusterRef.current && mapRef.current && mapsRef.current) {
+      const mapBounds = mapRef.current.getBounds();
+
+      let isClusterVisible = true;
+      let totalMarkers = 0;
+      for (const marker of focusedClusterRef.current.markers) {
+        if (!mapBounds.contains(marker.getPosition())) {
+          toggleOverlay(false, marker);
+          totalMarkers++;
+        }
+      }
+
+      if (totalMarkers === focusedClusterRef.current.markers.length)
+        isClusterVisible = false;
+
+      if (!isClusterVisible) {
+        setFocusedCluster(null);
       }
     }
 
@@ -275,13 +308,16 @@ const MapView = () => {
   const transRef = React.useRef(null);
 
   useEffect(() => {
-    if (!map || !maps || transRef.current !== null) return;
+    if (!map || !maps) return;
 
     // transRef.current =
     // new maps.TransitLayer();
     // transRef.current.setMap(map);
     // new maps.BicyclingLayer().setMap(map);
     // new maps.TrafficLayer().setMap(map);
+
+    // console.log(maps.MapTypeId)
+    // map.setMapTypeId(maps.MapTypeId.ROADMAP);
   }, [map, maps]);
 
   // useEffect(() => {
@@ -359,18 +395,17 @@ const MapView = () => {
   const zoomingRef = React.useRef(false);
 
   const onZoom = () => {
+    console.log("on Zoom");
     zoomingRef.current = true;
     const prevZoom = currentZoomRef.current;
 
-    setCurrentZoom(map.getZoom());
+    setCurrentZoom(mapRef.current.getZoom());
 
-    maps.event.addListenerOnce(map, "idle", () => {
+    mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
       zoomingRef.current = false;
-      if (
-        focusedMarkerExitOverlayRef.current &&
-        prevZoom > currentZoomRef.current
-      ) {
+      if (prevZoom > currentZoomRef.current) {
         setFocusedMarker(null);
+        setFocusedCluster(null);
       }
 
       if (
@@ -385,10 +420,12 @@ const MapView = () => {
     });
   };
 
+  const setZoomListener = useRef(false);
   useEffect(() => {
-    if (!map || !maps) return;
+    if (!map || !maps || setZoomListener.current) return;
 
-    maps.event.clearListeners(map, "zoom_changed");
+    setZoomListener.current = true;
+    // maps.event.clearListeners(map, "zoom_changed");
     map.addListener("zoom_changed", onZoom);
   }, [map, maps]);
 
@@ -422,9 +459,6 @@ const MapView = () => {
     );
 
     overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
-
-    if (focusedMarkerRef.current) {
-    }
   }
 
   function renderOverlays() {
@@ -439,7 +473,7 @@ const MapView = () => {
 
     const zoom = mapRef.current.getZoom();
 
-    if (zoom < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
+    if (!focusedMarkerRef.current) {
       if (focusedMarkerExitOverlayRef.current) {
         focusedMarkerExitOverlayRef.current.setMap(null);
         focusedMarkerExitOverlayRef.current = null;
@@ -450,15 +484,16 @@ const MapView = () => {
 
     // Find all markers that are in clusters
     const clusteredMarkers = [];
+
     markerClusterRef.current.clusters.forEach((cluster) => {
-      if (cluster.markers?.length > 1) {
+      if (
+        (!focusedClusterRef.current && cluster.markers?.length > 1) ||
+        (focusedClusterRef.current !== null &&
+          focusedClusterRef.current.marker !== cluster.marker &&
+          cluster.markers?.length > 1)
+      ) {
         cluster.markers?.forEach((marker) => {
-          if (
-            overlaysRef.current[getMarkerOverlayKey(marker)] &&
-            overlaysRef.current[getMarkerOverlayKey(marker)].map !== null
-          ) {
-            overlaysRef.current[getMarkerOverlayKey(marker)].setMap(null);
-          }
+          toggleOverlay(false, marker);
 
           clusteredMarkers.push(getMarkerOverlayKey(marker));
         });
@@ -498,18 +533,20 @@ const MapView = () => {
 
     // Hide overlays for clustered markers, show for others
     for (const marker of markersRef.current) {
-      if (zoom < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
+      if (
+        !focusedMarkerRef.current &&
+        zoom < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL
+      ) {
         if (
-          overlaysRef.current[getMarkerOverlayKey(marker)] &&
-          overlaysRef.current[getMarkerOverlayKey(marker)].map !== null
+          !focusedClusterRef.current ||
+          focusedClusterRef.current.markers.indexOf(marker) === -1
         )
-          overlaysRef.current[getMarkerOverlayKey(marker)].setMap(null); // Marker is clustered, hide the overlay
+          toggleOverlay(false, marker);
       } else if (
-        overlaysRef.current[getMarkerOverlayKey(marker)] &&
-        overlaysRef.current[getMarkerOverlayKey(marker)].map === null &&
+        !focusedMarkerRef.current &&
         clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1
       ) {
-        overlaysRef.current[getMarkerOverlayKey(marker)].setMap(mapRef.current); // Marker is not clustered, show the overlay
+        toggleOverlay(true, marker);
       }
     }
 
@@ -535,9 +572,6 @@ const MapView = () => {
         active ? mapRef.current : null
       );
     }
-
-    if (focusedMarkerRef.current) {
-    }
   }
 
   const markerHoveredRef = React.useRef(false);
@@ -560,7 +594,11 @@ const MapView = () => {
         //   m.setVisible(false);
         // }
 
-        toggleOverlay(false, m);
+        if (
+          !focusedClusterRef.current ||
+          focusedClusterRef.current.markers.indexOf(m) === -1
+        )
+          toggleOverlay(false, m);
       }
     });
 
@@ -622,44 +660,33 @@ const MapView = () => {
     //   return;
     // }
 
-    if (focusedMarkerExitOverlayRef.current) {
-      focusedMarkerExitOverlayRef.current.setMap(null);
-      focusedMarkerExitOverlayRef.current = null;
-    }
+    if (!focusedMarkerRef.current || focusedMarkerRef.current !== marker) {
+      // if (focusedMarkerExitOverlayRef.current) {
+      //   focusedMarkerExitOverlayRef.current.setMap(null);
+      //   focusedMarkerExitOverlayRef.current = null;
+      // }
 
-    toggleOverlay(false, marker);
+      if (
+        !focusedClusterRef.current ||
+        focusedClusterRef.current.markers.indexOf(marker) === -1
+      )
+        toggleOverlay(false, marker);
+      else if (focusedClusterRef.current.markers.indexOf(marker) !== -1)
+        toggleOverlay(true, marker);
+    }
   };
 
   const [focusedMarker, setFocusedMarker] = useState(null);
-  const focusedMarkerInfoOverlayRef = React.useRef(null);
+  // const focusedMarkerInfoOverlayRef = React.useRef(null);
 
   useEffect(() => {
-    focusedMarkerRef.current = focusedMarker;
-
-    if (focusedMarkerInfoOverlayRef.current) {
-      focusedMarkerInfoOverlayRef.current.setMap(null);
-      focusedMarkerInfoOverlayRef.current = null;
-    }
-
     if (focusedMarkerExitOverlayRef.current) {
       focusedMarkerExitOverlayRef.current.setMap(null);
       focusedMarkerExitOverlayRef.current = null;
     }
 
     if (focusedMarker) {
-      // focusedMarkerInfoOverlayRef.current = createOverlay({
-      //   maps: mapsRef.current,
-      //   marker: focusedMarker,
-      //   map: mapRef.current,
-      //   title:
-      //     "A lot of info about this location goes here. It's a very important location. It's the best location. SDoifrenfnopaeindfvoinrefoiadnfnv dasiovnasdoinvf faoijasoidjfas[doijf[asodijf asdf[iojasfoij adfoidsjfpasoidfjasdoifj asdfijjsadfoijasdfopijasdfpoijasdpfoi asdfpiojsadopfijaspdoijf afdsiojasfdpoij]]]",
-      //   offsetY: -25,
-      //   offsetX: -150,
-      //   type: "info",
-      // });
-
       focusedMarkerExitOverlayRef.current = createOverlay({
-        maps: mapsRef.current,
         marker: focusedMarker,
         map: mapRef.current,
         title: "X",
@@ -668,23 +695,30 @@ const MapView = () => {
         type: "icon",
         onClick: () => {
           setFocusedMarker(null);
+
+          if (mapRef.current) mapRef.current.setZoom(13);
         },
       });
+    } else if (focusedMarkerRef.current) {
+      toggleOverlay(false, focusedMarkerRef.current);
     }
+
+    focusedMarkerRef.current = focusedMarker;
   }, [focusedMarker]);
 
   const onMarkerClick = (marker) => {
     // Get the marker's position
-    var position = marker.getPosition();
-
     if (!mapRef.current) return;
 
+    var position = marker.getPosition();
+
+    setFocusedCluster(null);
     setFocusedMarker(marker);
-    focusedMarkerRef.current = focusedMarker;
 
     // Set the map's center to the marker's position
     mapRef.current.setCenter(position);
-    mapRef.current.setZoom(17);
+
+    mapRef.current.setZoom(20);
   };
 
   useEffect(() => {
@@ -749,7 +783,6 @@ const MapView = () => {
   }
 
   function createOverlay({
-    maps,
     map,
     marker,
     title,
@@ -759,105 +792,7 @@ const MapView = () => {
     type,
     onClick,
   }) {
-    let className = "LocationTitleWindow";
-
-    if (type === "info") {
-      className = "LocationInfoWindow";
-    }
-
-    if (type === "icon") {
-      className = "LocationIconWindow";
-    }
-
-    class CustomOverlay extends maps.OverlayView {
-      constructor(map, location, Component, props) {
-        super();
-        this.map = map;
-        this.location = location;
-        this.Component = Component;
-        this.props = props; // Initial props
-        this.div = null;
-        this.currentPaneType = "overlayLayer";
-        this.setMap(map);
-      }
-
-      onAdd() {
-        var div = document.createElement("div");
-        // Style your div however you wish
-        div.className = className;
-
-        // Insert the content
-        div.innerHTML = this.content;
-
-        // Assign the div as a property of the overlay
-        this.div = div;
-
-        // You can append your div to the "overlayLayer" pane or "floatPane" to have it
-        // float above the map and markers.
-        var panes = this.getPanes();
-
-        // console.log(panes);
-
-        if (onClick === undefined) {
-          if (!(this.currentPaneType in panes))
-            this.currentPaneType = "overlayLayer";
-          panes[this.currentPaneType].appendChild(div);
-        } else {
-          this.currentPaneType = "overlayMouseTarget";
-          panes[this.currentPaneType].appendChild(div);
-          div.addEventListener("click", () => {
-            onClick();
-          });
-        }
-
-        this.renderComponent();
-      }
-
-      changePane(paneName) {
-        this.currentPaneType = paneName;
-      }
-
-      renderComponent() {
-        // Render the React component into the div with the current props
-        ReactDOM.render(<this.Component {...this.props} />, this.div, () =>
-          this.draw()
-        );
-      }
-
-      draw() {
-        // Access the div from the property
-        var div = this.div;
-
-        const projection = overlay.getProjection();
-        const pixel = projection.fromLatLngToDivPixel(_position);
-
-        offsetY = offsetY ?? 5;
-
-        if (div) {
-          offsetX = offsetX ?? div.clientWidth / 2; // Center the div over the marker
-
-          div.style.left = pixel.x - offsetX + "px";
-          div.style.top = pixel.y + offsetY + "px";
-
-          div.style.zIndex = 99999; // Ensure the overlay is always on top
-        }
-      }
-
-      onRemove() {
-        ReactDOM.unmountComponentAtNode(this.div);
-        // Remove the div from the map when the overlay is removed
-        if (this.div) {
-          this.div.parentNode.removeChild(this.div);
-          this.div = null;
-        }
-      }
-
-      updateProps(newProps) {
-        // Update the props and rerender the component
-        this.props = { ...this.props, ...newProps };
-        this.renderComponent();
-      }
-    }
+    if (!CustomOverlayFactory.current) return;
 
     let pos = position ?? marker.position;
     const _position =
@@ -867,11 +802,17 @@ const MapView = () => {
 
     const _title = title ?? marker.title;
 
-    const MyComponent = (props) => <div>{props.text}</div>;
+    // const MyComponent = (props) => <div>{props.text}</div>;
 
-    const overlay = new CustomOverlay(null, _position, MyComponent, {
-      text: _title,
-    });
+    const overlay = new CustomOverlayFactory.current.class(
+      null,
+      { location: _position, offsetX, offsetY, onClick },
+      POILabel,
+      {
+        title: _title,
+        interactable: onClick !== undefined,
+      }
+    );
 
     if (map) overlay.setMap(map);
     else overlay.setMap(null);
@@ -879,16 +820,7 @@ const MapView = () => {
     return overlay;
   }
 
-  function createMarker({
-    label,
-    maps,
-    map,
-    position,
-    title,
-    icon,
-    isImportant,
-    priority,
-  }) {
+  function createMarker({ label, maps, map, position, title, icon, priority }) {
     const marker = new maps.Marker({
       label,
       map,
@@ -896,21 +828,19 @@ const MapView = () => {
       title,
       icon,
     });
-
-    if (isImportant) {
-      marker["isImportant"] = true;
-      marker["priority"] = 0;
-    }
-
-    if (priority !== undefined && priority !== null) {
-      marker["isImportant"] = true;
-      marker["priority"] = priority;
-    }
+    marker["priority"] = priority;
 
     return marker;
   }
 
   const clusterOverlaysRef = React.useRef({});
+
+  const [focusedCluster, setFocusedCluster] = useState(null);
+  const focusedClusterRef = React.useRef(null);
+
+  useEffect(() => {
+    focusedClusterRef.current = focusedCluster;
+  }, [focusedCluster]);
 
   useEffect(() => {
     if (markers.length === 0 || maps === undefined) return;
@@ -927,35 +857,53 @@ const MapView = () => {
           const { count, markers, _position } = ok;
 
           // Check if any markers are marked as important
-          const hasImportantMarker = markers.some(
-            (marker) => marker["isImportant"]
-          );
+          // const hasImportantMarker = markers.some(
+          //   (marker) => marker["isImportant"]
+          // );
 
           // Choose the icon based on whether the cluster contains an important marker
-          const important = markers.find((m) => m["isImportant"]);
+
+          let important;
+          let valids = markers.filter((m) => m.iconKey !== undefined);
+
+          if (valids.length > 0)
+            important = valids.reduce((prev, curr) => {
+              return curr.priority >= prev.priority ? curr : prev;
+            });
+
+          // const important = markers.find((m) => m["isImportant"]);
+
+          if (important)
+            console.log(
+              "Important marker: " +
+                important.info +
+                " priority: " +
+                important.priority
+            );
 
           const m = createMarker({
             maps,
             map,
-            position: hasImportantMarker
+            position: { lat: _position.lat(), lng: _position.lng() },
+            //  important
+              // ? {
+              //     lat: important.position.lat(),
+              //     lng: important.position.lng(),
+              //   }
+              // : { lat: _position.lat(), lng: _position.lng() },
+            icon: important
               ? {
-                  lat: important.position.lat(),
-                  lng: important.position.lng(),
-                }
-              : { lat: _position.lat(), lng: _position.lng() },
-            icon: hasImportantMarker
-              ? {
-                  url: OVERRIDE_ICONS[important.info].url,
+                  url: ICON_KEYS[important.iconKey].url,
                   scaledSize: new maps.Size(
-                    OVERRIDE_ICONS[important.info].scaledSize[0],
-                    OVERRIDE_ICONS[important.info].scaledSize[1]
+                    ICON_KEYS[important.iconKey].scaledSize[0],
+                    ICON_KEYS[important.iconKey].scaledSize[1]
                   ),
                 }
               : null,
           });
 
           // clusterMarkerPins.current[key] = m;
-          m["info"] = hasImportantMarker
+          m["info"] = important
             ? important.info + " and " + (count - 1) + " more"
             : count + " markers";
           m.addListener("mouseover", () => {
@@ -1016,6 +964,23 @@ const MapView = () => {
             renderOverlays();
           });
 
+          m.addListener("click", () => {
+            console.log("clusterclick");
+            setFocusedCluster({ marker: m, markers: markers });
+            var bounds = new maps.LatLngBounds();
+
+            //extend the bounds to include each marker's position
+            for (const marker of markers) bounds.extend(marker.position);
+
+            // if you want to still keep the default behaviour, keep the line below
+
+            markers.forEach((m) => {
+              toggleOverlay(true, m);
+            });
+
+            map.fitBounds(bounds);
+          });
+
           if (
             !(
               getMarkerOverlayKey({ marker: m, markers: markers }, true) in
@@ -1023,7 +988,6 @@ const MapView = () => {
             )
           ) {
             const overlay = createOverlay({
-              maps,
               marker: m,
               type: "title",
               title: m.info,
@@ -1083,7 +1047,8 @@ const MapView = () => {
         <div
           style={{
             position: "fixed",
-            top: 0,
+            top:
+              focusedMarker === null && focusedCluster === null ? 0 : "-100%",
             left: 0,
             display: "flex",
             flexFlow: "column",
@@ -1093,17 +1058,37 @@ const MapView = () => {
             padding: "0 1.5em .5em 1em",
             zIndex: 99999,
             borderRadius: "0 0 25px 0",
+            transition: "top 1s ease",
           }}
         >
           <h2 style={{ margin: "15px 0 0" }}>Itinerary Map</h2>
-          <p>Current Zoom Level: {currentZoom}</p>
-          <p>
-            OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL:{" "}
-            {OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL}
-          </p>
           {/* <button>Traffic Layer</button>
           <p>Zoom: {currentZoom}</p> */}
         </div>
+        <POIDetails
+          active={focusedMarker !== null || focusedCluster !== null}
+          title={
+            focusedCluster === null && focusedMarker === null
+              ? ""
+              : focusedMarker
+              ? focusedMarker.info
+              : focusedCluster.markers.map((m) => m.info)
+          }
+          description={
+            focusedCluster === null && focusedMarker === null
+              ? ""
+              : focusedMarker
+              ? focusedMarker.description
+              : ""
+          }
+          tags={
+            focusedCluster === null && focusedMarker === null
+              ? []
+              : focusedMarker
+              ? focusedMarker.tags
+              : []
+          }
+        />
       </div>
     </div>
   );

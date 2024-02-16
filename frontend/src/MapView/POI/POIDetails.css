@@ -1,0 +1,98 @@
+.slide-in-div {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  left: -100%; /* Start off-screen */
+  width: auto;
+  height: auto;
+  background-color: rgba(0, 0, 0, 0.276);
+  transition: left 1s ease; /* Smooth transition */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-radius: 0 1em 1em 0;
+  max-width: 300px;
+}
+
+.slide-in-div.active {
+  left: 0; /* Slide in */
+}
+
+.slide-in-div .content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center children horizontally */
+  justify-content: space-between; /* Space out children vertically */
+}
+
+.slide-in-div button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap");
+
+.poi-title {
+  margin-bottom: 0;
+  margin-top: 0;
+  font-family: "Indie Flower", cursive; /* The fun, whimsical font */
+  text-shadow: -1px -1px 0 #000, /* top left shadow */ 1px -1px 0 #000,
+    /* top right shadow */ -1px 1px 0 #000,
+    /* bottom left shadow */ 1px 1px 0 #000; /* bottom right shadow */
+}
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap");
+
+.poi-description {
+  font-size: 1.3em;
+  color: #ffffff;
+  font-family: "Fredoka", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  text-shadow: 
+    -1px -1px 0 #494949, /* top left shadow */
+     1px -1px 0 #494949, /* top right shadow */
+    -1px  1px 0 #494949, /* bottom left shadow */
+     1px  1px 0 #494949; /* bottom right shadow */
+}
+
+.poi-extra-info {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.poi-date {
+  display: block; /* Or inline-block, depending on your design */
+  text-align: left;
+  padding-left: 10%;
+  font-style: italic;
+}
+
+.poi-tags {
+  max-width: 200px;
+  display: flex;
+  flex-wrap: wrap; /* Allow pills to wrap to multiple lines */
+  gap: 5px; /* Space between lines */
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  justify-items: center;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.poi-tag {
+  display: inline-block;
+  padding: 1px 10px; /* Adjust padding as needed */
+  border-radius: 10px; /* Half of the height for a rounded shape */
+  background-color: #ffffff; /* Example background color */
+  color: #000000; /* Example text color */
+  min-width: 25px;
+  margin: 0 2px;
+  font-size: 0.75em;
+  font-style: italic;
+}

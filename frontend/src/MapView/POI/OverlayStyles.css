@@ -1,0 +1,34 @@
+
+.poi-label {
+  position: absolute;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.619); /* Darker background for contrast */
+  border-radius: 8px; /* Rounded corners */
+  padding: 0 16px; /* Uniform padding */
+  white-space: nowrap; /* Prevent text from wrapping */
+  backdrop-filter: blur(2px); /* Slightly less blur for sharpness */
+  -webkit-backdrop-filter: blur(2px); /* Fallback for Safari */
+  /* Simplify border and shadow to align with classic video game aesthetics */
+  border: 3px solid #ffee00; /* Gold border for a touch of vibrancy */
+  box-shadow: 0 8px 8px rgba(0, 0, 0, 0.5); /* More subtle shadow */
+}
+
+.poi-label.interactable {
+  pointer-events: all !important;
+  cursor: pointer;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
+
+.poi-label {
+  color: #000; /* Your text color */
+  font-family: 'Indie Flower', cursive; /* The fun, whimsical font */
+  font-size: 1.5rem; /* Adjust font size as needed */
+  font-weight: 100; /* Makes the text bolder */
+  text-shadow: 
+    2px 2px 0px #fff, /* White text shadow for a glow effect */
+    -1px -1px 0 #fff, 
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+}
