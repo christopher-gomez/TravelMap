@@ -113,6 +113,7 @@ const MapView = () => {
       fullscreenControl: false,
       // mapId: "1491931a2040a345",
       styles: styles,
+      gestureHandling: "greedy",
     };
   };
 
