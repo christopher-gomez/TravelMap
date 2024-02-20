@@ -1,17 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import GoogleMapReact from "google-map-react";
 // import testData from "./MapTestData.json";
-import mapStyles from "./MapStyles.json";
-// Import the .webp icon
-import TokyoTowerIcon from "../Assets/tokyo-tower-icon-alpha.png";
-import HiltonIcon from "../Assets/hilton-tokyo-bay-icon.png";
-import TempleIcon from "../Assets/senso-ji-temple.png";
-import RamenIcon from "../Assets/ramen.png";
-import SushiIcon from "../Assets/sushi.png";
-import JiroIcon from "../Assets/jiro.png";
-import SkytreeIcon from "../Assets/skytree.png";
+import TransitStyle from "./MapStyles/TransitStyle.json";
+import DefaultStyle from "./MapStyles/DefaultStyle.json";
 
-// import CustomMarker from "./CustomMarker";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
 import { queryDatabase, updatePage } from "../Api/Notion";
@@ -108,12 +100,13 @@ const MapView = () => {
   // }, [itineraryData]);
 
   const createOptions = (maps) => {
-    const styles = JSON.parse(JSON.stringify(mapStyles));
+    const styles = JSON.parse(JSON.stringify(DefaultStyle));
     return {
       fullscreenControl: false,
       // mapId: "1491931a2040a345",
       styles: styles,
-      gestureHandling: "greedy",
+      gestureHandling: "cooperative",
+      disableDefaultUI: true,
     };
   };
 
@@ -396,18 +389,20 @@ const MapView = () => {
   const zoomingRef = React.useRef(false);
 
   const onZoom = () => {
-    console.log("on Zoom");
+    // console.log("on Zoom");
     zoomingRef.current = true;
     const prevZoom = currentZoomRef.current;
+    const curZoom = mapRef.current.getZoom();
 
-    setCurrentZoom(mapRef.current.getZoom());
+    if (prevZoom > curZoom) {
+      setFocusedMarker(null);
+      setFocusedCluster(null);
+    }
+
+    setCurrentZoom(curZoom);
 
     mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
       zoomingRef.current = false;
-      if (prevZoom > currentZoomRef.current) {
-        setFocusedMarker(null);
-        setFocusedCluster(null);
-      }
 
       if (
         markerHoveredRef.current &&
@@ -874,24 +869,24 @@ const MapView = () => {
 
           // const important = markers.find((m) => m["isImportant"]);
 
-          if (important)
-            console.log(
-              "Important marker: " +
-                important.info +
-                " priority: " +
-                important.priority
-            );
+          // if (important)
+          //   console.log(
+          //     "Important marker: " +
+          //       important.info +
+          //       " priority: " +
+          //       important.priority
+          //   );
 
           const m = createMarker({
             maps,
             map,
             position: { lat: _position.lat(), lng: _position.lng() },
             //  important
-              // ? {
-              //     lat: important.position.lat(),
-              //     lng: important.position.lng(),
-              //   }
-              // : { lat: _position.lat(), lng: _position.lng() },
+            // ? {
+            //     lat: important.position.lat(),
+            //     lng: important.position.lng(),
+            //   }
+            // : { lat: _position.lat(), lng: _position.lng() },
             icon: important
               ? {
                   url: ICON_KEYS[important.iconKey].url,
@@ -966,7 +961,7 @@ const MapView = () => {
           });
 
           m.addListener("click", () => {
-            console.log("clusterclick");
+            // console.log("clusterclick");
             setFocusedCluster({ marker: m, markers: markers });
             var bounds = new maps.LatLngBounds();
 
@@ -1026,6 +1021,18 @@ const MapView = () => {
     setCurrentZoom(map.getZoom());
   };
 
+  const [currentMapStyle, setCurrentMapStyle] = useState("default");
+
+  useEffect(() => {
+    if (!map || !maps) return;
+
+    if (currentMapStyle === "default") {
+      map.setOptions({ styles: JSON.parse(JSON.stringify(DefaultStyle)) });
+    } else if (currentMapStyle === "transit") {
+      map.setOptions({ styles: JSON.parse(JSON.stringify(TransitStyle)) });
+    }
+  }, [currentMapStyle]);
+
   if (!fetchedAPIKey) return null;
 
   return (
@@ -1063,6 +1070,14 @@ const MapView = () => {
           }}
         >
           <h2 style={{ margin: "15px 0 0" }}>Itinerary Map</h2>
+          <button
+            onClick={() => {
+              if (currentMapStyle === "default") setCurrentMapStyle("transit");
+              else setCurrentMapStyle("default");
+            }}
+          >
+            Toggle Style
+          </button>
           {/* <button>Traffic Layer</button>
           <p>Zoom: {currentZoom}</p> */}
         </div>
