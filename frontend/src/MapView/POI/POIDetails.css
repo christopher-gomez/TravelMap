@@ -2,11 +2,12 @@
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  left: -100%; /* Start off-screen */
+  left: -100%;
+  /* Start off-screen */
   width: auto;
   height: auto;
   background-color: rgba(0, 0, 0, 0.276);
-  transition: left 1s ease; /* Smooth transition */
+  transition: all 1s ease; /* Smooth transition */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   border-radius: 0 1em 1em 0;
@@ -15,6 +16,28 @@
 
 .slide-in-div.active {
   left: 0; /* Slide in */
+  transition: all 1s ease; /* Smooth transition */
+}
+
+@media only screen and (max-width: 768px) {
+  .slide-in-div {
+    top: unset;
+    bottom: -100%;
+    left: 50%;
+    border-radius: 1em 1em 0 0;
+    transform: translateX(-50%);
+    transition: all 1s ease; /* Smooth transition */
+    width: 75%;
+    max-width: 90%;
+    max-height: 50%;
+    overflow: scroll;
+  }
+
+  .slide-in-div.active {
+    bottom: 0; /* Slide in from the bottom */
+    left: 50%;
+    transition: all 1s ease; /* Smooth transition */
+  }
 }
 
 .slide-in-div .content {
@@ -27,8 +50,14 @@
 
 .slide-in-div button {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 0px;
+  right: 0px;
+  color: white;
+  background-color: transparent;
+  border: none;
+  font-size: 2.25em;
+  font-family: "Indie Flower", cursive; /* The fun, whimsical font */
+  cursor: pointer;
 }
 
 @import url("https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap");
@@ -53,11 +82,9 @@
   font-variation-settings: "wdth" 100;
   margin-top: 10px;
   margin-bottom: 10px;
-  text-shadow: 
-    -1px -1px 0 #494949, /* top left shadow */
-     1px -1px 0 #494949, /* top right shadow */
-    -1px  1px 0 #494949, /* bottom left shadow */
-     1px  1px 0 #494949; /* bottom right shadow */
+  text-shadow: -1px -1px 0 #494949, /* top left shadow */ 1px -1px 0 #494949,
+    /* top right shadow */ -1px 1px 0 #494949,
+    /* bottom left shadow */ 1px 1px 0 #494949; /* bottom right shadow */
 }
 
 .poi-extra-info {
@@ -83,6 +110,12 @@
   justify-items: center;
   width: 100%;
   margin-top: 5px;
+}
+
+@media only screen and (max-width: 768px) {
+  .poi-tags {
+    max-width: 75%;
+  }
 }
 
 .poi-tag {

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import "./POIDetails.css";
 
-const POIDetails = ({ active, title, tags, description }) => {
+const POIDetails = ({ active, title, tags, description, onClose }) => {
   return (
     <div className={`slide-in-div ${active ? "active" : ""}`}>
+      {onClose !== undefined && <button onClick={() => onClose()}>X</button>}
       <div className="content">
         {/* <span className="poi-date">Date</span> */}
         {title &&

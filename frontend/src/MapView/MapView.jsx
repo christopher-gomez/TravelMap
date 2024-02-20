@@ -105,8 +105,9 @@ const MapView = () => {
       fullscreenControl: false,
       // mapId: "1491931a2040a345",
       styles: styles,
-      gestureHandling: "auto",
+      gestureHandling: "greedy",
       disableDefaultUI: true,
+      mapTypeControl: false,
     };
   };
 
@@ -436,7 +437,7 @@ const MapView = () => {
   //   // renderOverlays();
   // }, [map, markers, overlays, markerCluster, ]);
 
-  const focusedMarkerExitOverlayRef = React.useRef(null);
+  // const focusedMarkerExitOverlayRef = React.useRef(null);
   const focusedMarkerRef = React.useRef(null);
 
   function toggleClusterOverlay(active, cluster) {
@@ -470,10 +471,10 @@ const MapView = () => {
     const zoom = mapRef.current.getZoom();
 
     if (!focusedMarkerRef.current) {
-      if (focusedMarkerExitOverlayRef.current) {
-        focusedMarkerExitOverlayRef.current.setMap(null);
-        focusedMarkerExitOverlayRef.current = null;
-      }
+      // if (focusedMarkerExitOverlayRef.current) {
+      //   focusedMarkerExitOverlayRef.current.setMap(null);
+      //   focusedMarkerExitOverlayRef.current = null;
+      // }
     }
 
     // markersRef.current.forEach((m) => m.setVisible(true));
@@ -563,11 +564,11 @@ const MapView = () => {
 
     overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
 
-    if (focusedMarkerExitOverlayRef.current) {
-      focusedMarkerExitOverlayRef.current.setMap(
-        active ? mapRef.current : null
-      );
-    }
+    // if (focusedMarkerExitOverlayRef.current) {
+    //   focusedMarkerExitOverlayRef.current.setMap(
+    //     active ? mapRef.current : null
+    //   );
+    // }
   }
 
   const markerHoveredRef = React.useRef(false);
@@ -676,25 +677,24 @@ const MapView = () => {
   // const focusedMarkerInfoOverlayRef = React.useRef(null);
 
   useEffect(() => {
-    if (focusedMarkerExitOverlayRef.current) {
-      focusedMarkerExitOverlayRef.current.setMap(null);
-      focusedMarkerExitOverlayRef.current = null;
-    }
+    // if (focusedMarkerExitOverlayRef.current) {
+    //   focusedMarkerExitOverlayRef.current.setMap(null);
+    //   focusedMarkerExitOverlayRef.current = null;
+    // }
 
     if (focusedMarker) {
-      focusedMarkerExitOverlayRef.current = createOverlay({
-        marker: focusedMarker,
-        map: mapRef.current,
-        title: "X",
-        offsetY: -75,
-        offsetX: 50,
-        type: "icon",
-        onClick: () => {
-          setFocusedMarker(null);
-
-          if (mapRef.current) mapRef.current.setZoom(13);
-        },
-      });
+      // focusedMarkerExitOverlayRef.current = createOverlay({
+      //   marker: focusedMarker,
+      //   map: mapRef.current,
+      //   title: "X",
+      //   offsetY: -75,
+      //   offsetX: 50,
+      //   type: "icon",
+      //   onClick: () => {
+      //     setFocusedMarker(null);
+      //     if (mapRef.current) mapRef.current.setZoom(13);
+      //   },
+      // });
     } else if (focusedMarkerRef.current) {
       toggleOverlay(false, focusedMarkerRef.current);
     }
@@ -1033,6 +1033,19 @@ const MapView = () => {
     }
   }, [currentMapStyle]);
 
+  const [currentRenderType, setCurrentRenderType] = useState("roadmap");
+
+  useEffect(() => {
+    if (!map || !maps) return;
+
+    if (currentRenderType === "roadmap") {
+      map.setMapTypeId(maps.MapTypeId.ROADMAP);
+    } else if (currentRenderType === "satellite") {
+      map.setMapTypeId(maps.MapTypeId.SATELLITE);
+      setCurrentMapStyle("default");
+    }
+  }, [currentRenderType]);
+
   if (!fetchedAPIKey) return null;
 
   return (
@@ -1070,13 +1083,25 @@ const MapView = () => {
           }}
         >
           <h2 style={{ margin: "15px 0 0" }}>Itinerary Map</h2>
+          {currentRenderType === "roadmap" && (
+            <button
+              onClick={() => {
+                if (currentMapStyle === "default")
+                  setCurrentMapStyle("transit");
+                else setCurrentMapStyle("default");
+              }}
+            >
+              Toggle Transit
+            </button>
+          )}
           <button
             onClick={() => {
-              if (currentMapStyle === "default") setCurrentMapStyle("transit");
-              else setCurrentMapStyle("default");
+              if (currentRenderType === "roadmap")
+                setCurrentRenderType("satellite");
+              else setCurrentRenderType("roadmap");
             }}
           >
-            Toggle Style
+            Toggle Satellite
           </button>
           {/* <button>Traffic Layer</button>
           <p>Zoom: {currentZoom}</p> */}
@@ -1104,6 +1129,12 @@ const MapView = () => {
               ? focusedMarker.tags
               : []
           }
+          onClose={() => {
+            setFocusedMarker(null);
+            setFocusedCluster(null);
+
+            if (mapRef.current) mapRef.current.setZoom(13);
+          }}
         />
       </div>
     </div>
