@@ -13,6 +13,9 @@ import CustomOverlayContainerFactory from "./POI/CustomOverlayContainerClass";
 import POILabel from "./POI/POILabel";
 import ICON_KEYS from "./POI/IconMapKeys";
 import POIDetails from "./POI/POIDetails";
+import MultipleSelectChip from "../Util/MultipleSelect";
+import { Accordion, AccordionDetails, AccordionSummary, AccordionActions, Button } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 // import {
 //   findLocationLngLat,
@@ -126,6 +129,8 @@ const MapView = () => {
         return;
       }
 
+      tripDateRange.current = item.properties.DateRange.formula.date;
+
       try {
         const locations = JSON.parse(
           item.properties.Location.rich_text[0].plain_text
@@ -147,6 +152,12 @@ const MapView = () => {
               item.properties.Tags.multi_select.length > 0
                 ? item.properties.Tags.multi_select.map((tag) => tag.name)
                 : null,
+            date: item.properties.Date.date
+              ? {
+                  start: item.properties.Date.date.start,
+                  end: item.properties.Date.date.end,
+                }
+              : null,
           });
         });
       } catch (error) {
@@ -169,6 +180,12 @@ const MapView = () => {
             item.properties.Tags.multi_select.length > 0
               ? item.properties.Tags.multi_select.map((tag) => tag.name)
               : null,
+          date: item.properties.Date.date
+            ? {
+                start: item.properties.Date.date.start,
+                end: item.properties.Date.date.end,
+              }
+            : null,
         });
       }
     });
@@ -223,6 +240,8 @@ const MapView = () => {
       marker["info"] = item.title;
       marker["description"] = item.description;
       marker["tags"] = item.tags;
+      marker["date"] = item.date;
+      marker["day"] = calculateDay(item.date);
       markers.push(marker);
 
       const overlay = createOverlay({
@@ -285,7 +304,8 @@ const MapView = () => {
       }
     }
 
-    markersRef.current.forEach((m, i) => m.setVisible(true));
+    // markersRef.current.forEach((m, i) => m.setVisible(true));
+    // renderMarkers();
   }
 
   useEffect(() => {
@@ -355,6 +375,38 @@ const MapView = () => {
     markerClusterRef.current = markerCluster;
   }, [markerCluster]);
 
+  const calculateDay = (activityDate) => {
+    if (!activityDate) return null;
+
+    const tripStart = new Date(tripDateRange.current.start);
+    const activityStart = new Date(activityDate.start);
+    const activityEnd = activityDate.end
+      ? new Date(activityDate.end)
+      : activityStart;
+
+    // Calculate the start and end day numbers
+    const startDay =
+      Math.ceil((activityStart - tripStart) / (1000 * 60 * 60 * 24)) + 1;
+    const endDay =
+      Math.ceil((activityEnd - tripStart) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Generate an array of day numbers if there are multiple days
+    if (startDay !== endDay) {
+      const dayNumbers = [];
+      for (let i = startDay; i <= endDay; i++) {
+        dayNumbers.push(i);
+      }
+      return dayNumbers;
+    }
+
+    // If the activity is only one day, return an array with that single number
+    return startDay;
+  };
+
+  const tripDateRange = useRef(null);
+
+  const [markerDays, setMarkerDays] = useState([]);
+
   useEffect(() => {
     if (markersRef.current.length > 0) {
       markersRef.current.forEach((m) => {
@@ -371,8 +423,115 @@ const MapView = () => {
       });
     }
 
+    const days = [];
+    const tags = [];
+
+    for (const marker of markers) {
+      if (marker.day) {
+        if (Array.isArray(marker.day)) {
+          marker.day.forEach((day) => {
+            if (!days.includes(day)) {
+              days.push(day);
+            }
+          });
+        } else if (!days.includes(marker.day)) {
+          days.push(marker.day);
+        }
+      }
+
+      if (marker.tags) {
+        marker.tags.forEach((tag) => {
+          if (!tags.includes(tag)) {
+            tags.push(tag);
+          }
+        });
+      }
+    }
+
+    setAllTags(tags);
+
+    days.sort((a, b) => a - b);
+    days.unshift("All");
+    days.push("General");
+
+    setMarkerDays(days);
     markersRef.current = markers;
   }, [markers]);
+
+  const [currentDayFilter, setCurrentDayFilter] = useState(null);
+
+  const [allTags, setAllTags] = useState([]);
+  const [includeTagsFilter, setIncludeTagsFilter] = useState([]);
+  const [excludeTagsFilter, setExcludeTagsFilter] = useState([]);
+
+  useEffect(() => {
+    setCurrentDayFilter("All");
+  }, [markerDays]);
+
+  useEffect(() => {
+    if (!markers || !maps) return;
+
+    console.log("Current Day Filter: " + currentDayFilter);
+
+    renderMarkers();
+    // renderOverlays();
+  }, [currentDayFilter]);
+
+  const renderMarkers = () => {
+    if (!map || !maps || !markers) return;
+
+    markers.forEach((marker, index) => {
+      marker.setVisible(false);
+      marker.setMap(null);
+    });
+
+    // Filter by day first
+    let _markers = markers.filter((m) => {
+      if (currentDayFilter === "All") return true;
+      if (currentDayFilter === "General" && !m.day) return true;
+      if (Array.isArray(m.day) && m.day.includes(currentDayFilter)) return true;
+      if (m.day === currentDayFilter) return true;
+      return false;
+    });
+
+    // Filter for target tags
+    if (includeTagsFilter.length > 0) {
+      _markers = _markers.filter((m) => {
+        if (!m.tags) return false;
+        return includeTagsFilter.some((tag) => m.tags.includes(tag));
+      });
+    }
+
+    // Filter out excluded tags
+    if (excludeTagsFilter.length > 0) {
+      _markers = _markers.filter((m) => {
+        if (!m.tags) return true;
+        return !excludeTagsFilter.some((tag) => m.tags.includes(tag));
+      });
+    }
+
+    _markers.forEach((m) => {
+      if (!m.visible || !m.map) {
+        m.setVisible(true);
+        m.setMap(map);
+      }
+    });
+
+    if (
+      markerClusterRef.current &&
+      _markers !== markerClusterRef.current.markers
+    ) {
+      markerClusterRef.current.clearMarkers();
+      markerClusterRef.current.addMarkers(_markers);
+    }
+  };
+
+  useEffect(() => {
+    if (!map || !maps || !markers) return;
+
+    renderMarkers();
+    // renderOverlays();
+  }, [includeTagsFilter, excludeTagsFilter]);
 
   useEffect(() => {
     overlaysRef.current = overlays;
@@ -384,7 +543,7 @@ const MapView = () => {
     const prevZoom = currentZoomRef.current;
     currentZoomRef.current = currentZoom;
 
-    if (prevZoom > currentZoom) renderOverlays();
+    renderOverlays();
   }, [currentZoom]);
 
   const zoomingRef = React.useRef(false);
@@ -405,15 +564,17 @@ const MapView = () => {
     mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
       zoomingRef.current = false;
 
-      if (
-        markerHoveredRef.current &&
-        (prevZoom > currentZoomRef.current ||
-          currentZoomRef.current >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL)
-      ) {
-        markersRef.current.forEach((m) => m.setVisible(true));
-      }
+      // if (
+      //   markerHoveredRef.current &&
+      //   (prevZoom > currentZoomRef.current ||
+      //     currentZoomRef.current >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL)
+      // ) {
+      //   renderMarkers();
+      // }
 
-      if (prevZoom > currentZoomRef.current) renderOverlays();
+      // if (prevZoom > currentZoomRef.current) renderOverlays();
+
+      renderOverlays();
     });
   };
 
@@ -547,9 +708,21 @@ const MapView = () => {
       }
     }
 
-    if (markersRef.current.every((m) => !m.visible)) {
-      markersRef.current.forEach((m) => m.setVisible(true));
-    }
+    // if (markersRef.current.every((m) => !m.visible)) {
+    //   markersRef.current.forEach((m) => m.setVisible(true));
+    // }
+
+    markersRef.current.forEach((m) => {
+      if (m.hovered) {
+        toggleOverlay(true, m);
+      }
+    });
+
+    markerClusterRef.current.clusters.forEach((c) => {
+      if (c.marker.hovered) {
+        toggleClusterOverlay(true, c);
+      }
+    });
   }
 
   function toggleOverlay(active, marker) {
@@ -619,10 +792,11 @@ const MapView = () => {
     ) {
       toggleOverlay(true, marker);
     } else {
-      markersRef.current.forEach((m, i) => m.setVisible(true));
-      markerClusterRef.current.clusters.forEach((c) => {
-        c.marker.setVisible(true);
-      });
+      // markersRef.current.forEach((m, i) => m.setVisible(true));
+      // markerClusterRef.current.clusters.forEach((c) => {
+      //   c.marker.setVisible(true);
+      // });
+      // renderMarkers();
     }
 
     if (currentZoomRef.current >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
@@ -851,6 +1025,7 @@ const MapView = () => {
       renderer: {
         render: (ok, stats, map) => {
           const { count, markers, _position } = ok;
+          // console.log("rendering cluster");
 
           // Check if any markers are marked as important
           // const hasImportantMarker = markers.some(
@@ -949,13 +1124,14 @@ const MapView = () => {
 
             markerHoveredRef.current = false;
             markerHoveredOverlayRef.current = null;
-            markersRef.current.forEach((m) => {
-              if (!m.visible) m.setVisible(true);
-            });
+            // renderMarkers();
+            // markersRef.current.forEach((m) => {
+            //   if (!m.visible) m.setVisible(true);
+            // });
 
-            markerClusterRef.current.clusters.forEach((c) => {
-              if (!c.marker.visible) c.marker.setVisible(true);
-            });
+            // markerClusterRef.current.clusters.forEach((c) => {
+            //   if (!c.marker.visible) c.marker.setVisible(true);
+            // });
 
             renderOverlays();
           });
@@ -995,6 +1171,8 @@ const MapView = () => {
             ] = overlay;
           }
 
+          markers.forEach((m) => (m["hovered"] = false));
+
           return m;
         },
       },
@@ -1007,6 +1185,7 @@ const MapView = () => {
 
     // maps.event.removeListener(markerCluster, "clusteringend");
     maps.event.addListener(markerCluster, "clusteringend", () => {
+      // console.log("cluster end");
       renderOverlays();
     });
 
@@ -1083,6 +1262,81 @@ const MapView = () => {
           }}
         >
           <h2 style={{ margin: "15px 0 0" }}>Itinerary Map</h2>
+
+          {(markerDays.length > 0 || allTags.length > 0) && (
+            <Accordion
+              sx={{
+                marginBottom: "1em !important",
+                maxWidth: 250,
+                background: "transparent",
+                color: "white",
+                border: "none",
+                outline: "none",
+                boxShadow: "none",
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon sx={{ color: "white" }} />}
+                aria-controls="panel1-content"
+                id="panel1-header"
+              >
+                Filters
+              </AccordionSummary>
+              <AccordionDetails  sx={{padding: 0}}>
+                {markerDays.length > 0 && (
+                  <MultipleSelectChip
+                    options={markerDays}
+                    labels={markerDays.map((day, index) =>
+                      day !== "All" && day !== "General" ? "Day " + day : day
+                    )}
+                    label={"Day Filter"}
+                    onChange={(val) => {
+                      setCurrentDayFilter(
+                        val !== "All" && val !== "General"
+                          ? Number.parseInt(val)
+                          : val
+                      );
+                    }}
+                    value={currentDayFilter}
+                  />
+                )}
+
+                {allTags.length > 0 && (
+                  <MultipleSelectChip
+                    options={allTags.filter(
+                      (tag) => !excludeTagsFilter.includes(tag)
+                    )}
+                    label={"Filter For"}
+                    multiple={true}
+                    onChange={(val) => {
+                      setIncludeTagsFilter(val);
+                    }}
+                  />
+                )}
+
+                {allTags.length > 0 && (
+                  <MultipleSelectChip
+                    multiple={true}
+                    options={allTags.filter(
+                      (tag) => !includeTagsFilter.includes(tag)
+                    )}
+                    label={"Filter Out"}
+                    onChange={(val) => {
+                      setExcludeTagsFilter(val);
+                    }}
+                  />
+                )}
+              </AccordionDetails>
+              {(currentDayFilter !== "All" ||
+                includeTagsFilter.length > 0 ||
+                excludeTagsFilter.length > 0) && (
+                <AccordionActions>
+                  <Button sx={{color: "white"}} size="small">Reset</Button>
+                </AccordionActions>
+              )}
+            </Accordion>
+          )}
+
           {currentRenderType === "roadmap" && (
             <button
               onClick={() => {
@@ -1114,6 +1368,20 @@ const MapView = () => {
               : focusedMarker
               ? focusedMarker.info
               : focusedCluster.markers.map((m) => m.info)
+          }
+          day={
+            focusedCluster === null && focusedMarker === null
+              ? null
+              : focusedMarker
+              ? focusedMarker.day
+              : null
+          }
+          date={
+            focusedCluster === null && focusedMarker === null
+              ? null
+              : focusedMarker
+              ? focusedMarker.date
+              : null
           }
           description={
             focusedCluster === null && focusedMarker === null

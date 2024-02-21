@@ -28,6 +28,10 @@ import ShiroHigeIcon from '../../Assets/shiro-hige.png';
 import AirportIcon from '../../Assets/airport.png';
 import RollerCoasterIcon from '../../Assets/rollercoaster.png';
 import WaterParkIcon from '../../Assets/water-park.png';
+import NintendoIcon from '../../Assets/nintendo.png';
+import DonqIcon from '../../Assets/donq.png';
+import CupNoodlesIcon from '../../Assets/cup-noodles.png';
+import KaraokeIcon from '../../Assets/karaoke.png';
 
 export default {
     temple: {
@@ -177,6 +181,26 @@ export default {
     },
     waterPark: {
         url: WaterParkIcon,
+        scaledSize: [70, 70],
+        offsetY: -5,
+    },
+    nintendo: {
+        url: NintendoIcon,
+        scaledSize: [70, 70],
+        offsetY: -5,
+    },
+    donq: {
+        url: DonqIcon,
+        scaledSize: [70, 70],
+        offsetY: -5,
+    },
+    cupNoodles: {
+        url: CupNoodlesIcon,
+        scaledSize: [70, 70],
+        offsetY: -5,
+    },
+    karaoke: {
+        url: KaraokeIcon,
         scaledSize: [70, 70],
         offsetY: -5,
     },
