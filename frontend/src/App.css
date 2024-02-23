@@ -15,6 +15,7 @@
 body {
   max-height: 100vh;
   max-height: -wekit-fill-available;
+  min-height: 100vh;
   min-height: -webkit-fill-available;
 }
 
