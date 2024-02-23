@@ -60,6 +60,7 @@ export default function MapDrawer({
           <POIDetailsDescription description={description} />
         ) : null
       }
+      onClose={onClose}
     />
   ) : (
     <StandardDrawer

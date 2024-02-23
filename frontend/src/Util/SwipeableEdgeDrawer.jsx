@@ -27,6 +27,7 @@ function SwipeableEdgeDrawer({
   headerHeight = 56,
   HeaderContent,
   DrawerContent,
+  onClose,
 }) {
   const [drawerBleeding, setDrawerBleeding] = React.useState(headerHeight);
 
@@ -42,6 +43,19 @@ function SwipeableEdgeDrawer({
   }, [headerHeight]);
 
   const [open, setOpen] = React.useState(false);
+  const [headerHidden, setHeaderHidden] = React.useState(hidden);
+
+  React.useEffect(() => {
+    setHeaderHidden(hidden);
+  }, [hidden]);
+
+  React.useEffect(() => {
+    if (headerHidden) {
+      setOpen(false);
+      if (onClose) onClose();
+    }
+  }, [headerHidden]);
+
   const drawerRef = React.useRef();
 
   const toggleDrawer = (newOpen) => () => {
@@ -55,6 +69,48 @@ function SwipeableEdgeDrawer({
     }
   }, [open, onHeightChange]);
 
+  const [swipeStartY, setSwipeStartY] = React.useState(null);
+  const [swipeEndY, setSwipeEndY] = React.useState(null);
+
+  const handleTouchStart = (event) => {
+    if(open) return;
+    setSwipeStartY(event.touches[0].clientY);
+  };
+
+  const [drawerYPosition, setDrawerYPosition] = React.useState(0); // New state for drawer Y position
+
+  const handleTouchMove = (event) => {
+    if (!swipeStartY || open) return;
+    const touchY = event.touches[0].clientY;
+    const swipeDistance = touchY - swipeStartY;
+
+    console.log("swipeDistance", swipeDistance)
+
+    if (swipeDistance < 0) {
+      setDrawerYPosition(0); // Prevent drawer from moving up
+      return;
+    } else {
+      event.preventDefault(); // Prevent the window from scrolling
+      event.stopPropagation();
+    }
+    
+    setDrawerYPosition(swipeDistance); // Set the new drawer Y position
+    setSwipeEndY(event.touches[0].clientY);
+  };
+
+  const handleTouchEnd = (event) => {
+    if(open) return;
+    if (swipeStartY && swipeEndY) {
+      const swipeDistance = swipeEndY - swipeStartY;
+      if (swipeDistance > 100) { // Adjust the threshold as needed
+        setHeaderHidden(true);
+      }
+    }
+    setSwipeStartY(null);
+    setSwipeEndY(null);
+    setDrawerYPosition(0)
+  };
+
   return (
     <>
       <Global
@@ -65,12 +121,14 @@ function SwipeableEdgeDrawer({
             height: `calc(50% - ${drawerBleeding}px)`,
             overflow: "visible",
           },
-          ".MuiDrawer-root > .PrivateSwipeArea-root": {
+          ".PrivateSwipeArea-root": {
             height: headerHeight,
+            pointerEvents: headerHidden ? "none" : "all",
           },
         }}
       />
       <SwipeableDrawer
+        allowSwipeInChildren
         anchor="bottom"
         open={open}
         onClose={toggleDrawer(false)}
@@ -81,14 +139,11 @@ function SwipeableEdgeDrawer({
         disableBackdropTransition
         disableDiscovery
         slotProps={{ backdrop: { invisible: true } }}
-        ModalProps={{
-          keepMounted: true,
-        }}
       >
         <StyledBox
           sx={{
             position: "absolute",
-            top: hidden ? "100%" : -drawerBleeding,
+            top: headerHidden ? "100%" : -drawerBleeding,
             borderTopLeftRadius: "1.5em",
             borderTopRightRadius: "1.5em",
             visibility: "visible",
@@ -102,11 +157,25 @@ function SwipeableEdgeDrawer({
             justifyItems: "center",
             alignItems: "center",
             boxShadow: "0px -10px 10px 0px rgba(0,0,0,0.15)",
+            pointerEvents: "all",
+            transform: headerHidden ? "unset" : `translateY(${drawerYPosition}px)`,
           }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
         >
           <Puller />
           {HeaderContent !== undefined && (
-            <StyledBox sx={{ p: 2, pt: 0, backgroundColor: "transparent" }}>{HeaderContent}</StyledBox>
+            <StyledBox
+              sx={{
+                p: 2,
+                pt: 0,
+                backgroundColor: "transparent",
+                userSelect: "none",
+              }}
+            >
+              {HeaderContent}
+            </StyledBox>
           )}
         </StyledBox>
         <StyledBox

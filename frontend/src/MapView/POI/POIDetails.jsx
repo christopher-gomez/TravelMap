@@ -94,7 +94,7 @@ export const POIDetailsTitle = ({ title, tags, day, date }) => {
             </h1>
           ))
         ) : (
-          <h1 className="poi-title" style={{marginTop: '1em'}}>{title}</h1>
+          <h1 className="poi-title">{title}</h1>
         ))}
       {(day || date) && (
         <div
