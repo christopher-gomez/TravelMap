@@ -1,0 +1,3 @@
+.MuiTimelineItem-missingOppositeContent:before {
+  content: none;
+}

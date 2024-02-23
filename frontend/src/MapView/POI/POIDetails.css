@@ -40,12 +40,14 @@
   }
 }
 
-.slide-in-div .content {
-  padding: 20px;
+.content {
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center children horizontally */
-  justify-content: space-between; /* Space out children vertically */
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  justify-items: center;
 }
 
 .slide-in-div button {
@@ -65,16 +67,18 @@
 .poi-title {
   margin-bottom: 0;
   margin-top: 0;
+  color: black !important;
   font-family: "Indie Flower", cursive; /* The fun, whimsical font */
-  text-shadow: -1px -1px 0 #000, /* top left shadow */ 1px -1px 0 #000,
-    /* top right shadow */ -1px 1px 0 #000,
-    /* bottom left shadow */ 1px 1px 0 #000; /* bottom right shadow */
+  text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
+    /* top right shadow */ -1px 1px 0 #fff,
+    /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
 }
 @import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap");
 
 .poi-description {
+  flex: 1;
   font-size: 1.3em;
-  color: #ffffff;
+  color: black;
   font-family: "Fredoka", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
@@ -82,9 +86,26 @@
   font-variation-settings: "wdth" 100;
   margin-top: 10px;
   margin-bottom: 10px;
-  text-shadow: -1px -1px 0 #494949, /* top left shadow */ 1px -1px 0 #494949,
-    /* top right shadow */ -1px 1px 0 #494949,
-    /* bottom left shadow */ 1px 1px 0 #494949; /* bottom right shadow */
+  text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
+    /* top right shadow */ -1px 1px 0 #fff,
+    /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
+  overflow-y: auto;
+}
+
+.poi-description::-webkit-scrollbar {
+  width: 8px;
+}
+.poi-description::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.103); /* Slightly transparent */
+}
+
+.poi-description::-webkit-scrollbar-thumb {
+  background: #adadad4e;
+  border-radius: 6px;
+}
+
+.poi-description:hover::-webkit-scrollbar-thumb {
+  background: #a7a7a7;
 }
 
 .poi-extra-info {
@@ -99,8 +120,10 @@
   align-self: flex-start;
   font-weight: bolder;
   font-size: 0.8em;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-    1px 1px 0 #000;
+  color: black !important;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+  margin-top: 10px;
 }
 
 .poi-day {
@@ -111,14 +134,40 @@
   font-weight: bolder;
   font-size: 0.8em;
   padding-left: 10px;
-  text-shadow: -1px -1px 0 #000, /* top left shadow */ 1px -1px 0 #000,
-    /* top right shadow */ -1px 1px 0 #000,
-    /* bottom left shadow */ 1px 1px 0 #000; /* bottom right shadow */
-  margin-bottom: 10px;
+  text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
+    /* top right shadow */ -1px 1px 0 #fff,
+    /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
+  margin-bottom: 0;
+}
+
+.poi-date.row {
+  display: flex; /* Or inline-block, depending on your design */
+  text-align: center;
+  font-style: italic;
+  align-self: center;
+  font-weight: bolder;
+  font-size: 0.8em;
+  color: black !important;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+  margin-top: 0;
+}
+
+.poi-day.row {
+  display: flex; /* Or inline-block, depending on your design */
+  text-align: center;
+  font-style: italic;
+  align-self: center;
+  font-weight: bolder;
+  font-size: 0.8em;
+  padding-left: 5px;
+  text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
+    /* top right shadow */ -1px 1px 0 #fff,
+    /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
+  margin-bottom: 0;
 }
 
 .poi-tags {
-  max-width: 200px;
   display: flex;
   flex-wrap: wrap; /* Allow pills to wrap to multiple lines */
   gap: 5px; /* Space between lines */
@@ -130,20 +179,41 @@
   margin-top: 5px;
 }
 
+.poi-tags.row {
+  display: flex;
+  flex-wrap: wrap; /* Allow pills to wrap to multiple lines */
+  gap: 0 !important; /* Space between lines */
+  row-gap: 5px !important; /* Space between lines */
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  justify-items: center;
+  width: 80%;
+  margin-top: 5px;
+}
+
 @media only screen and (max-width: 768px) {
   .poi-tags {
     max-width: 75%;
+  }
+
+  .poi-tags.row {
+    max-width: 100%;
   }
 }
 
 .poi-tag {
   display: inline-block;
-  padding: 1px 10px; /* Adjust padding as needed */
-  border-radius: 10px; /* Half of the height for a rounded shape */
-  background-color: #ffffff; /* Example background color */
-  color: #000000; /* Example text color */
+  padding: 2.5px 12px; /* Adjust padding as needed */
+  border-radius: 2em; /* Half of the height for a rounded shape */
+  background-color: #f0f0f0; /* Example background color */
+  color: #000; /* Example text color */
   min-width: 25px;
   margin: 0 2px;
-  font-size: 0.75em;
+  font-size: 0.8em;
   font-style: italic;
+  border: 1px solid #000;
+  text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
+  /* top right shadow */ -1px 1px 0 #fff,
+  /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
 }

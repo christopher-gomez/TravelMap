@@ -1,13 +1,13 @@
 import logo from './logo.svg';
 import './App.css';
 import MapView from './MapView/MapView';
+import CssBaseline from "@mui/material/CssBaseline";
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <MapView />
-      </header>
+      <CssBaseline />
+      <MapView />
     </div>
   );
 }

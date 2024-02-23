@@ -19,12 +19,14 @@ const MenuProps = {
       maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
       width: 250,
       backgroundColor: "white",
+      fontFamily: "'Indie Flower', cursive",
     },
   },
 };
 
 function getStyles(name, personName, theme) {
   return {
+    fontFamily: "'Indie Flower', cursive",
     fontWeight: Array.isArray(personName)
       ? personName.indexOf(name) === -1
         ? theme.typography.fontWeightRegular
@@ -32,6 +34,7 @@ function getStyles(name, personName, theme) {
       : personName === name
       ? theme.typography.fontWeightMedium
       : theme.typography.fontWeightRegular,
+    minHeight: "36px",
   };
 }
 
@@ -42,6 +45,7 @@ export default function MultipleSelectChip({
   label,
   multiple,
   value,
+  disabled,
 }) {
   const theme = useTheme();
   const [personName, setPersonName] = React.useState([]);
@@ -67,33 +71,63 @@ export default function MultipleSelectChip({
 
   return (
     <div>
-      <FormControl sx={{ m: 1, minWidth: 150 }} size="small">
+      <FormControl
+        sx={{ m: 1, minWidth: 150, fontFamily: "'Indie Flower', cursive" }}
+        size="small"
+      >
         <InputLabel
           id="demo-multiple-chip-label"
           sx={{
-            backgroundColor: "rgba(255, 255, 255, 0.5) !important",
-            color: "black !important",
+            backgroundColor: disabled ? "transparent" : "rgba(255, 255, 255, 0.5) !important",
+            color: disabled ? "rgba(0,0,0,.15)" : "black !important",
             padding: "2px",
             borderRadius: "4px",
+            fontFamily: "'Indie Flower', cursive",
           }}
         >
           {label}
         </InputLabel>
         <Select
+          disabled={disabled ?? false}
           autoWidth
           labelId="demo-multiple-chip-label"
           id="demo-multiple-chip"
           multiple={multiple}
           value={value ?? personName}
           onChange={handleChange}
-          sx={{ backgroundColor: "white", color: "black" }}
-          input={<OutlinedInput id="select-multiple-chip" label={label} />}
+          sx={{
+            backgroundColor: "white",
+            color: "black",
+            fontFamily: "'Indie Flower', cursive",
+            "&.Mui-disabled": {
+              backgroundColor: "rgba(0, 0, 0, 0)",
+              borderColor: "rgba(0, 0, 0, .1) !important",
+              outlineColor: "rgba(0, 0, 0, .1) !important",
+            },
+          }}
+          input={
+            <OutlinedInput
+              id="select-multiple-chip"
+              label={label}
+              sx={{ fontFamily: "'Indie Flower', cursive" }}
+            />
+          }
           renderValue={(selected) => (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
               {Array.isArray(selected) ? (
-                selected.map((value) => <Chip key={value} label={value} />)
+                selected.map((value) => (
+                  <Chip
+                    key={value}
+                    label={value}
+                    sx={{ fontFamily: "'Indie Flower', cursive" }}
+                  />
+                ))
               ) : (
-                <Chip key={selected} label={selected} />
+                <Chip
+                  key={selected}
+                  label={selected}
+                  sx={{ fontFamily: "'Indie Flower', cursive" }}
+                />
               )}
             </Box>
           )}
@@ -104,9 +138,23 @@ export default function MultipleSelectChip({
               key={name}
               value={name}
               style={getStyles(name, personName, theme)}
+              sx={{ fontFamily: "'Indie Flower', cursive" }}
             >
-              {multiple && <Checkbox checked={personName.indexOf(name) > -1} />}
-              <ListItemText primary={labels ? labels[i] : name} />
+              {multiple && (
+                <Checkbox
+                  checked={
+                    value
+                      ? Array.isArray(value)
+                        ? value.indexOf(name) > -1
+                        : value === name
+                      : personName.indexOf(name) > -1
+                  }
+                />
+              )}
+              <ListItemText
+                primary={labels ? labels[i] : name}
+                sx={{ fontFamily: "'Indie Flower', cursive" }}
+              />
             </MenuItem>
           ))}
         </Select>

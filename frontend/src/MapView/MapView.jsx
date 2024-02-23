@@ -12,10 +12,18 @@ import { getGoogleMapsApiKey } from "../Api/Maps";
 import CustomOverlayContainerFactory from "./POI/CustomOverlayContainerClass";
 import POILabel from "./POI/POILabel";
 import ICON_KEYS from "./POI/IconMapKeys";
-import POIDetails from "./POI/POIDetails";
-import MultipleSelectChip from "../Util/MultipleSelect";
-import { Accordion, AccordionDetails, AccordionSummary, AccordionActions, Button } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import POIDetailsCard from "./POI/POIDetails";
+import SpeedDial from "../Util/SpeedDial";
+
+import Timeline from "../Util/Timeline";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
+import ForkLeftIcon from "@mui/icons-material/ForkLeft";
+import CancelIcon from "@mui/icons-material/Cancel";
+import AppHeader from "./Header/MapHeader";
+import { FILTER_PROPERTIES, FILTER_TYPE } from "./Header/FilterDialog";
+import SwipeableEdgeDrawer from "../Util/SwipeableEdgeDrawer";
+import AppFooter from "./Footer/AppFooter";
 
 // import {
 //   findLocationLngLat,
@@ -26,6 +34,21 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 // import PlacesData from "./data.json";
 
 const OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL = 100;
+const timeOrder = {
+  "All Day": 0,
+  Morning: 1,
+  Afternoon: 2,
+  Evening: 3,
+  Night: 4,
+};
+
+const timeOverrideKeys = {
+  0: "All Day",
+  1: "Morning",
+  2: "Afternoon",
+  3: "Evening",
+  4: "Night",
+};
 
 const MapView = () => {
   const defaultProps = {
@@ -158,6 +181,18 @@ const MapView = () => {
                   end: item.properties.Date.date.end,
                 }
               : null,
+            time: item.properties.Time.select
+              ? item.properties.Time.select.name
+              : null,
+            id: item.id,
+            timelineOverride:
+              item.properties.mapTimelineOverride.rich_text.length > 0
+                ? JSON.parse(
+                    // JSON.stringify(
+                    item.properties.mapTimelineOverride.rich_text[0].plain_text
+                    // )
+                  )
+                : null,
           });
         });
       } catch (error) {
@@ -186,6 +221,18 @@ const MapView = () => {
                 end: item.properties.Date.date.end,
               }
             : null,
+          time: item.properties.Time.select
+            ? item.properties.Time.select.name
+            : null,
+          id: item.id,
+          timelineOverride:
+            item.properties.mapTimelineOverride.rich_text.length > 0
+              ? JSON.parse(
+                  // JSON.stringify(
+                  item.properties.mapTimelineOverride.rich_text[0].plain_text
+                  // )
+                )
+              : null,
         });
       }
     });
@@ -242,6 +289,10 @@ const MapView = () => {
       marker["tags"] = item.tags;
       marker["date"] = item.date;
       marker["day"] = calculateDay(item.date);
+      marker["time"] = item.time;
+      marker["id"] = item.id;
+      marker["timelineOverride"] = item.timelineOverride;
+
       markers.push(marker);
 
       const overlay = createOverlay({
@@ -320,20 +371,39 @@ const MapView = () => {
     mapsRef.current = maps;
   }, [maps]);
 
-  const transRef = React.useRef(null);
+  // const transRef = React.useRef(null);
+  const [directionsService, setDirectionsService] = useState(null);
+  const [directionsRenderer, setDirectionsRenderer] = useState(null);
 
-  useEffect(() => {
-    if (!map || !maps) return;
+  const [preferredTravelMode, setPreferredTravelMode] = useState(null);
 
-    // transRef.current =
-    // new maps.TransitLayer();
-    // transRef.current.setMap(map);
-    // new maps.BicyclingLayer().setMap(map);
-    // new maps.TrafficLayer().setMap(map);
+  function calculateRoute(start, end, waypoints) {
+    if (!directionsService || !directionsRenderer) return;
 
-    // console.log(maps.MapTypeId)
-    // map.setMapTypeId(maps.MapTypeId.ROADMAP);
-  }, [map, maps]);
+    const mileThreshold = 1; // 1 mile
+    const distanceInMeters =
+      mapsRef.current.geometry.spherical.computeDistanceBetween(start, end);
+    const distanceInMiles = distanceInMeters * 0.000621371;
+
+    const travelMode =
+      preferredTravelMode ?? distanceInMiles <= mileThreshold
+        ? "WALKING"
+        : "DRIVING";
+
+    const request = {
+      origin: start,
+      destination: end,
+      travelMode,
+      waypoints: waypoints,
+    };
+
+    directionsService.route(request, (result, status) => {
+      if (status === "OK") {
+        directionsRenderer.setMap(mapRef.current);
+        directionsRenderer.setDirections(result);
+      }
+    });
+  }
 
   // useEffect(() => {
   //   (async () => {
@@ -451,7 +521,7 @@ const MapView = () => {
     setAllTags(tags);
 
     days.sort((a, b) => a - b);
-    days.unshift("All");
+    // days.unshift("All");
     days.push("General");
 
     setMarkerDays(days);
@@ -459,54 +529,200 @@ const MapView = () => {
   }, [markers]);
 
   const [currentDayFilter, setCurrentDayFilter] = useState(null);
-
   const [allTags, setAllTags] = useState([]);
-  const [includeTagsFilter, setIncludeTagsFilter] = useState([]);
-  const [excludeTagsFilter, setExcludeTagsFilter] = useState([]);
+  // const [includeTagsFilter, setIncludeTagsFilter] = useState([]);
+  // const [excludeTagsFilter, setExcludeTagsFilter] = useState([]);
+
+  const [markerPropertyFilters, setMarkerPropertyFilters] = useState([]);
+
+  const [markerInfoFilter, setMarkerInfoFilter] = useState(null);
 
   useEffect(() => {
-    setCurrentDayFilter("All");
+    console.log("Marker Property Filters");
+    console.log(markerPropertyFilters);
+    if (
+      markerPropertyFilters.length === 0 ||
+      markerPropertyFilters.filter((f) => f.property === FILTER_PROPERTIES.day)
+        .length === 0 ||
+      markerPropertyFilters
+        .filter((f) => f.property === FILTER_PROPERTIES.day)
+        .find((f) => f.value.includes("All"))
+    ) {
+      setCurrentDayFilter("All");
+    } else if (
+      markerPropertyFilters.filter(
+        (f) =>
+          f.property === FILTER_PROPERTIES.day && //f.type === FILTER_TYPE.MATCH ||
+          f.type === FILTER_TYPE.INCLUDE
+      ).length === 1 &&
+      markerPropertyFilters.filter(
+        (f) =>
+          f.property === FILTER_PROPERTIES.day && //f.type === FILTER_TYPE.MATCH ||
+          f.type === FILTER_TYPE.INCLUDE
+      )[0].value.length === 1
+    ) {
+      setCurrentDayFilter(
+        markerPropertyFilters.filter(
+          (f) =>
+            f.property === FILTER_PROPERTIES.day && //f.type === FILTER_TYPE.MATCH ||
+            f.type === FILTER_TYPE.INCLUDE
+        )[0].value[0]
+      );
+    } else {
+      setCurrentDayFilter(null);
+    }
+  }, [markerPropertyFilters]);
+
+  useEffect(() => {
+    console.log("Current Day Filter");
+    console.log(currentDayFilter);
+  }, [currentDayFilter]);
+
+  useEffect(() => {
+    // setCurrentDayFilter("All");
+    setMarkerPropertyFilters([]);
   }, [markerDays]);
 
   useEffect(() => {
-    if (!markers || !maps) return;
+    if (!markers || !maps || !map) return;
 
-    console.log("Current Day Filter: " + currentDayFilter);
-
+    setRouting(false);
+    setRenderedMarkers([]);
     renderMarkers();
-    // renderOverlays();
-  }, [currentDayFilter]);
+  }, [
+    // currentDayFilter,
+    // includeTagsFilter,
+    // excludeTagsFilter,
+    markerPropertyFilters,
+    markerInfoFilter,
+    markers,
+  ]);
 
   const renderMarkers = () => {
     if (!map || !maps || !markers) return;
+
+    function arraysContainSameValues(arr1, arr2) {
+      // Check if the arrays are the same length
+      if (arr1.length !== arr2.length) {
+        return false;
+      }
+
+      // Sort both arrays
+      const sortedArr1 = [...arr1].sort();
+      const sortedArr2 = [...arr2].sort();
+
+      // Compare sorted arrays
+      for (let i = 0; i < sortedArr1.length; i++) {
+        if (sortedArr1[i] !== sortedArr2[i]) {
+          return false;
+        }
+      }
+
+      return true;
+    }
 
     markers.forEach((marker, index) => {
       marker.setVisible(false);
       marker.setMap(null);
     });
 
-    // Filter by day first
-    let _markers = markers.filter((m) => {
-      if (currentDayFilter === "All") return true;
-      if (currentDayFilter === "General" && !m.day) return true;
-      if (Array.isArray(m.day) && m.day.includes(currentDayFilter)) return true;
-      if (m.day === currentDayFilter) return true;
-      return false;
-    });
+    let dayFilters = markerPropertyFilters.filter(
+      (f) => f.property === FILTER_PROPERTIES.day
+    );
 
-    // Filter for target tags
-    if (includeTagsFilter.length > 0) {
-      _markers = _markers.filter((m) => {
-        if (!m.tags) return false;
-        return includeTagsFilter.some((tag) => m.tags.includes(tag));
+    if (dayFilters.length === 0) {
+      dayFilters.push({
+        property: FILTER_PROPERTIES.day,
+        type: FILTER_TYPE.MATCH,
+        value: ["All"],
       });
     }
 
-    // Filter out excluded tags
-    if (excludeTagsFilter.length > 0) {
+    let _markers = [...markers];
+
+    // Filter by day first
+    for (const filter of dayFilters) {
       _markers = _markers.filter((m) => {
-        if (!m.tags) return true;
-        return !excludeTagsFilter.some((tag) => m.tags.includes(tag));
+        if (filter.value.length === 1 && filter.value[0] === "All") {
+          switch (filter.type) {
+            case FILTER_TYPE.MATCH:
+            case FILTER_TYPE.INCLUDE:
+              return true;
+            case FILTER_TYPE.EXCLUDE:
+              return false;
+          }
+        }
+        if (filter.value.includes("General") && !m.day) {
+          switch (filter.type) {
+            case FILTER_TYPE.MATCH:
+            case FILTER_TYPE.INCLUDE:
+              return true;
+            case FILTER_TYPE.EXCLUDE:
+              return false;
+          }
+        }
+
+        if (Array.isArray(m.day)) {
+          switch (filter.type) {
+            case FILTER_TYPE.MATCH:
+              return arraysContainSameValues(m.day, filter.value);
+            case FILTER_TYPE.INCLUDE:
+              return m.day.some((day) => filter.value.includes(day));
+            case FILTER_TYPE.EXCLUDE:
+              return !m.day.some((day) => filter.value.includes(day));
+          }
+        } else if (filter.value.includes(m.day)) {
+          switch (filter.type) {
+            case FILTER_TYPE.MATCH:
+              return filter.value.length === 1;
+            case FILTER_TYPE.INCLUDE:
+              return true;
+            case FILTER_TYPE.EXCLUDE:
+              return false;
+          }
+        }
+        return false;
+      });
+    }
+
+    let tagFilters = markerPropertyFilters.filter(
+      (f) => f.property === FILTER_PROPERTIES.tags
+    );
+
+    for (const filter of tagFilters) {
+      _markers = _markers.filter((m) => {
+        if (!m.tags) return false;
+        switch (filter.type) {
+          case FILTER_TYPE.MATCH:
+            return arraysContainSameValues(m.tags, filter.value);
+          case FILTER_TYPE.INCLUDE:
+            return filter.value.some((tag) => m.tags.includes(tag));
+          case FILTER_TYPE.EXCLUDE:
+            return !filter.value.some((tag) => m.tags.includes(tag));
+        }
+      });
+    }
+
+    // // Filter for target tags
+    // if (includeTagsFilter.length > 0) {
+    //   _markers = _markers.filter((m) => {
+    //     if (!m.tags) return false;
+    //     return includeTagsFilter.some((tag) => m.tags.includes(tag));
+    //   });
+    // }
+
+    // // Filter out excluded tags
+    // if (excludeTagsFilter.length > 0) {
+    //   _markers = _markers.filter((m) => {
+    //     if (!m.tags) return true;
+    //     return !excludeTagsFilter.some((tag) => m.tags.includes(tag));
+    //   });
+    // }
+
+    // Filter for target info
+    if (markerInfoFilter) {
+      _markers = _markers.filter((m) => {
+        return m.info.toLowerCase().includes(markerInfoFilter.toLowerCase());
       });
     }
 
@@ -524,14 +740,92 @@ const MapView = () => {
       markerClusterRef.current.clearMarkers();
       markerClusterRef.current.addMarkers(_markers);
     }
+
+    setRenderedMarkers(_markers);
+
+    if (_markers.length > 0) {
+      var bounds = new maps.LatLngBounds();
+      //extend the bounds to include each marker's position
+      for (const marker of _markers) bounds.extend(marker.position);
+
+      map.fitBounds(
+        bounds,
+        dayFilters.length === 1 && dayFilters[0].value.includes("All") ? 0 : 300
+      );
+    }
   };
 
-  useEffect(() => {
-    if (!map || !maps || !markers) return;
+  const [renderedMarkers, setRenderedMarkers] = useState([]);
+  const [timelineActivities, setTimelineActivities] = useState([]);
 
-    renderMarkers();
-    // renderOverlays();
-  }, [includeTagsFilter, excludeTagsFilter]);
+  useEffect(() => {
+    if (currentDayFilter === null) return;
+
+    console.log("setting timeline activities");
+
+    const activities = renderedMarkers
+      .reduce((activities, m) => {
+        const { id, info, time, timelineOverride } = m;
+        // Check if there's an override for the current day filter
+        if (
+          timelineOverride &&
+          currentDayFilter !== null &&
+          timelineOverride[currentDayFilter] !== undefined
+        ) {
+          if (timelineOverride[currentDayFilter] === null) {
+            // If override is null for the current day, use the marker's time
+            activities.push({
+              id,
+              label: info,
+              time,
+              day: currentDayFilter,
+              position: m.position,
+              marker: m,
+            });
+          } else {
+            // Use the override for the current day
+            activities.push({
+              id,
+              label: info,
+              time: timeOverrideKeys[timelineOverride[currentDayFilter]],
+              day: currentDayFilter,
+              position: m.position,
+              marker: m,
+            });
+          }
+        } else if (timelineOverride && timelineOverride.misc) {
+          // Check for miscellaneous override
+          const miscOverride = timelineOverride.misc;
+          if (Array.isArray(miscOverride)) {
+            // Use the misc override if the current day filter is not found
+            miscOverride.forEach((override, index) => {
+              activities.push({
+                id,
+                label: info,
+                time: timeOverrideKeys[override],
+                day: `misc-${index}`,
+                position: m.position,
+                marker: m,
+              });
+            });
+          }
+        } else if (!activities.some((activity) => activity.id === id) && time) {
+          // If there's no override or miscellaneous override, use the marker's time
+          activities.push({
+            id,
+            label: info,
+            time,
+            day: currentDayFilter,
+            position: m.position,
+            marker: m,
+          });
+        }
+        return activities;
+      }, [])
+      .sort((a, b) => timeOrder[a.time] - timeOrder[b.time])
+      .map((activity, i) => ({ ...activity, index: i }));
+    setTimelineActivities(activities);
+  }, [renderedMarkers]);
 
   useEffect(() => {
     overlaysRef.current = overlays;
@@ -540,7 +834,6 @@ const MapView = () => {
   useEffect(() => {
     if (!currentZoom) return;
 
-    const prevZoom = currentZoomRef.current;
     currentZoomRef.current = currentZoom;
 
     renderOverlays();
@@ -549,7 +842,6 @@ const MapView = () => {
   const zoomingRef = React.useRef(false);
 
   const onZoom = () => {
-    // console.log("on Zoom");
     zoomingRef.current = true;
     const prevZoom = currentZoomRef.current;
     const curZoom = mapRef.current.getZoom();
@@ -563,42 +855,34 @@ const MapView = () => {
 
     mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
       zoomingRef.current = false;
-
-      // if (
-      //   markerHoveredRef.current &&
-      //   (prevZoom > currentZoomRef.current ||
-      //     currentZoomRef.current >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL)
-      // ) {
-      //   renderMarkers();
-      // }
-
-      // if (prevZoom > currentZoomRef.current) renderOverlays();
-
       renderOverlays();
     });
   };
 
   const setZoomListener = useRef(false);
   useEffect(() => {
-    if (!map || !maps || setZoomListener.current) return;
+    if (!map || !maps) return;
 
-    setZoomListener.current = true;
-    // maps.event.clearListeners(map, "zoom_changed");
-    map.addListener("zoom_changed", onZoom);
+    if (!directionsService || !directionsRenderer) {
+      const _directionsService = new maps.DirectionsService();
+      const _directionsRenderer = new maps.DirectionsRenderer({
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: "#4169E1",
+          strokeOpacity: 1,
+          strokeWeight: 8,
+        },
+      });
+      setDirectionsService(_directionsService);
+      setDirectionsRenderer(_directionsRenderer);
+    }
+
+    if (!setZoomListener.current) {
+      map.addListener("zoom_changed", onZoom);
+      setZoomListener.current = true;
+    }
   }, [map, maps]);
 
-  // useEffect(() => {
-  //   if (!map || !markers || !overlays || !markerCluster) return;
-
-  //   mapRef.current = map;
-  //   markersRef.current = markers;
-  //   overlaysRef.current = overlays;
-  //   markerClusterRef.current = markerCluster;
-
-  //   // renderOverlays();
-  // }, [map, markers, overlays, markerCluster, ]);
-
-  // const focusedMarkerExitOverlayRef = React.useRef(null);
   const focusedMarkerRef = React.useRef(null);
 
   function toggleClusterOverlay(active, cluster) {
@@ -630,15 +914,6 @@ const MapView = () => {
       return;
 
     const zoom = mapRef.current.getZoom();
-
-    if (!focusedMarkerRef.current) {
-      // if (focusedMarkerExitOverlayRef.current) {
-      //   focusedMarkerExitOverlayRef.current.setMap(null);
-      //   focusedMarkerExitOverlayRef.current = null;
-      // }
-    }
-
-    // markersRef.current.forEach((m) => m.setVisible(true));
 
     // Find all markers that are in clusters
     const clusteredMarkers = [];
@@ -686,31 +961,21 @@ const MapView = () => {
       }
     }
 
-    // console.log("orphanedClusterOverlays");
-    // console.log(orphanedClusterOverlays);
-
     // Hide overlays for clustered markers, show for others
     for (const marker of markersRef.current) {
-      if (
-        !focusedMarkerRef.current &&
-        zoom < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL
-      ) {
+      if (!focusedMarkerRef.current) {
         if (
           !focusedClusterRef.current ||
           focusedClusterRef.current.markers.indexOf(marker) === -1
         )
           toggleOverlay(false, marker);
-      } else if (
-        !focusedMarkerRef.current &&
-        clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1
-      ) {
-        toggleOverlay(true, marker);
+      } else if (clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1) {
+        toggleOverlay(
+          marker["hovered"] || marker === focusedMarkerRef.current,
+          marker
+        );
       }
     }
-
-    // if (markersRef.current.every((m) => !m.visible)) {
-    //   markersRef.current.forEach((m) => m.setVisible(true));
-    // }
 
     markersRef.current.forEach((m) => {
       if (m.hovered) {
@@ -726,22 +991,17 @@ const MapView = () => {
   }
 
   function toggleOverlay(active, marker) {
-    // console.log("toggleOverlay active: " + active + " marker: " + marker.info);
     const overlayToShow = overlaysRef.current[getMarkerOverlayKey(marker)];
 
     if (overlayToShow === undefined || (active && !mapRef.current)) return;
 
     overlayToShow.changePane(
-      active && marker["hovered"] ? "floatPane" : "overlayLayer"
+      active && (marker["hovered"] || marker === focusedMarkerRef.current)
+        ? "floatPane"
+        : "overlayLayer"
     );
 
     overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
-
-    // if (focusedMarkerExitOverlayRef.current) {
-    //   focusedMarkerExitOverlayRef.current.setMap(
-    //     active ? mapRef.current : null
-    //   );
-    // }
   }
 
   const markerHoveredRef = React.useRef(false);
@@ -755,125 +1015,23 @@ const MapView = () => {
 
     if (zoomingRef.current) return;
 
-    markerHoveredOverlayRef.current =
-      overlaysRef.current[getMarkerOverlayKey(marker)];
-
-    markersRef.current.forEach((m, i) => {
-      if (i !== index) {
-        // if (currentZoomRef.current < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
-        //   m.setVisible(false);
-        // }
-
-        if (
-          !focusedClusterRef.current ||
-          focusedClusterRef.current.markers.indexOf(m) === -1
-        )
-          toggleOverlay(false, m);
-      }
-    });
-
-    markerClusterRef.current.clusters.forEach((c) => {
-      if (c.markers.length > 1) toggleClusterOverlay(false, c);
-    });
-
-    toggleOverlay(true, marker);
+    renderOverlays();
   };
 
   const onMarkerMouseOut = (marker, index) => {
-    // console.log("marker mouse out: " + marker.info);
     marker["hovered"] = false;
     markerHoveredRef.current = false;
 
     if (zoomingRef.current) return;
 
-    if (
-      focusedMarkerRef.current === marker &&
-      currentZoomRef.current < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL
-    ) {
-      toggleOverlay(true, marker);
-    } else {
-      // markersRef.current.forEach((m, i) => m.setVisible(true));
-      // markerClusterRef.current.clusters.forEach((c) => {
-      //   c.marker.setVisible(true);
-      // });
-      // renderMarkers();
-    }
-
-    if (currentZoomRef.current >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
-      const clusteredMarkers = markerClusterRef.current.clusters
-        .filter((c) => c.markers.length > 1)
-        .map((c) => {
-          return c.markers.map((marker) => {
-            // code for each marker in c
-            return marker;
-          });
-        })
-        .flat();
-
-      // console.log(clusteredMarkers);
-
-      markersRef.current.forEach((m, i) => {
-        if (m.visible && clusteredMarkers.indexOf(m) === -1)
-          toggleOverlay(true, m);
-      });
-      markerClusterRef.current.clusters.forEach((c) => {
-        if (c.markers.length > 1) {
-          toggleClusterOverlay(true, c);
-        }
-      });
-      // setFocusedMarker(null);
-      // focusedMarkerRef.current = null;
-      return;
-    }
-
-    // if (focusedMarkerRef.current === marker) {
-    //   setFocusedMarker(null);
-    //   return;
-    // }
-
-    if (!focusedMarkerRef.current || focusedMarkerRef.current !== marker) {
-      // if (focusedMarkerExitOverlayRef.current) {
-      //   focusedMarkerExitOverlayRef.current.setMap(null);
-      //   focusedMarkerExitOverlayRef.current = null;
-      // }
-
-      if (
-        !focusedClusterRef.current ||
-        focusedClusterRef.current.markers.indexOf(marker) === -1
-      )
-        toggleOverlay(false, marker);
-      else if (focusedClusterRef.current.markers.indexOf(marker) !== -1)
-        toggleOverlay(true, marker);
-    }
+    renderOverlays();
   };
 
   const [focusedMarker, setFocusedMarker] = useState(null);
-  // const focusedMarkerInfoOverlayRef = React.useRef(null);
 
   useEffect(() => {
-    // if (focusedMarkerExitOverlayRef.current) {
-    //   focusedMarkerExitOverlayRef.current.setMap(null);
-    //   focusedMarkerExitOverlayRef.current = null;
-    // }
-
-    if (focusedMarker) {
-      // focusedMarkerExitOverlayRef.current = createOverlay({
-      //   marker: focusedMarker,
-      //   map: mapRef.current,
-      //   title: "X",
-      //   offsetY: -75,
-      //   offsetX: 50,
-      //   type: "icon",
-      //   onClick: () => {
-      //     setFocusedMarker(null);
-      //     if (mapRef.current) mapRef.current.setZoom(13);
-      //   },
-      // });
-    } else if (focusedMarkerRef.current) {
-      toggleOverlay(false, focusedMarkerRef.current);
-    }
-
     focusedMarkerRef.current = focusedMarker;
+    renderOverlays();
   }, [focusedMarker]);
 
   const onMarkerClick = (marker) => {
@@ -887,17 +1045,11 @@ const MapView = () => {
 
     // Set the map's center to the marker's position
     mapRef.current.setCenter(position);
-
-    mapRef.current.setZoom(20);
+    if (currentZoomRef.current < 15) mapRef.current.setZoom(15);
   };
 
   useEffect(() => {
-    if (
-      markers.length == 0 ||
-      Object.entries(overlays).length == 0 ||
-      maps === undefined
-    )
-      return;
+    if (markers.length == 0 || maps === undefined) return;
 
     markers.forEach((marker, index) => {
       maps.event.clearListeners(marker, "mouseover");
@@ -911,46 +1063,7 @@ const MapView = () => {
       maps.event.clearListeners(marker, "click");
       marker.addListener("click", () => onMarkerClick(marker));
     });
-  }, [markers, overlays, maps]);
-
-  function populateInfoWindow(
-    div,
-    headerData,
-    title,
-    contentBodyData,
-    otherData
-  ) {
-    // Clear the current content
-    div.innerHTML = "";
-
-    // Create the header div and set its content
-    let headerDiv = document.createElement("div");
-    headerDiv.id = "header";
-    headerDiv.textContent = headerData;
-
-    // Create the title element
-    let titleElement = document.createElement("h1");
-    titleElement.textContent = title;
-
-    // Create the content body div
-    let contentDiv = document.createElement("div");
-    contentDiv.id = "LocationContent";
-    contentDiv.textContent = contentBodyData;
-
-    // Create the other things div
-    let otherDiv = document.createElement("div");
-    otherDiv.id = "otherThings";
-    otherDiv.textContent = otherData;
-
-    // Append all our elements to the main div
-    div.appendChild(headerDiv);
-    div.appendChild(titleElement);
-    div.appendChild(contentDiv);
-    div.appendChild(otherDiv);
-
-    // Now you can add any CSS classes to div for animation
-    div.classList.add("animate-info-window");
-  }
+  }, [markers, maps]);
 
   function createOverlay({
     map,
@@ -971,8 +1084,6 @@ const MapView = () => {
         : pos;
 
     const _title = title ?? marker.title;
-
-    // const MyComponent = (props) => <div>{props.text}</div>;
 
     const overlay = new CustomOverlayFactory.current.class(
       null,
@@ -1010,6 +1121,8 @@ const MapView = () => {
 
   useEffect(() => {
     focusedClusterRef.current = focusedCluster;
+
+    renderOverlays();
   }, [focusedCluster]);
 
   useEffect(() => {
@@ -1020,17 +1133,11 @@ const MapView = () => {
     }
 
     const markerCluster = new MarkerClusterer({
-      markers /*: markers.filter(m => !m['isImportant'])*/,
+      markers,
       map,
       renderer: {
         render: (ok, stats, map) => {
           const { count, markers, _position } = ok;
-          // console.log("rendering cluster");
-
-          // Check if any markers are marked as important
-          // const hasImportantMarker = markers.some(
-          //   (marker) => marker["isImportant"]
-          // );
 
           // Choose the icon based on whether the cluster contains an important marker
 
@@ -1042,26 +1149,10 @@ const MapView = () => {
               return curr.priority >= prev.priority ? curr : prev;
             });
 
-          // const important = markers.find((m) => m["isImportant"]);
-
-          // if (important)
-          //   console.log(
-          //     "Important marker: " +
-          //       important.info +
-          //       " priority: " +
-          //       important.priority
-          //   );
-
           const m = createMarker({
             maps,
             map,
             position: { lat: _position.lat(), lng: _position.lng() },
-            //  important
-            // ? {
-            //     lat: important.position.lat(),
-            //     lng: important.position.lng(),
-            //   }
-            // : { lat: _position.lat(), lng: _position.lng() },
             icon: important
               ? {
                   url: ICON_KEYS[important.iconKey].url,
@@ -1073,7 +1164,6 @@ const MapView = () => {
               : null,
           });
 
-          // clusterMarkerPins.current[key] = m;
           m["info"] = important
             ? important.info + " and " + (count - 1) + " more"
             : count + " markers";
@@ -1086,16 +1176,12 @@ const MapView = () => {
             markersRef.current.forEach((m) => {
               if (markers.indexOf(m) !== -1) return;
 
-              // if (currentZoomRef.current < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL)
-              //   m.setVisible(false);
-
               toggleOverlay(false, m);
             });
 
             if (markerClusterRef.current) {
               markerClusterRef.current.clusters.forEach((c) => {
                 if (c.markers.length > 1) {
-                  // c.marker.setVisible(false);
                   toggleClusterOverlay(false, c);
                 }
               });
@@ -1124,27 +1210,15 @@ const MapView = () => {
 
             markerHoveredRef.current = false;
             markerHoveredOverlayRef.current = null;
-            // renderMarkers();
-            // markersRef.current.forEach((m) => {
-            //   if (!m.visible) m.setVisible(true);
-            // });
-
-            // markerClusterRef.current.clusters.forEach((c) => {
-            //   if (!c.marker.visible) c.marker.setVisible(true);
-            // });
-
             renderOverlays();
           });
 
           m.addListener("click", () => {
-            // console.log("clusterclick");
             setFocusedCluster({ marker: m, markers: markers });
             var bounds = new maps.LatLngBounds();
 
             //extend the bounds to include each marker's position
             for (const marker of markers) bounds.extend(marker.position);
-
-            // if you want to still keep the default behaviour, keep the line below
 
             markers.forEach((m) => {
               toggleOverlay(true, m);
@@ -1225,17 +1299,80 @@ const MapView = () => {
     }
   }, [currentRenderType]);
 
+  const [timelineHidden, setTimelineHidden] = useState(false);
+  const [routing, setRouting] = useState(false);
+  const [routingData, setRoutingData] = useState([]);
+
+  useEffect(() => {
+    if (!routing) {
+      setRoutingData([]);
+    }
+  }, [routing]);
+
+  useEffect(() => {
+    if (!directionsService || !directionsRenderer) return;
+
+    if (routingData.length === 0) {
+      directionsRenderer.setMap(null);
+    } else {
+      if (routingData.length === 2) {
+        const waypoints = timelineActivities
+          .filter((activity, index) => {
+            const minIndex = Math.min(
+              routingData[0].index,
+              routingData[1].index
+            );
+            const maxIndex = Math.max(
+              routingData[0].index,
+              routingData[1].index
+            );
+            return index > minIndex && index < maxIndex;
+          })
+          .map((activity) => ({ location: activity.position }));
+
+        calculateRoute(
+          routingData[0].position,
+          routingData[1].position,
+          waypoints
+        );
+      }
+    }
+  }, [routingData]);
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   if (!fetchedAPIKey) return null;
 
   return (
     <div style={{ height: "100vh", width: "100%", position: "absolute" }}>
+      <AppHeader
+        markers={renderedMarkers}
+        markerDays={markerDays}
+        allTags={allTags}
+        focusedMarker={focusedMarker}
+        focusedCluster={focusedCluster}
+        onSearch={(search) => {
+          if (search === "") {
+            setMarkerInfoFilter(null);
+          } else {
+            setMarkerInfoFilter(search);
+          }
+        }}
+        onFilterEdit={(filters) => {
+          setMarkerPropertyFilters(filters);
+        }}
+        onFiltersOpen={(open) => {
+          setTimelineHidden(open);
+          setFiltersOpen(open);
+        }}
+      />
       <GoogleMapReact
         options={createOptions}
         bootstrapURLKeys={{
           key: fetchedAPIKey,
           language: "en",
           region: "US",
-          libraries: ["places"],
+          libraries: ["places", "routes", "geometry"],
         }}
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
@@ -1243,168 +1380,168 @@ const MapView = () => {
         onGoogleApiLoaded={onGoogleApiLoaded}
         // layerTypes={["TransitLayer"]}
       />
-      <div>
-        <div
-          style={{
-            position: "fixed",
-            top:
-              focusedMarker === null && focusedCluster === null ? 0 : "-100%",
-            left: 0,
-            display: "flex",
-            flexFlow: "column",
-            alignItems: "start",
-            backgroundColor: "rgb(0, 0, 0, .5)",
-            backgroundFilter: "blur(10px)",
-            padding: "0 1.5em .5em 1em",
-            zIndex: 99999,
-            borderRadius: "0 0 25px 0",
-            transition: "top 1s ease",
-          }}
-        >
-          <h2 style={{ margin: "15px 0 0" }}>Itinerary Map</h2>
-
-          {(markerDays.length > 0 || allTags.length > 0) && (
-            <Accordion
-              sx={{
-                marginBottom: "1em !important",
-                maxWidth: 250,
-                background: "transparent",
-                color: "white",
-                border: "none",
-                outline: "none",
-                boxShadow: "none",
+      {/* Timeline */}
+      {currentDayFilter !== null &&
+        currentDayFilter !== "All" &&
+        currentDayFilter !== "General" &&
+        timelineActivities.length > 0 && (
+          <>
+            <div
+              style={{
+                position: "fixed",
+                bottom: "50%",
+                transform: !timelineHidden
+                  ? "translateX(0) translateY(50%)"
+                  : "translateX(calc(100% + 20px)) translateY(50%)",
+                right: 0,
+                zIndex: 99999,
+                background: "rgba(0,0,0,.75)",
+                borderRadius: "1em 0 0 1em",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+                transition: "transform 0.3s ease-in-out",
               }}
             >
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon sx={{ color: "white" }} />}
-                aria-controls="panel1-content"
-                id="panel1-header"
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: filtersOpen ? 0 : timelineHidden ? -55 : 0,
+                  padding: "10px",
+                  cursor: filtersOpen ? "default" : "pointer",
+                  borderRadius: "1em",
+                  backgroundColor: timelineHidden
+                    ? "rgba(0,0,0,.75)"
+                    : "rgba(0,0,0,0)",
+                  display: "flex",
+                  alignContent: "center",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  justifyItems: "center",
+                  transition: "all .7s ease",
+                }}
+                onClick={() => {
+                  if (filtersOpen) return;
+
+                  setTimelineHidden(!timelineHidden);
+                }}
               >
-                Filters
-              </AccordionSummary>
-              <AccordionDetails  sx={{padding: 0}}>
-                {markerDays.length > 0 && (
-                  <MultipleSelectChip
-                    options={markerDays}
-                    labels={markerDays.map((day, index) =>
-                      day !== "All" && day !== "General" ? "Day " + day : day
-                    )}
-                    label={"Day Filter"}
-                    onChange={(val) => {
-                      setCurrentDayFilter(
-                        val !== "All" && val !== "General"
-                          ? Number.parseInt(val)
-                          : val
-                      );
-                    }}
-                    value={currentDayFilter}
-                  />
+                {timelineHidden ? (
+                  <ArrowBackIosIcon />
+                ) : (
+                  <ArrowForwardIosIcon />
                 )}
-
-                {allTags.length > 0 && (
-                  <MultipleSelectChip
-                    options={allTags.filter(
-                      (tag) => !excludeTagsFilter.includes(tag)
-                    )}
-                    label={"Filter For"}
-                    multiple={true}
-                    onChange={(val) => {
-                      setIncludeTagsFilter(val);
-                    }}
-                  />
-                )}
-
-                {allTags.length > 0 && (
-                  <MultipleSelectChip
-                    multiple={true}
-                    options={allTags.filter(
-                      (tag) => !includeTagsFilter.includes(tag)
-                    )}
-                    label={"Filter Out"}
-                    onChange={(val) => {
-                      setExcludeTagsFilter(val);
-                    }}
-                  />
-                )}
-              </AccordionDetails>
-              {(currentDayFilter !== "All" ||
-                includeTagsFilter.length > 0 ||
-                excludeTagsFilter.length > 0) && (
-                <AccordionActions>
-                  <Button sx={{color: "white"}} size="small">Reset</Button>
-                </AccordionActions>
+              </div>
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  display: "flex",
+                  justifyContent: "center",
+                  justifyItems: "center",
+                  alignContent: "center",
+                  alignItems: "center",
+                  padding: "10px",
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  setRouting(!routing);
+                }}
+              >
+                {routing ? <CancelIcon /> : <ForkLeftIcon />}
+              </div>
+              <h2 style={{ fontFamily: "'Indie Flower', cursive" }}>
+                Day {currentDayFilter}
+              </h2>
+              {routing && (
+                <h3 style={{ fontFamily: "'Indie Flower', cursive" }}>
+                  Routing
+                </h3>
               )}
-            </Accordion>
-          )}
+              <Timeline
+                selectedActivities={routingData
+                  .slice(0, 2)
+                  .map((data) => data.index)}
+                activities={timelineActivities}
+                onActivityClick={(activity) => {
+                  if (routing) {
+                    let routeData = [...routingData];
+                    if (routeData.length >= 2) {
+                      routeData = [];
+                      setRoutingData([]);
+                    }
+                    routeData.push({
+                      index: activity.index,
+                      position: activity.position,
+                    });
+                    setRoutingData(routeData);
+                  } else {
+                    onMarkerClick(activity.marker);
+                  }
+                }}
+              />
+            </div>
+          </>
+        )}
+      {/* <POIDetailsCard
+        active={focusedMarker !== null || focusedCluster !== null}
+        title={
+          focusedCluster === null && focusedMarker === null
+            ? ""
+            : focusedMarker
+            ? focusedMarker.info
+            : focusedCluster.markers.map((m) => m.info)
+        }
+        day={
+          focusedCluster === null && focusedMarker === null
+            ? null
+            : focusedMarker
+            ? focusedMarker.day
+            : null
+        }
+        date={
+          focusedCluster === null && focusedMarker === null
+            ? null
+            : focusedMarker
+            ? focusedMarker.date
+            : null
+        }
+        description={
+          focusedCluster === null && focusedMarker === null
+            ? ""
+            : focusedMarker
+            ? focusedMarker.description
+            : ""
+        }
+        tags={
+          focusedCluster === null && focusedMarker === null
+            ? []
+            : focusedMarker
+            ? focusedMarker.tags
+            : []
+        }
+        onClose={() => {
+          setFocusedMarker(null);
+          setFocusedCluster(null);
 
-          {currentRenderType === "roadmap" && (
-            <button
-              onClick={() => {
-                if (currentMapStyle === "default")
-                  setCurrentMapStyle("transit");
-                else setCurrentMapStyle("default");
-              }}
-            >
-              Toggle Transit
-            </button>
-          )}
-          <button
-            onClick={() => {
-              if (currentRenderType === "roadmap")
-                setCurrentRenderType("satellite");
-              else setCurrentRenderType("roadmap");
-            }}
-          >
-            Toggle Satellite
-          </button>
-          {/* <button>Traffic Layer</button>
-          <p>Zoom: {currentZoom}</p> */}
-        </div>
-        <POIDetails
-          active={focusedMarker !== null || focusedCluster !== null}
-          title={
-            focusedCluster === null && focusedMarker === null
-              ? ""
-              : focusedMarker
-              ? focusedMarker.info
-              : focusedCluster.markers.map((m) => m.info)
-          }
-          day={
-            focusedCluster === null && focusedMarker === null
-              ? null
-              : focusedMarker
-              ? focusedMarker.day
-              : null
-          }
-          date={
-            focusedCluster === null && focusedMarker === null
-              ? null
-              : focusedMarker
-              ? focusedMarker.date
-              : null
-          }
-          description={
-            focusedCluster === null && focusedMarker === null
-              ? ""
-              : focusedMarker
-              ? focusedMarker.description
-              : ""
-          }
-          tags={
-            focusedCluster === null && focusedMarker === null
-              ? []
-              : focusedMarker
-              ? focusedMarker.tags
-              : []
-          }
-          onClose={() => {
-            setFocusedMarker(null);
-            setFocusedCluster(null);
+          if (mapRef.current) mapRef.current.setZoom(13);
+        }}
+      /> */}
+      <AppFooter
+        currentMapStyle={currentMapStyle}
+        currentRenderType={currentRenderType}
+        setCurrentMapStyle={setCurrentMapStyle}
+        setCurrentRenderType={setCurrentRenderType}
+        focusedCluster={focusedCluster}
+        focusedMarker={focusedMarker}
+        onDrawerClose={() => {
+          setFocusedMarker(null);
+          setFocusedCluster(null);
 
-            if (mapRef.current) mapRef.current.setZoom(13);
-          }}
-        />
-      </div>
+          if (mapRef.current) mapRef.current.setZoom(13);
+        }}
+      />
     </div>
   );
 };
