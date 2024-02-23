@@ -7,7 +7,12 @@
   justify-content: center;
   color: white;
   max-height: 100vh;
-  overflow: visible;
+  max-height: -wekit-fill-available;
+  overflow: hidden;
+}
+
+html {
+  height: -webkit-fill-available;
 }
 
 .App-logo {
