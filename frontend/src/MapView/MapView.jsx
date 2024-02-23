@@ -1344,7 +1344,7 @@ const MapView = () => {
   if (!fetchedAPIKey) return null;
 
   return (
-    <div style={{ height: "100vh", width: "100%", position: "absolute" }}>
+    <React.Fragment>
       <AppHeader
         markers={renderedMarkers}
         markerDays={markerDays}
@@ -1542,7 +1542,7 @@ const MapView = () => {
           if (mapRef.current) mapRef.current.setZoom(13);
         }}
       />
-    </div>
+    </React.Fragment>
   );
 };
 
