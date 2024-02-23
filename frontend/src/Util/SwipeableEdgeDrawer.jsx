@@ -73,7 +73,7 @@ function SwipeableEdgeDrawer({
   const [swipeEndY, setSwipeEndY] = React.useState(null);
 
   const handleTouchStart = (event) => {
-    if(open) return;
+    if (open) return;
     setSwipeStartY(event.touches[0].clientY);
   };
 
@@ -84,7 +84,7 @@ function SwipeableEdgeDrawer({
     const touchY = event.touches[0].clientY;
     const swipeDistance = touchY - swipeStartY;
 
-    console.log("swipeDistance", swipeDistance)
+    console.log("swipeDistance", swipeDistance);
 
     if (swipeDistance < 0) {
       setDrawerYPosition(0); // Prevent drawer from moving up
@@ -93,22 +93,23 @@ function SwipeableEdgeDrawer({
       event.preventDefault(); // Prevent the window from scrolling
       event.stopPropagation();
     }
-    
+
     setDrawerYPosition(swipeDistance); // Set the new drawer Y position
     setSwipeEndY(event.touches[0].clientY);
   };
 
   const handleTouchEnd = (event) => {
-    if(open) return;
+    if (open) return;
     if (swipeStartY && swipeEndY) {
       const swipeDistance = swipeEndY - swipeStartY;
-      if (swipeDistance > 100) { // Adjust the threshold as needed
+      if (swipeDistance > 100) {
+        // Adjust the threshold as needed
         setHeaderHidden(true);
       }
     }
     setSwipeStartY(null);
     setSwipeEndY(null);
-    setDrawerYPosition(0)
+    setDrawerYPosition(0);
   };
 
   return (
@@ -118,7 +119,7 @@ function SwipeableEdgeDrawer({
           ".MuiDrawer-root": { pointerEvents: "none", overflow: "hidden" },
           ".MuiDrawer-root > .MuiPaper-root": {
             pointerEvents: "all",
-            height: `calc(50% - ${drawerBleeding}px)`,
+            height: `calc(60% - ${drawerBleeding}px)`,
             overflow: "visible",
           },
           ".PrivateSwipeArea-root": {

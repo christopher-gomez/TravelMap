@@ -1044,9 +1044,37 @@ const MapView = () => {
     setFocusedMarker(marker);
 
     // Set the map's center to the marker's position
-    mapRef.current.setCenter(position);
-    if (currentZoomRef.current < 15) mapRef.current.setZoom(15);
+    mapRef.current.setZoom(15);
+    offsetCenter(position, 0, 70);
   };
+
+  function offsetCenter(latlng, offsetx, offsety) {
+
+    if(!mapsRef.current || !mapRef.current) return;
+
+    // latlng is the LatLng of the marker's position
+    // offsetx is the horizontal pixel offset
+    // offsety is the vertical pixel offset
+    // map is the Google Maps map instance
+
+    var scale = Math.pow(2, mapRef.current.getZoom());
+    var nw = new mapsRef.current.LatLng(
+      mapRef.current.getBounds().getNorthEast().lat(),
+      mapRef.current.getBounds().getSouthWest().lng()
+    );
+
+    var worldCoordinateCenter = mapRef.current.getProjection().fromLatLngToPoint(latlng);
+    var pixelOffset = new mapsRef.current.Point((offsetx / scale) || 0, (offsety / scale) || 0);
+
+    var worldCoordinateNewCenter = new mapsRef.current.Point(
+        worldCoordinateCenter.x - pixelOffset.x,
+        worldCoordinateCenter.y + pixelOffset.y
+    );
+
+    var newCenter = mapRef.current.getProjection().fromPointToLatLng(worldCoordinateNewCenter);
+
+    mapRef.current.setCenter(newCenter);
+}
 
   useEffect(() => {
     if (markers.length == 0 || maps === undefined) return;
