@@ -158,7 +158,7 @@ function SwipeableEdgeDrawer({
             alignItems: "center",
             boxShadow: "0px -10px 10px 0px rgba(0,0,0,0.15)",
             pointerEvents: "all",
-            transform: headerHidden ? "unset" : `translateY(${drawerYPosition}px)`,
+            transform: headerHidden || open ? "unset" : `translateY(${drawerYPosition}px)`,
           }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
