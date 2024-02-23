@@ -80,7 +80,6 @@ function SwipeableEdgeDrawer({
         hideBackdrop
         disableBackdropTransition
         disableDiscovery
-        disablePortal
         slotProps={{ backdrop: { invisible: true } }}
         ModalProps={{
           keepMounted: true,
