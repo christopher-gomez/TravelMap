@@ -1,14 +1,14 @@
-import logo from './logo.svg';
-import './App.css';
 import MapView from './MapView/MapView';
 import CssBaseline from "@mui/material/CssBaseline";
+import Div100vh from 'react-div-100vh'
+
 
 function App() {
   return (
-    <div className="App">
+    <Div100vh>
       <CssBaseline />
       <MapView />
-    </div>
+    </Div100vh>
   );
 }
 
