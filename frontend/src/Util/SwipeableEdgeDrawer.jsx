@@ -115,7 +115,7 @@ function SwipeableEdgeDrawer({
     <>
       <Global
         styles={{
-          ".MuiDrawer-root": { pointerEvents: "none" },
+          ".MuiDrawer-root": { pointerEvents: "none", overflow: "hidden" },
           ".MuiDrawer-root > .MuiPaper-root": {
             pointerEvents: "all",
             height: `calc(50% - ${drawerBleeding}px)`,
