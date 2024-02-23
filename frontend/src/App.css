@@ -6,6 +6,8 @@
   align-items: center;
   justify-content: center;
   color: white;
+  max-height: 100vh;
+  overflow: visible;
 }
 
 .App-logo {
