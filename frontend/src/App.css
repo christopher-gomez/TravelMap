@@ -1,26 +1,13 @@
 .App {
   text-align: center;
   min-height: 100vh;
-  min-height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: white;
   max-height: 100vh;
-  max-height: -wekit-fill-available;
   overflow: hidden;
-}
-
-body {
-  max-height: 100vh;
-  max-height: -wekit-fill-available;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-}
-
-html {
-  height: -webkit-fill-available;
 }
 
 .App-logo {

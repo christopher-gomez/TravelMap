@@ -138,6 +138,7 @@ function SwipeableEdgeDrawer({
         hideBackdrop
         disableBackdropTransition
         disableDiscovery
+        disablePortal
         slotProps={{ backdrop: { invisible: true } }}
       >
         <StyledBox
