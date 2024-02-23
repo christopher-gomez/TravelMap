@@ -172,6 +172,7 @@ function SwipeableEdgeDrawer({
               sx={{
                 p: 2,
                 pt: 0,
+                pb: 0,
                 backgroundColor: "transparent",
                 userSelect: "none",
               }}
