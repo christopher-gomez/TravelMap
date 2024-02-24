@@ -112,7 +112,6 @@ function SwipeableEdgeDrawer({
 
   const checkScroll = () => {
     if (drawerRef.current) {
-      console.log("check scroll");
       const { scrollTop, scrollHeight, clientHeight } = drawerRef.current;
       // Set state based on scroll position
       setAtBottom(scrollTop + clientHeight >= scrollHeight);
@@ -232,6 +231,7 @@ function SwipeableEdgeDrawer({
           disablePortal
           disableBackdropTransition
           slotProps={{ backdrop: { invisible: true } }}
+          disableDiscovery={headerHidden}
         >
           <StyledBox
             sx={{
@@ -269,6 +269,7 @@ function SwipeableEdgeDrawer({
                 pt: 0,
                 pb: 0,
                 mb: 1,
+                zIndex: 9999999
               }}
             >
               <IconButton
