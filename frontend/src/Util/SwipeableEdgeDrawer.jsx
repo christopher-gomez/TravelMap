@@ -35,6 +35,7 @@ function SwipeableEdgeDrawer({
   HeaderContent,
   DrawerContent,
   onClose,
+  onHeaderHeightChange,
 }) {
   const [drawerBleeding, setDrawerBleeding] = React.useState(null);
 
@@ -68,9 +69,11 @@ function SwipeableEdgeDrawer({
 
   React.useEffect(() => {
     if (drawerBleeding !== null) {
+      if (onHeaderHeightChange) onHeaderHeightChange(drawerBleeding);
       setHeaderHidden(false);
     } else {
-      setHeaderHidden(false);
+      setHeaderHidden(true);
+      if (onHeaderHeightChange) onHeaderHeightChange(0);
     }
   }, [drawerBleeding]);
 
@@ -90,7 +93,10 @@ function SwipeableEdgeDrawer({
   React.useEffect(() => {
     if (drawerRef.current) {
       const drawerHeight = drawerRef.current.clientHeight;
-      onHeightChange(open ? drawerBleeding + drawerHeight : drawerBleeding);
+      onHeightChange(
+        open ? drawerBleeding + drawerHeight : drawerBleeding,
+        open
+      );
     }
   }, [open, onHeightChange]);
 
@@ -269,7 +275,7 @@ function SwipeableEdgeDrawer({
                 pt: 0,
                 pb: 0,
                 mb: 1,
-                zIndex: 9999999
+                zIndex: 9999999,
               }}
             >
               <IconButton

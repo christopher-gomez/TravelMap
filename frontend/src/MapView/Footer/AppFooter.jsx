@@ -13,15 +13,17 @@ export default function AppFooter({
   focusedCluster,
   onDrawerClose,
 }) {
-  const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(
-    isTouchDevice() ? 200 : 0
-  );
+  const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
 
   React.useEffect(() => {
     if (!focusedMarker && !focusedCluster) setDrawerHeight(0);
     else setDrawerHeight(DRAWER_HEADER_HEIGHT);
   }, [focusedCluster, focusedMarker]);
+
+  React.useEffect(() => {
+    setDrawerHeight(DRAWER_HEADER_HEIGHT);
+  }, [DRAWER_HEADER_HEIGHT]);
 
   return (
     <>
@@ -35,15 +37,15 @@ export default function AppFooter({
         focusedCluster={focusedCluster}
       />
       <MapDrawer
-        onHeightChange={setDrawerHeight}
+        onHeightChange={(height, open) => {
+          setDrawerHeight(open ? height + 16 : height);
+        }}
         focusedMarker={focusedMarker}
         focusedCluster={focusedCluster}
-        drawerHeaderHeight={DRAWER_HEADER_HEIGHT}
         onClose={onDrawerClose}
         onHeaderHeightChange={(height) => {
-            console.log("header height changed", height);
-            setDRAWER_HEADER_HEIGHT(height);
-        } }
+          setDRAWER_HEADER_HEIGHT(height);
+        }}
       />
     </>
   );
