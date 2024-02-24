@@ -2,36 +2,51 @@ import * as React from "react";
 import { styled, alpha } from "@mui/material/styles";
 import InputBase from "@mui/material/InputBase";
 import FilterAlt from "@mui/icons-material/FilterAlt";
-import { IconButton, TextField, Typography } from "@mui/material";
+import { IconButton, Popper, TextField, Typography } from "@mui/material";
 import "./SearchBar.css";
 import Autocomplete from "@mui/material/Autocomplete";
 import parse from "autosuggest-highlight/parse";
 import match from "autosuggest-highlight/match";
 import ClearIcon from "@mui/icons-material/Clear";
+import { Global } from "@emotion/react";
 
-const Search = styled("div")(({ theme }) => ({
+const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
   position: "relative",
   borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 1),
-  "&:hover": {
-    backgroundColor: alpha(theme.palette.common.white, 1),
-  },
+  border:
+    "5px solid #ffee00 !important" /* Gold border for a touch of vibrancy */,
+  borderBottom: isFocused
+    ? "0px solid transparent !important"
+    : "5px solid #ffee00 !important" /* Gold border for a touch of vibrancy */,
+  backgroundColor: isFocused
+    ? alpha(theme.palette.common.white, 1)
+    : "rgba(255, 255, 255, 0.85)" /* Slightly transparent */,
+  backdropFilter: "blur(10px)",
   marginLeft: 0,
   width: "100%",
-  borderRadius: "5em",
-  transition: theme.transitions.create("width"),
+  borderRadius: isFocused ? "1em 1em 0 0" : "5em",
+  transition: theme.transitions.create(["width", "margin", "background-color"]),
   [theme.breakpoints.up("sm")]: {
-    marginLeft: theme.spacing(1),
+    marginLeft: theme.spacing(2),
     width: "auto",
-    minWidth: "200px",
-    transition: theme.transitions.create("width"),
+    minWidth: "376px",
+    // transition: theme.transitions.create("width"),
+    "&:hover": {
+      backgroundColor: alpha(theme.palette.common.white, 1),
+    },
   },
-  "& .MuiAutocomplete-root": {
-    transition: theme.transitions.create("width"),
+  [theme.breakpoints.down("md")]: {
+    marginLeft: theme.spacing(1),
+    marginRight: theme.spacing(1),
   },
-  boxShadow: "0px 0px 15px 0px rgba(0, 0, 0, 0.3)",
+  boxShadow: true
+    ? "0px 0px 5px 0px rgba(0, 0, 0, 0.3)"
+    : "0px 10px 5px 0px rgba(0, 0, 0, 0.3)",
   marginTop: "10px",
-  zIndex: 10000000000
+  zIndex: 10000000000,
+  "& > .MuiAutocomplete-root": {
+    backgroundColor: "transparent !important",
+  },
 }));
 
 const SearchIconWrapper = styled("div")(({ theme }) => ({
@@ -46,12 +61,21 @@ const SearchIconWrapper = styled("div")(({ theme }) => ({
   zIndex: 2,
 }));
 
-const StyledInputBase = styled(TextField)(({ theme }) => ({
+const StyledInputBase = styled(TextField)(({ theme, isFocused }) => ({
   color: "black",
+  backgroundColor: "transparent !important",
+  "& .MuiOutlinedInput-root": {
+    border: "none !important",
+    backgroundColor: "transparent !important",
+  },
+  "& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline": {
+    border: "none !important",
+  },
   "& .MuiInputBase-root": {
+    fontFamily: `"Fredoka", sans-serif !important`,
     width: "100% !important",
     padding: "2px 0px !important",
-    borderRadius: "5em",
+    borderRadius: isFocused ? "5em 5em 0 0" : "5em",
     // vertical padding + font size from searchIcon
     paddingLeft: `calc(1em + ${theme.spacing(4)}) !important`,
     transition: theme.transitions.create("width"),
@@ -64,9 +88,53 @@ const StyledInputBase = styled(TextField)(({ theme }) => ({
   },
 }));
 
-export default function SearchBar({ markers, onSearch, onFilterClick }) {
+const CustomPopper = styled(Popper)(({ theme }) => ({
+  zIndex: "1 !important",
+  "& .MuiPaper-root": {
+    zIndex: "1 !important",
+    border:
+      "5px solid #ffee00 !important" /* Gold border for a touch of vibrancy */,
+    borderTop: "0px solid transparent !important",
+    boxShadow: true ? "0px 2px 5px 0px rgba(0, 0, 0, 0.2)" : "none",
+    borderRadius: "0 0 1em 1em",
+    width: "102.5%",
+    position: "absolute",
+    left: "50%", // Position the left edge of the popper at the center of the parent
+    transform: "translateX(-50%)", // Shift the popper to the left by half its width
+    fontFamily: `"Fredoka", sans-serif !important`,
+    fontWeight: 500,
+    "> .MuiAutocomplete-listbox": {
+      "&::-webkit-scrollbar": {
+        "-webkit-appearance": "none",
+        width: "8px",
+      },
+      "&::-webkit-scrollbar-track": {
+        background: "rgba(255, 255, 255, 0.103)" /* Slightly transparent */,
+      },
+
+      "&::-webkit-scrollbar-thumb": {
+        background: "#adadad4e",
+        borderRadius: "6px",
+      },
+
+      "&:hover::-webkit-scrollbar-thumb": {
+        background: "#a7a7a7",
+      },
+    },
+  },
+}));
+
+export default function SearchBar({
+  markers,
+  onSearch,
+  onFilterClick,
+  focusedMarker,
+  focusedCluster,
+}) {
   const hint = React.useRef("");
   const [inputValue, setInputValue] = React.useState("");
+
+  const [inputFocused, setInputFocused] = React.useState(false);
 
   // Create a Set to store unique info values
   const uniqueInfoSet = new Set();
@@ -87,8 +155,12 @@ export default function SearchBar({ markers, onSearch, onFilterClick }) {
     id: i,
   }));
 
+  const [open, setOpen] = React.useState(false);
+
+  const inputRef = React.useRef();
+
   return (
-    <Search>
+    <Search useBoxShadow={!inputFocused && !open} isFocused={inputFocused}>
       <Autocomplete
         id="free-solo-demo"
         onKeyDown={(event) => {
@@ -125,6 +197,7 @@ export default function SearchBar({ markers, onSearch, onFilterClick }) {
             return;
           }
         }}
+        PopperComponent={CustomPopper}
         onBlur={() => {
           hint.current = "";
 
@@ -149,6 +222,15 @@ export default function SearchBar({ markers, onSearch, onFilterClick }) {
             onSearch("");
           }
         }}
+        onOpen={() => {
+          setOpen(true);
+          setInputFocused(true);
+        }}
+        onClose={() => {
+          // setOpen(false);
+        }}
+        componentsProps={{ popper: { open: open } }}
+        open={open}
         inputValue={inputValue}
         filterOptions={(options, state) => {
           const displayOptions = options.filter((option) =>
@@ -171,20 +253,31 @@ export default function SearchBar({ markers, onSearch, onFilterClick }) {
           return (
             <li
               {...props}
+              style={{
+                fontFamily: `"Fredoka", sans-serif !important`,
+              }}
               onClick={() => {
                 hint.current = "";
                 setInputValue(option.label);
                 if (onSearch) {
                   onSearch(option.label);
                 }
+
+                setInputFocused(false);
+                setOpen(false);
               }}
             >
-              <div>
+              <div
+                style={{
+                  fontFamily: `"Fredoka", sans-serif !important`,
+                }}
+              >
                 {parts.map((part, index) => (
                   <span
                     key={index}
                     style={{
                       fontWeight: part.highlight ? 700 : 400,
+                      fontFamily: `"Fredoka", sans-serif !important`,
                     }}
                   >
                     {part.text}
@@ -225,6 +318,17 @@ export default function SearchBar({ markers, onSearch, onFilterClick }) {
             </Typography>
             <StyledInputBase
               {...params}
+              onFocus={() => {
+                console.log("focused");
+                setInputFocused(true);
+                setOpen(true);
+              }}
+              onBlur={() => {
+                console.log("blurred");
+                setInputFocused(false);
+                setOpen(false);
+              }}
+              isFocused={inputFocused}
               placeholder="Search…"
               onChange={(e) => {
                 const newValue = e.target.value;
@@ -246,11 +350,14 @@ export default function SearchBar({ markers, onSearch, onFilterClick }) {
                   hint.current = "";
                 }
               }}
+              ref={inputRef}
               InputProps={{
                 ...params.InputProps,
+
                 endAdornment: inputValue ? (
                   <IconButton
                     onClick={() => {
+                      hint.current = "";
                       setInputValue("");
                       if (onSearch) {
                         onSearch("");
@@ -263,13 +370,12 @@ export default function SearchBar({ markers, onSearch, onFilterClick }) {
                   >
                     <ClearIcon fontSize="inherit" />
                   </IconButton>
-                ) : (
-                  params.InputProps.endAdornment
-                ),
+                ) : null,
               }}
             />
           </>
         )}
+        disablePortal
       />
     </Search>
   );

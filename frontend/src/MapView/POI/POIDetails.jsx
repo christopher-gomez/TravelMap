@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./POIDetails.css";
+import { Box, Skeleton } from "@mui/material";
 
 var options = { weekday: "short", month: "short", day: "numeric" };
 
@@ -67,7 +68,7 @@ export const POIDetails = ({ title, tags, description, day, date }) => {
         </div>
       )}
       {tags && (
-        <div className="poi-tags">
+        <div className="poi-tags" style={{ marginTop: "1em" }}>
           {tags.map((tag, i) => (
             <span className="poi-tag" key={title + "-tag-" + i}>
               {tag}
@@ -75,7 +76,23 @@ export const POIDetails = ({ title, tags, description, day, date }) => {
           ))}
         </div>
       )}
-      {description && <p className="poi-description">{description}</p>}
+      {description && (
+        <p
+          className="poi-description"
+          style={{ marginTop: "1em", marginBottom: 0 }}
+        >
+          {description}
+        </p>
+      )}
+      {!description && (
+        <div
+          className="poi-description"
+          style={{ marginTop: "1em", marginBottom: 0, width: "100%", height: "100%" }}
+        >
+          <Skeleton height={"100%"} width={"100%"} sx={{transform: "none !important"}}/>
+        </div>
+      )}
+
       {/* <div className="poi-extra-info">
         </div> */}
     </div>
@@ -84,11 +101,11 @@ export const POIDetails = ({ title, tags, description, day, date }) => {
 
 export const POIDetailsTitle = ({ title, tags, day, date }) => {
   return (
-    <div className="content">
+    <div className="content mobile">
       {title &&
         (Array.isArray(title) ? (
           title.map((t, i) => (
-            <h1 className="poi-title" key={title + "-title"} >
+            <h1 className="poi-title" key={title + "-title"}>
               {t}
               {i !== title.length - 1 && ","}
             </h1>
@@ -141,9 +158,43 @@ export const POIDetailsTitle = ({ title, tags, day, date }) => {
 };
 
 export const POIDetailsDescription = ({ description }) => {
+  const [atBottom, setAtBottom] = useState(false);
+  const [atTop, setAtTop] = useState(true);
+  const scrollableRef = useRef(null);
+
+  useEffect(() => {
+    const scrollable = scrollableRef.current;
+    // Attach the scroll event listener
+    scrollable.addEventListener("scroll", checkScroll);
+
+    // Remove the event listener on cleanup
+    return () => {
+      scrollable.removeEventListener("scroll", checkScroll);
+    };
+  }, [scrollableRef]);
+
+  const checkScroll = () => {
+    if (scrollableRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollableRef.current;
+      // Set state based on scroll position
+      setAtBottom(scrollTop + clientHeight >= scrollHeight);
+      setAtTop(scrollTop === 0);
+    }
+  };
+
   return (
-    <div className="content">
-      {description && <p className="poi-description">{description}</p>}
+    <div className="content mobile">
+      {description && (
+        <>
+          {/* <div className={`scroll-fade-top ${atTop ? "hidden" : ""}`}></div> */}
+          <p className="poi-description" ref={scrollableRef}>
+            {description}
+          </p>
+          {/* <div
+            className={`scroll-fade-bottom ${atBottom ? "hidden" : ""}`}
+          ></div> */}
+        </>
+      )}
     </div>
   );
 };
@@ -197,7 +248,11 @@ const POIDetailsCard = ({
             ))}
           </div>
         )}
-        {description && <p className="poi-description">{description}</p>}
+        {description && (
+          <p className="poi-description" style={{ marginTop: "1em" }}>
+            {description}
+          </p>
+        )}
         {/* <div className="poi-extra-info">
         </div> */}
       </div>

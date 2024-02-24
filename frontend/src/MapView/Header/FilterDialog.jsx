@@ -92,6 +92,11 @@ export default function FilterDialog({
       onClose={handleClose}
       aria-labelledby="customized-dialog-title"
       open={open}
+      disablePortal
+      componentsProps={{
+        backdrop: { style: { backdropFilter: "blur(3px)" } },
+        root: { style: { zIndex: 999999 } },
+      }}
     >
       <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
         {addingFilter ? "Add Filter" : "Filters"}

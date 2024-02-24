@@ -25,7 +25,6 @@ app.use((req, res, next) => {
     return next();
 });
 
-// app.use(cors(corsOptions));
 app.use(morgan("combined"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));

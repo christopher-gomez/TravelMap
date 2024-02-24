@@ -15,6 +15,7 @@ export default function MapDrawer({
   focusedCluster,
   drawerHeaderHeight,
   onClose,
+  onHeaderHeightChange,
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -61,6 +62,7 @@ export default function MapDrawer({
         ) : null
       }
       onClose={onClose}
+      onHeaderHeightChange={onHeaderHeightChange}
     />
   ) : (
     <StandardDrawer

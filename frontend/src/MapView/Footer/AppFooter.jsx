@@ -13,8 +13,9 @@ export default function AppFooter({
   focusedCluster,
   onDrawerClose,
 }) {
-
-  const DRAWER_HEADER_HEIGHT = isTouchDevice() ? 200 : 0;
+  const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(
+    isTouchDevice() ? 200 : 0
+  );
   const [drawerHeight, setDrawerHeight] = React.useState(0);
 
   React.useEffect(() => {
@@ -39,6 +40,10 @@ export default function AppFooter({
         focusedCluster={focusedCluster}
         drawerHeaderHeight={DRAWER_HEADER_HEIGHT}
         onClose={onDrawerClose}
+        onHeaderHeightChange={(height) => {
+            console.log("header height changed", height);
+            setDRAWER_HEADER_HEIGHT(height);
+        } }
       />
     </>
   );

@@ -538,8 +538,6 @@ const MapView = () => {
   const [markerInfoFilter, setMarkerInfoFilter] = useState(null);
 
   useEffect(() => {
-    console.log("Marker Property Filters");
-    console.log(markerPropertyFilters);
     if (
       markerPropertyFilters.length === 0 ||
       markerPropertyFilters.filter((f) => f.property === FILTER_PROPERTIES.day)
@@ -574,8 +572,8 @@ const MapView = () => {
   }, [markerPropertyFilters]);
 
   useEffect(() => {
-    console.log("Current Day Filter");
-    console.log(currentDayFilter);
+    // console.log("Current Day Filter");
+    // console.log(currentDayFilter);
   }, [currentDayFilter]);
 
   useEffect(() => {
@@ -744,6 +742,13 @@ const MapView = () => {
     setRenderedMarkers(_markers);
 
     if (_markers.length > 0) {
+
+      if (_markers.length === 1) {
+        setFocusedMarker(_markers[0]);
+        offsetCenter(_markers[0].position, 0, 70);
+        return;
+      }
+
       var bounds = new maps.LatLngBounds();
       //extend the bounds to include each marker's position
       for (const marker of _markers) bounds.extend(marker.position);
@@ -1049,8 +1054,7 @@ const MapView = () => {
   };
 
   function offsetCenter(latlng, offsetx, offsety) {
-
-    if(!mapsRef.current || !mapRef.current) return;
+    if (!mapsRef.current || !mapRef.current) return;
 
     // latlng is the LatLng of the marker's position
     // offsetx is the horizontal pixel offset
@@ -1063,18 +1067,25 @@ const MapView = () => {
       mapRef.current.getBounds().getSouthWest().lng()
     );
 
-    var worldCoordinateCenter = mapRef.current.getProjection().fromLatLngToPoint(latlng);
-    var pixelOffset = new mapsRef.current.Point((offsetx / scale) || 0, (offsety / scale) || 0);
-
-    var worldCoordinateNewCenter = new mapsRef.current.Point(
-        worldCoordinateCenter.x - pixelOffset.x,
-        worldCoordinateCenter.y + pixelOffset.y
+    var worldCoordinateCenter = mapRef.current
+      .getProjection()
+      .fromLatLngToPoint(latlng);
+    var pixelOffset = new mapsRef.current.Point(
+      offsetx / scale || 0,
+      offsety / scale || 0
     );
 
-    var newCenter = mapRef.current.getProjection().fromPointToLatLng(worldCoordinateNewCenter);
+    var worldCoordinateNewCenter = new mapsRef.current.Point(
+      worldCoordinateCenter.x - pixelOffset.x,
+      worldCoordinateCenter.y + pixelOffset.y
+    );
+
+    var newCenter = mapRef.current
+      .getProjection()
+      .fromPointToLatLng(worldCoordinateNewCenter);
 
     mapRef.current.setCenter(newCenter);
-}
+  }
 
   useEffect(() => {
     if (markers.length == 0 || maps === undefined) return;
@@ -1380,6 +1391,9 @@ const MapView = () => {
         focusedMarker={focusedMarker}
         focusedCluster={focusedCluster}
         onSearch={(search) => {
+          setFocusedMarker(null);
+          setFocusedCluster(null);
+
           if (search === "") {
             setMarkerInfoFilter(null);
           } else {

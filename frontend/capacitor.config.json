@@ -1,0 +1,8 @@
+{
+  "appId": "com.christophergomez.travelmap",
+  "appName": "travelmap",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https"
+  }
+}

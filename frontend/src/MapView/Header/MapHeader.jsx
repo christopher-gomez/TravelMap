@@ -1,18 +1,5 @@
-import {
-  Accordion,
-  AccordionActions,
-  AccordionDetails,
-  AccordionSummary,
-  AppBar,
-  Button,
-  IconButton,
-  Toolbar,
-  Typography,
-} from "@mui/material";
+import { AppBar, Toolbar } from "@mui/material";
 import * as React from "react";
-import { isTouchDevice } from "../../Util/Utils";
-import MultipleSelectChip from "../../Util/MultipleSelect";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SearchBar from "./SearchBar";
 import FilterDialog from "./FilterDialog";
 
@@ -33,7 +20,7 @@ export default function AppHeader({
       onFiltersOpen(filtersOpen);
     }
   }, [filtersOpen]);
-  
+
   // return isTouchDevice() ? (
   return (
     <>
@@ -42,10 +29,11 @@ export default function AppHeader({
         sx={{
           backgroundColor: "rgba(0, 0, 0, 0)",
           boxShadow: "none",
-          zIndex: 99999
+          zIndex: 99999,
+          padding: "0 !important",
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{padding: "0 !important"}}>
           {/* <Typography
           variant="h4"
           component="div"
@@ -62,6 +50,8 @@ export default function AppHeader({
             markers={markers}
             onSearch={onSearch}
             onFilterClick={(open) => setFiltersOpen(open)}
+            focusedCluster={focusedCluster}
+            focusedMarker={focusedMarker}
           />
         </Toolbar>
       </AppBar>

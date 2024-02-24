@@ -40,15 +40,28 @@
   }
 }
 
-.content {
+.content.mobile{
   display: flex;
   flex-direction: column;
   height: 100%;
   align-items: center;
-  justify-content: center;
+  justify-content: start;
   align-content: center;
   justify-items: center;
   text-align: center;
+  padding: 0;
+}
+
+.content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center children horizontally */
+  justify-content: space-between; /* Space out children vertically */
+  overflow-y: visible;
+  padding-left: 0;
+  padding-right: 0;
+  height: 100%;
 }
 
 .slide-in-div button {
@@ -86,28 +99,50 @@
   font-weight: 400;
   font-style: normal;
   font-variation-settings: "wdth" 100;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: 1em;
   text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
     /* top right shadow */ -1px 1px 0 #fff,
     /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
-  overflow-y: auto;
+  text-align: center;
 }
 
-.poi-description::-webkit-scrollbar {
+/* Fade effect using a ::after pseudo-element */
+.scroll-fade-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100px; /* Height of the fade effect */
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+  pointer-events: none; /* Prevent the fade effect from blocking clicks */
+}
+
+.scroll-fade-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 50px; /* Height of the fade effect */
+  background-image: linear-gradient(to top, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+  pointer-events: none; /* Prevent the fade effect from blocking clicks */
+}
+
+.hidden {
+  display: none;
+}
+
+.content::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: 8px;
 }
-.poi-description::-webkit-scrollbar-track {
+.content::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.103); /* Slightly transparent */
 }
 
-.poi-description::-webkit-scrollbar-thumb {
+.content::-webkit-scrollbar-thumb {
   background: #adadad4e;
   border-radius: 6px;
-}
-
-.poi-description:hover::-webkit-scrollbar-thumb {
-  background: #a7a7a7;
 }
 
 .poi-extra-info {
@@ -172,7 +207,7 @@
 .poi-tags {
   display: flex;
   flex-wrap: wrap; /* Allow pills to wrap to multiple lines */
-  gap: 5px; /* Space between lines */
+  gap: 15px 15px; /* Space between lines */
   align-items: center;
   align-content: center;
   justify-content: center;
@@ -184,14 +219,13 @@
 .poi-tags.row {
   display: flex;
   flex-wrap: wrap; /* Allow pills to wrap to multiple lines */
-  gap: 0 !important; /* Space between lines */
-  row-gap: 5px !important; /* Space between lines */
+  gap: 10px 10px; /* Space between lines */
   align-items: center;
   align-content: center;
   justify-content: center;
   justify-items: center;
-  width: 80%;
-  margin-top: 5px;
+  margin: 0;
+  margin-top: 8px;
 }
 
 @media only screen and (max-width: 768px) {
@@ -206,16 +240,21 @@
 
 .poi-tag {
   display: inline-block;
-  padding: 2.5px 12px; /* Adjust padding as needed */
+  font-family: "Fredoka", sans-serif;
+  padding: .25em 1.5em; /* Adjust padding as needed */
   border-radius: 2em; /* Half of the height for a rounded shape */
-  background-color: #f0f0f0; /* Example background color */
-  color: #000; /* Example text color */
+  color: #fff; /* Example text color */
+  box-shadow: 0 0 3.5px 0px rgba(0, 0, 0, 0.47); /* Example shadow */
   min-width: 25px;
-  margin: 0 2px;
-  font-size: 0.8em;
+  font-size: 0.95em;
+  font-weight: 600;
   font-style: italic;
-  border: 1px solid #000;
-  text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
-  /* top right shadow */ -1px 1px 0 #fff,
-  /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
+  text-shadow: -1px -1px 0 #000, /* top left shadow */ 1px -1px 0 #000,
+  /* top right shadow */ -1px 1px 0 #000,
+  /* bottom left shadow */ 1px 1px 0 #000; /* bottom right shadow */
+  white-space: nowrap; /* Prevent text from wrapping */
+  backdrop-filter: blur(2px); /* Slightly less blur for sharpness */
+  -webkit-backdrop-filter: blur(2px); /* Fallback for Safari */
+  /* Simplify border and shadow to align with classic video game aesthetics */
+  border: 2px solid #ffee00; /* Gold border for a touch of vibrancy */
 }

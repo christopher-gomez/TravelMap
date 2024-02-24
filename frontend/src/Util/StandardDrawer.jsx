@@ -39,16 +39,18 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
             display: "flex", // Make this a flex container
             flexDirection: "column", // Stack children vertically
             borderRadius: "0em 1em 0em 0em",
-            padding: "1em",
-            paddingBottom: "0",
+            padding: "2em",
             paddingTop: "64px",
-            minWidth: "17em",
-            maxWidth: "17em",
+            paddingBottom: "0",
+            minWidth: "408px",
+            maxWidth: "408px",
             height: "100%", // Set the height to 100% of the viewport
           },
         }}
       />
       <Drawer
+        disableAutoFocus
+        disableEnforceFocus
         disablePortal
         anchor={"left"}
         PaperProps={{ style: { zIndex: 1 } }}
@@ -61,7 +63,7 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
           style={{
             position: "absolute",
             bottom: "0",
-            right: open ? "-2.25em" : "0",
+            right: open ? "-2.52em" : "0",
             backgroundColor: "white",
             borderRadius: "0em 1em 1em 0em",
             cursor: "pointer",
