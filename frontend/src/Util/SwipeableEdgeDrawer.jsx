@@ -100,15 +100,12 @@ function SwipeableEdgeDrawer({
   React.useEffect(() => {
     if (!drawerRef.current) return;
 
-    else console.log("set drawer ref")
-
     const scrollable = drawerRef.current;
     // Attach the scroll event listener
     scrollable.addEventListener("scroll", checkScroll);
 
     // Remove the event listener on cleanup
     return () => {
-      console.log('removing`')
       scrollable.removeEventListener("scroll", checkScroll);
     };
   }, [drawerRef, headerHidden, open]);
