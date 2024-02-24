@@ -201,6 +201,8 @@ export default function SearchBar({
         onBlur={() => {
           hint.current = "";
 
+          if(inputValue === "") return;
+
           if (inputValue) {
             if (
               !options.find(
@@ -319,12 +321,10 @@ export default function SearchBar({
             <StyledInputBase
               {...params}
               onFocus={() => {
-                console.log("focused");
                 setInputFocused(true);
                 setOpen(true);
               }}
               onBlur={() => {
-                console.log("blurred");
                 setInputFocused(false);
                 setOpen(false);
               }}
