@@ -112,7 +112,7 @@ function SwipeableEdgeDrawer({
 
   const checkScroll = () => {
     if (drawerRef.current) {
-      console.log("check scroll")
+      console.log("check scroll");
       const { scrollTop, scrollHeight, clientHeight } = drawerRef.current;
       // Set state based on scroll position
       setAtBottom(scrollTop + clientHeight >= scrollHeight);
@@ -121,7 +121,7 @@ function SwipeableEdgeDrawer({
   };
 
   return (
-    <Root>
+    <React.Fragment>
       <Global
         styles={{
           ".MuiDrawer-root": { pointerEvents: "none", overflow: "hidden" },
@@ -229,6 +229,7 @@ function SwipeableEdgeDrawer({
           swipeAreaWidth={drawerBleeding}
           disableSwipeToOpen={false}
           hideBackdrop
+          disablePortal
           disableBackdropTransition
           slotProps={{ backdrop: { invisible: true } }}
         >
@@ -329,7 +330,7 @@ function SwipeableEdgeDrawer({
           </StyledBox>
         </SwipeableDrawer>
       )}
-    </Root>
+    </React.Fragment>
   );
 }
 
