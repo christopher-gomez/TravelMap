@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import SwipeableDrawer from "@mui/material/SwipeableDrawer";
 import { Box, IconButton } from "@mui/material";
 import { Close, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+
 const Root = styled("div")(({ theme }) => ({
   height: "100%",
   backgroundColor:
