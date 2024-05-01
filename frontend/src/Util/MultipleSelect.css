@@ -1,3 +1,3 @@
 .MuiPopover-root {
-    z-index: 99999 !important; /* Adjust the number as needed to be higher than other elements */
+    z-index: 9999999 !important; /* Adjust the number as needed to be higher than other elements */
   }

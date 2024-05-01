@@ -8,7 +8,9 @@ import DialogActions from "@mui/material/DialogActions";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import Typography from "@mui/material/Typography";
-import MultipleSelectChip from "../../Util/MultipleSelect";
+import MultipleSelectChip, { ChipSelectMenu } from "../../Util/MultipleSelect";
+import { Box, Chip, Grid, Stack } from "@mui/material";
+import { FilterAlt } from "@mui/icons-material";
 
 const BootstrapDialog = styled(Dialog)(({ theme }) => ({
   "& .MuiDialogContent-root": {
@@ -29,6 +31,7 @@ export const FILTER_TYPE = {
 export const FILTER_PROPERTIES = {
   tags: "tags",
   day: "day",
+  city: "city",
 };
 
 export default function FilterDialog({
@@ -422,7 +425,7 @@ export default function FilterDialog({
                     label={
                       addingFilterType === null || addingFilterType === ""
                         ? "Filter Days"
-                        : addingFilterType === "INCLUDE" ||
+                        : addingFilterType === FILTER_TYPE.INCLUDE ||
                           addingFilterType === FILTER_TYPE.MATCH
                         ? "Filter For Days"
                         : "Filter Out Days"
@@ -500,5 +503,420 @@ export default function FilterDialog({
         )}
       </DialogActions>
     </BootstrapDialog>
+  );
+}
+
+export function Filters({ allTags, allDays, onFilterEdit, allCities }) {
+  const [filters, setFilters] = React.useState([]);
+  React.useEffect(() => {
+    if (onFilterEdit) onFilterEdit(filters);
+  }, [filters]);
+
+  // const [currentFilter, setCurrentFilter] = React.useState({
+  //   type: null,
+  //   property: null,
+  //   value: null,
+  // });
+
+  // const [addingFilterType, setAddingFilterType] = React.useState(null);
+  // const [addingFilterProperty, setAddingFilterProperty] = React.useState(null);
+  // const [addingTagFilterValue, setAddingTagFilterValue] = React.useState([]);
+
+  const [tagFilters, setTagFilters] = React.useState([]);
+  const [dayFilters, setDayFilters] = React.useState([]);
+  const [cityFilters, setCityFilters] = React.useState([]);
+
+  React.useEffect(() => {
+    let newFilters = filters.filter((filter) => {
+      return filter.property !== FILTER_PROPERTIES.tags;
+    });
+
+    if (Array.isArray(tagFilters) && tagFilters.length > 0) {
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.tags,
+        value: tagFilters,
+      });
+    } else if (
+      tagFilters !== null &&
+      !Array.isArray(tagFilters) &&
+      tagFilters !== ""
+    ) {
+      const newTagFilters = [tagFilters];
+      const filterOfTags = filters.find((filter) => {
+        return filter.property === FILTER_PROPERTIES.tags;
+      });
+      if (filterOfTags) {
+        newTagFilters.push(...filterOfTags.value);
+      }
+
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.tags,
+        value: newTagFilters,
+      });
+    }
+    setFilters(newFilters);
+  }, [tagFilters]);
+
+  React.useEffect(() => {
+    let newFilters = filters.filter((filter) => {
+      return filter.property !== FILTER_PROPERTIES.day;
+    });
+
+    if (Array.isArray(dayFilters) && dayFilters.length > 0) {
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.day,
+        value: dayFilters,
+      });
+    } else if (
+      dayFilters !== null &&
+      !Array.isArray(dayFilters) &&
+      dayFilters !== ""
+    ) {
+      const newDayFilters = [dayFilters];
+      const filterOfDays = filters.find((filter) => {
+        return filter.property === FILTER_PROPERTIES.day;
+      });
+      if (filterOfDays) {
+        newDayFilters.push(...filterOfDays.value);
+      }
+
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.day,
+        value: newDayFilters,
+      });
+    }
+    setFilters(newFilters);
+  }, [dayFilters]);
+
+  React.useEffect(() => {
+    let newFilters = filters.filter((filter) => {
+      return filter.property !== FILTER_PROPERTIES.city;
+    });
+
+    if (Array.isArray(cityFilters) && cityFilters.length > 0) {
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.city,
+        value: cityFilters,
+      });
+    } else if (
+      cityFilters !== null &&
+      !Array.isArray(cityFilters) &&
+      cityFilters !== ""
+    ) {
+      const newCityFilters = [cityFilters];
+      const filterOfCities = filters.find((filter) => {
+        return filter.property === FILTER_PROPERTIES.city;
+      });
+      if (filterOfCities) {
+        newCityFilters.push(...filterOfCities.value);
+      }
+
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.city,
+        value: newCityFilters,
+      });
+    }
+    setFilters(newFilters);
+  }, [cityFilters]);
+
+  // React.useEffect(() => {
+  //   setCurrentFilter({
+  //     type: addingFilterType,
+  //     property: addingFilterProperty,
+  //     value: addingTagFilterValue,
+  //   });
+  // }, [addingTagFilterValue]);
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexFlow: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
+    >
+      <Grid
+        container
+        alignItems="center"
+        spacing={1}
+        style={{ flexWrap: "wrap" }}
+      >
+        {filters.length > 0 &&
+          filters
+            .filter((filter) => {
+              return filter.property === FILTER_PROPERTIES.tags;
+            })
+            .map(
+              (filter) =>
+                filter.value.length > 0 &&
+                filter.value.map((tag, index) => (
+                  <Grid item>
+                    <Chip
+                      variant="filled"
+                      sx={{ backgroundColor: "white" }}
+                      key={"tag-filter-" + index}
+                      label={tag}
+                      onDelete={() => {
+                        const tagFilter = filters.find((filter) => {
+                          return filter.property === FILTER_PROPERTIES.tags;
+                        });
+
+                        if (Array.isArray(tagFilter.value)) {
+                          const newTagFilters = tagFilter.value.filter(
+                            (t) => t !== tag
+                          );
+                          setTagFilters(newTagFilters);
+                        } else {
+                          setTagFilters("");
+                        }
+                      }}
+                    />
+                  </Grid>
+                ))
+            )}
+        {allTags.filter((tag) => {
+          if (filters.length === 0) return true;
+          else {
+            return !filters.find((filter) => {
+              // let oppositeType =
+              //   addingFilterType === FILTER_TYPE.INCLUDE
+              //     ? FILTER_TYPE.EXCLUDE
+              //     : FILTER_TYPE.INCLUDE;
+              return (
+                filter.property === FILTER_PROPERTIES.tags &&
+                // filter.type === oppositeType &&
+                (Array.isArray(filter.value)
+                  ? filter.value.includes(tag)
+                  : filter.value === tag)
+              );
+            });
+          }
+        }).length > 0 && (
+          <Grid item>
+            <ChipSelectMenu
+              icon={<FilterAlt />}
+              options={allTags.filter((tag) => {
+                if (filters.length === 0) return true;
+                else {
+                  return !filters.find((filter) => {
+                    // let oppositeType =
+                    //   addingFilterType === FILTER_TYPE.INCLUDE
+                    //     ? FILTER_TYPE.EXCLUDE
+                    //     : FILTER_TYPE.INCLUDE;
+                    return (
+                      filter.property === FILTER_PROPERTIES.tags &&
+                      // filter.type === oppositeType &&
+                      (Array.isArray(filter.value)
+                        ? filter.value.includes(tag)
+                        : filter.value === tag)
+                    );
+                  });
+                }
+              })}
+              label={
+                // addingFilterType === "" || addingFilterType === null
+                //   ? "Filter Tags"
+                //   : addingFilterType === "INCLUDE" ||
+                //     addingFilterType === FILTER_TYPE.MATCH
+                //   ? "Filter For Tags"
+                //   : "Filter Out Tags"
+                "Tags"
+              }
+              multiple={false}
+              onChange={(val) => {
+                setTagFilters(val);
+              }}
+              value={tagFilters}
+            />
+          </Grid>
+        )}
+        {filters.length > 0 &&
+          filters
+            .filter((filter) => {
+              return filter.property === FILTER_PROPERTIES.day;
+            })
+            .map(
+              (filter) =>
+                filter.value.length > 0 &&
+                filter.value.map((day, index) => (
+                  <Grid item>
+                    <Chip
+                      variant="filled"
+                      sx={{ backgroundColor: "white" }}
+                      key={"day-filter-" + index}
+                      label={"Day - " + day}
+                      onDelete={() => {
+                        const dayFilter = filters.find((filter) => {
+                          return filter.property === FILTER_PROPERTIES.day;
+                        });
+
+                        if (Array.isArray(dayFilter.value)) {
+                          const newDayFilters = dayFilter.value.filter(
+                            (t) => t !== day
+                          );
+                          setDayFilters(newDayFilters);
+                        } else {
+                          setDayFilters("");
+                        }
+                      }}
+                    />
+                  </Grid>
+                ))
+            )}
+        {allDays.filter((day) => {
+          if (filters.length === 0) return true;
+          else {
+            return !filters.find((filter) => {
+              // let oppositeType =
+              //   addingFilterType === FILTER_TYPE.INCLUDE
+              //     ? FILTER_TYPE.EXCLUDE
+              //     : FILTER_TYPE.INCLUDE;
+              return (
+                filter.property === FILTER_PROPERTIES.tags &&
+                // filter.type === oppositeType &&
+                (Array.isArray(filter.value)
+                  ? filter.value.includes(day)
+                  : filter.value === day)
+              );
+            });
+          }
+        }).length > 0 && (
+          <Grid item>
+            <ChipSelectMenu
+              icon={<FilterAlt />}
+              options={allDays.filter((day) => {
+                if (filters.length === 0) return true;
+                else {
+                  return !filters.find((filter) => {
+                    // let oppositeType =
+                    //   addingFilterType === FILTER_TYPE.INCLUDE
+                    //     ? FILTER_TYPE.EXCLUDE
+                    //     : FILTER_TYPE.INCLUDE;
+                    return (
+                      filter.property === FILTER_PROPERTIES.day &&
+                      // filter.type === oppositeType &&
+                      (Array.isArray(filter.value)
+                        ? filter.value.includes(day)
+                        : filter.value === day)
+                    );
+                  });
+                }
+              })}
+              label={
+                // addingFilterType === "" || addingFilterType === null
+                //   ? "Filter Tags"
+                //   : addingFilterType === "INCLUDE" ||
+                //     addingFilterType === FILTER_TYPE.MATCH
+                //   ? "Filter For Tags"
+                //   : "Filter Out Tags"
+                "Day"
+              }
+              multiple={false}
+              onChange={(val) => {
+                setDayFilters(val);
+              }}
+              value={dayFilters}
+            />
+          </Grid>
+        )}
+        {filters.length > 0 &&
+          filters
+            .filter((filter) => {
+              return filter.property === FILTER_PROPERTIES.city;
+            })
+            .map(
+              (filter) =>
+                filter.value.length > 0 &&
+                filter.value.map((city, index) => (
+                  <Grid item>
+                    <Chip
+                      variant="filled"
+                      sx={{ backgroundColor: "white" }}
+                      key={"city-filter-" + index}
+                      label={city}
+                      onDelete={() => {
+                        const cityFilter = filters.find((filter) => {
+                          return filter.property === FILTER_PROPERTIES.city;
+                        });
+
+                        if (Array.isArray(cityFilter.value)) {
+                          const newCityFilters = cityFilter.value.filter(
+                            (t) => t !== city
+                          );
+                          setCityFilters(newCityFilters);
+                        } else {
+                          setCityFilters("");
+                        }
+                      }}
+                    />
+                  </Grid>
+                ))
+            )}
+        {allCities.filter((city) => {
+          if (filters.length === 0) return true;
+          else {
+            return !filters.find((filter) => {
+              // let oppositeType =
+              //   addingFilterType === FILTER_TYPE.INCLUDE
+              //     ? FILTER_TYPE.EXCLUDE
+              //     : FILTER_TYPE.INCLUDE;
+              return (
+                filter.property === FILTER_PROPERTIES.city &&
+                // filter.type === oppositeType &&
+                (Array.isArray(filter.value)
+                  ? filter.value.includes(city)
+                  : filter.value === city)
+              );
+            });
+          }
+        }).length > 0 && (
+          <Grid item>
+            <ChipSelectMenu
+              icon={<FilterAlt />}
+              options={allCities.filter((city) => {
+                if (filters.length === 0) return true;
+                else {
+                  return !filters.find((filter) => {
+                    // let oppositeType =
+                    //   addingFilterType === FILTER_TYPE.INCLUDE
+                    //     ? FILTER_TYPE.EXCLUDE
+                    //     : FILTER_TYPE.INCLUDE;
+                    return (
+                      filter.property === FILTER_PROPERTIES.city &&
+                      // filter.type === oppositeType &&
+                      (Array.isArray(filter.value)
+                        ? filter.value.includes(city)
+                        : filter.value === city)
+                    );
+                  });
+                }
+              })}
+              label={
+                // addingFilterType === "" || addingFilterType === null
+                //   ? "Filter Tags"
+                //   : addingFilterType === "INCLUDE" ||
+                //     addingFilterType === FILTER_TYPE.MATCH
+                //   ? "Filter For Tags"
+                //   : "Filter Out Tags"
+                "City"
+              }
+              multiple={false}
+              onChange={(val) => {
+                setCityFilters(val);
+              }}
+              value={cityFilters}
+            />
+          </Grid>
+        )}
+      </Grid>
+    </Box>
   );
 }

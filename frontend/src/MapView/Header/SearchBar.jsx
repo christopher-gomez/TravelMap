@@ -9,6 +9,7 @@ import parse from "autosuggest-highlight/parse";
 import match from "autosuggest-highlight/match";
 import ClearIcon from "@mui/icons-material/Clear";
 import { Global } from "@emotion/react";
+import { LocationSearching } from "@mui/icons-material";
 
 const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
   position: "relative",
@@ -27,7 +28,7 @@ const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
   borderRadius: isFocused ? "1em 1em 0 0" : "5em",
   transition: theme.transitions.create(["width", "margin", "background-color"]),
   [theme.breakpoints.up("sm")]: {
-    marginLeft: theme.spacing(2),
+    // marginLeft: theme.spacing(2),
     width: "auto",
     minWidth: "376px",
     // transition: theme.transitions.create("width"),
@@ -42,7 +43,7 @@ const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
   boxShadow: true
     ? "0px 0px 5px 0px rgba(0, 0, 0, 0.3)"
     : "0px 10px 5px 0px rgba(0, 0, 0, 0.3)",
-  marginTop: "10px",
+  // marginTop: "10px",
   zIndex: 10000000000,
   "& > .MuiAutocomplete-root": {
     backgroundColor: "transparent !important",
@@ -201,7 +202,7 @@ export default function SearchBar({
         onBlur={() => {
           hint.current = "";
 
-          if(inputValue === "") return;
+          if (inputValue === "") return;
 
           if (inputValue) {
             if (
@@ -293,7 +294,7 @@ export default function SearchBar({
           <>
             <SearchIconWrapper>
               {/* Use IconButton for clickable icon */}
-              <IconButton
+              {/* <IconButton
                 sx={{ padding: 0 }}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -305,7 +306,8 @@ export default function SearchBar({
                 aria-label="search filter"
               >
                 <FilterAlt />
-              </IconButton>
+              </IconButton> */}
+              <LocationSearching />
             </SearchIconWrapper>
             <Typography
               sx={{

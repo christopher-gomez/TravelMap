@@ -7,7 +7,7 @@ import DefaultStyle from "./MapStyles/DefaultStyle.json";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
 import { queryDatabase, updatePage } from "../Api/Notion";
-import { TOKYO_QUERY } from "./NotionMapQueryParams";
+import { NOTION_QUERY } from "./NotionMapQueryParams";
 import { getGoogleMapsApiKey } from "../Api/Maps";
 import CustomOverlayContainerFactory from "./POI/CustomOverlayContainerClass";
 import POILabel from "./POI/POILabel";
@@ -77,10 +77,11 @@ const MapView = () => {
     };
 
     const fetchItineraryData = async () => {
-      const query = await queryDatabase(TOKYO_QUERY);
+      const query = await queryDatabase(NOTION_QUERY);
       if (query.results && query.results.length > 0) {
+        console.log("Itinerary data fetched", query);
         setItineraryData(query.results);
-        console.log(query.results);
+        // console.log(query.results);
 
         // const data = JSON.parse(JSON.stringify(PlacesData));
 
@@ -142,13 +143,17 @@ const MapView = () => {
   const [maps, setMaps] = useState(undefined);
   const mapsRef = React.useRef(maps);
 
+  const [noLocationItems, setNoLocationItems] = useState([]);
+
   function parseItineraryDataLocations(data) {
     const places = [];
+    const unknownPlaces = [];
     data.forEach((item) => {
       if (
         item.properties.Location.rich_text.length === 0 ||
         item.properties.Location.rich_text[0].plain_text === ""
       ) {
+        unknownPlaces.push(item);
         return;
       }
 
@@ -193,6 +198,10 @@ const MapView = () => {
                     // )
                   )
                 : null,
+            city:
+              item.properties.City.multi_select.length > 0
+                ? item.properties.City.multi_select.map((city) => city.name)
+                : null,
           });
         });
       } catch (error) {
@@ -233,10 +242,15 @@ const MapView = () => {
                   // )
                 )
               : null,
+          city:
+            item.properties.City.multi_select.length > 0
+              ? item.properties.City.multi_select.map((city) => city.name)
+              : null,
         });
       }
     });
 
+    setNoLocationItems(unknownPlaces);
     return places;
   }
 
@@ -292,6 +306,7 @@ const MapView = () => {
       marker["time"] = item.time;
       marker["id"] = item.id;
       marker["timelineOverride"] = item.timelineOverride;
+      marker["city"] = item.city;
 
       markers.push(marker);
 
@@ -495,6 +510,7 @@ const MapView = () => {
 
     const days = [];
     const tags = [];
+    const cities = [];
 
     for (const marker of markers) {
       if (marker.day) {
@@ -516,9 +532,18 @@ const MapView = () => {
           }
         });
       }
+
+      if (marker.city) {
+        marker.city.forEach((city) => {
+          if (!cities.includes(city)) {
+            cities.push(city);
+          }
+        });
+      }
     }
 
     setAllTags(tags);
+    setAllCities(cities);
 
     days.sort((a, b) => a - b);
     // days.unshift("All");
@@ -530,6 +555,8 @@ const MapView = () => {
 
   const [currentDayFilter, setCurrentDayFilter] = useState(null);
   const [allTags, setAllTags] = useState([]);
+  const [allCities, setAllCities] = useState([]);
+  // const [cityFilter, setCityFilter] = useState("All");
   // const [includeTagsFilter, setIncludeTagsFilter] = useState([]);
   // const [excludeTagsFilter, setExcludeTagsFilter] = useState([]);
 
@@ -687,8 +714,20 @@ const MapView = () => {
       (f) => f.property === FILTER_PROPERTIES.tags
     );
 
+    if (tagFilters.length === 0) {
+      tagFilters.push({
+        property: FILTER_PROPERTIES.tags,
+        type: FILTER_TYPE.INCLUDE,
+        value: ["All"],
+      });
+    }
+
     for (const filter of tagFilters) {
       _markers = _markers.filter((m) => {
+        if (filter.value.includes("All")) {
+          return true;
+        }
+
         if (!m.tags) return false;
         switch (filter.type) {
           case FILTER_TYPE.MATCH:
@@ -697,6 +736,37 @@ const MapView = () => {
             return filter.value.some((tag) => m.tags.includes(tag));
           case FILTER_TYPE.EXCLUDE:
             return !filter.value.some((tag) => m.tags.includes(tag));
+        }
+      });
+    }
+
+    let cityFilters = markerPropertyFilters.filter(
+      (f) => f.property === FILTER_PROPERTIES.city
+    );
+
+    if (cityFilters.length === 0) {
+      cityFilters.push({
+        property: FILTER_PROPERTIES.city,
+        type: FILTER_TYPE.INCLUDE,
+        value: ["All"],
+      });
+    }
+
+    for (const filter of cityFilters) {
+      _markers = _markers.filter((m) => {
+        if (filter.value.includes("All")) {
+          return true;
+        }
+
+        if (!m.city) return false;
+
+        switch (filter.type) {
+          case FILTER_TYPE.MATCH:
+            return arraysContainSameValues(m.city, filter.value);
+          case FILTER_TYPE.INCLUDE:
+            return filter.value.some((city) => m.city.includes(city));
+          case FILTER_TYPE.EXCLUDE:
+            return !filter.value.some((city) => m.city.includes(city));
         }
       });
     }
@@ -742,7 +812,6 @@ const MapView = () => {
     setRenderedMarkers(_markers);
 
     if (_markers.length > 0) {
-
       if (_markers.length === 1) {
         setFocusedMarker(_markers[0]);
         offsetCenter(_markers[0].position, 0, 70);
@@ -1386,6 +1455,8 @@ const MapView = () => {
     <React.Fragment>
       <AppHeader
         markers={renderedMarkers}
+        noLocationItems={noLocationItems}
+        allCities={allCities}
         markerDays={markerDays}
         allTags={allTags}
         focusedMarker={focusedMarker}

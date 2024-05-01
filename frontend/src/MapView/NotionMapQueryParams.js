@@ -1,19 +1,35 @@
-export const TOKYO_QUERY = {
-    id: "",
-    filter: {
+export const NOTION_QUERY = {
+  id: "",
+  filter: {
+    or: [
+      {
         property: "City",
         multi_select: {
-            contains: "Tokyo",
+          contains: "Tokyo",
         },
-    },
-    sorts: [
-        {
-            property: "Date",
-            direction: "ascending",
+      },
+      {
+        property: "City",
+        multi_select: {
+          contains: "Kyoto",
         },
-        {
-            property: "Time",
-            direction: "descending",
+      },
+      {
+        property: "City",
+        multi_select: {
+          contains: "Osaka",
         },
+      },
     ],
-}
+  },
+  sorts: [
+    {
+      property: "Date",
+      direction: "ascending",
+    },
+    {
+      property: "Time",
+      direction: "descending",
+    },
+  ],
+};
