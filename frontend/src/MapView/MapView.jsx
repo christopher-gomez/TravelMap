@@ -1414,6 +1414,11 @@ const MapView = () => {
   useEffect(() => {
     if (!routing) {
       setRoutingData([]);
+    } else {
+      setRoutingData([
+        timelineActivities[0],
+        timelineActivities[timelineActivities.length - 1],
+      ]);
     }
   }, [routing]);
 
@@ -1508,7 +1513,7 @@ const MapView = () => {
                   : "translateX(calc(100% + 20px)) translateY(50%)",
                 right: 0,
                 zIndex: 99999,
-                background: "rgba(0,0,0,.75)",
+                background: "rgba(255,255,255,.75)",
                 borderRadius: "1em 0 0 1em",
                 backdropFilter: "blur(10px)",
                 WebkitBackdropFilter: "blur(10px)",
@@ -1523,8 +1528,9 @@ const MapView = () => {
                   padding: "10px",
                   cursor: filtersOpen ? "default" : "pointer",
                   borderRadius: "1em",
+                  border: timelineHidden ? "1px solid black" : "none",
                   backgroundColor: timelineHidden
-                    ? "rgba(0,0,0,.75)"
+                    ? "rgba(255,255,255,1)"
                     : "rgba(0,0,0,0)",
                   display: "flex",
                   alignContent: "center",
@@ -1564,11 +1570,25 @@ const MapView = () => {
               >
                 {routing ? <CancelIcon /> : <ForkLeftIcon />}
               </div>
-              <h2 style={{ fontFamily: "'Indie Flower', cursive" }}>
+              <h2
+                style={{
+                  fontFamily: "'Indie Flower', cursive",
+                  paddingTop: "16px",
+                  paddingLeft: "16px",
+                  marginTop: "32px",
+                  marginBottom: "0px",
+                }}
+              >
                 Day {currentDayFilter}
               </h2>
               {routing && (
-                <h3 style={{ fontFamily: "'Indie Flower', cursive" }}>
+                <h3
+                  style={{
+                    fontFamily: "'Indie Flower', cursive",
+                    paddingLeft: "32px",
+                    marginTop: "0px",
+                  }}
+                >
                   Routing
                 </h3>
               )}
