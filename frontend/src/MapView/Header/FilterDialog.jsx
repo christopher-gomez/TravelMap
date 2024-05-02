@@ -506,10 +506,13 @@ export default function FilterDialog({
   );
 }
 
-export function Filters({ allTags, allDays, onFilterEdit, allCities }) {
+export function Filters({ allTags, allDays, onFilterEdit, allCities, setFocusedMarker, setFocusedCluster}) {
   const [filters, setFilters] = React.useState([]);
+
   React.useEffect(() => {
     if (onFilterEdit) onFilterEdit(filters);
+    setFocusedCluster(null);
+    setFocusedMarker(null);
   }, [filters]);
 
   // const [currentFilter, setCurrentFilter] = React.useState({

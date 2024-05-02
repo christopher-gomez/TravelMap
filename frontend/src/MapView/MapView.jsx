@@ -632,11 +632,15 @@ const MapView = () => {
     } else {
       setCurrentDayFilter(null);
     }
+    setFocusedCluster(null);
+    setFocusedMarker(null);
   }, [markerPropertyFilters]);
 
   useEffect(() => {
     // console.log("Current Day Filter");
     // console.log(currentDayFilter);
+    setFocusedCluster(null);
+    setFocusedMarker(null);
   }, [currentDayFilter]);
 
   useEffect(() => {
@@ -1573,6 +1577,8 @@ const MapView = () => {
   return (
     <React.Fragment>
       <AppHeader
+        setFocusedCluster={setFocusedCluster}
+        setFocusedMarker={setFocusedMarker}
         markers={renderedMarkers}
         noLocationItems={noLocationItems}
         allCities={allCities}

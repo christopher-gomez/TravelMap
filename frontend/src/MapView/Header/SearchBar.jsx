@@ -141,8 +141,10 @@ export default function SearchBar({
       setInputValue(focusedMarker.info);
     } else if (focusedCluster) {
       setInputValue("Multiple locations");
+    } else {
+      setInputValue("");
     }
-  });
+  }, [focusedMarker, focusedCluster]);
 
   const [inputFocused, setInputFocused] = React.useState(false);
 

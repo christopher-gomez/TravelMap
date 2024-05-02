@@ -15,6 +15,8 @@ export default function AppHeader({
   onFiltersOpen,
   allCities,
   noLocationItems,
+  setFocusedCluster,
+  setFocusedMarker,
 }) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [devOpen, setDevOpen] = React.useState(false);
@@ -85,6 +87,8 @@ export default function AppHeader({
                   allTags={allTags}
                   allDays={markerDays}
                   onFilterEdit={onFilterEdit}
+                  setFocusedCluster={setFocusedCluster}
+                  setFocusedMarker={setFocusedMarker}
                 />
               </Grid>
             )}

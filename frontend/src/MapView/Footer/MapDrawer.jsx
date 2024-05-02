@@ -64,17 +64,22 @@ export default function MapDrawer({
       tags={tags}
     />
   ) : focusedCluster ? (
-    focusedCluster.markers.map((m) => (
-      <POIDetails
-        icon={m.icon}
-        title={m.info}
-        day={m.day}
-        date={m.date}
-        hideDescription={true}
-        onClick={() => setFocusedMarker(m)}
-        // description={m.description}
-        // tags={m.tags}
-      />
+    focusedCluster.markers.map((m, i) => (
+      <>
+        <POIDetails
+          icon={m.icon}
+          title={m.info}
+          day={m.day}
+          date={m.date}
+          hideDescription={true}
+          onClick={() => setFocusedMarker(m)}
+          // description={m.description}
+          // tags={m.tags}
+        />
+        {i !== focusedCluster.markers.length - 1 && (
+          <hr style={{ color: "black", width: "100%" }} />
+        )}
+      </>
     ))
   ) : null;
 
