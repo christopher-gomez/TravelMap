@@ -62,6 +62,11 @@ export default function MapDrawer({
       day={day}
       date={date}
       description={description}
+      hideDescription={
+        focusedMarker.description === "" ||
+        !focusedMarker.description ||
+        focusedMarker.description === null
+      }
       tags={tags}
     />
   ) : focusedCluster ? (

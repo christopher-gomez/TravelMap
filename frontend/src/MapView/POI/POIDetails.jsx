@@ -12,7 +12,7 @@ export const POIDetails = ({
   description,
   day,
   date,
-  hideDescription,
+  hideDescription = true,
   onClick,
 }) => {
   return (
