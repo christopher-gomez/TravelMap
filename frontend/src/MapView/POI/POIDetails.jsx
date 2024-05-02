@@ -6,6 +6,7 @@ var options = { weekday: "short", month: "short", day: "numeric" };
 
 export const POIDetails = ({
   title,
+  image,
   icon,
   tags,
   description,
@@ -40,8 +41,9 @@ export const POIDetails = ({
 
       {title && (
         <>
+          {image && <img src={image} style={{ width: "100%", height: '400px', marginBottom: '.5em' }} />}
           {icon && (
-            <img src={icon.url} style={{ height: "50px", width: "50px" }} />
+            <img src={icon.url} style={{ height: "50px", width: "50px",  }} />
           )}
           {Array.isArray(title) ? (
             title.map((t, i) => (

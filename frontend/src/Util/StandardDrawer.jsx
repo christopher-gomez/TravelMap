@@ -42,10 +42,26 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
             padding: "2em",
             paddingTop: "64px",
             paddingBottom: "0",
-            minWidth: "408px",
+            minWidth: "420px",
             maxWidth: "420px",
             height: "100%", // Set the height to 100% of the viewport
-            position: 'relative',            
+            position: "relative",
+            // scrollbarWidth: "thin",
+            // scrollbarColor: "#c1c1c1 #f0f0f0",
+            "&::-webkit-scrollbar": {
+              width: "0.5em",
+              height: "0.5em",
+            },
+            "&::-webkit-scrollbar-track": {
+              background: "#f0f0f0 !important",
+              borderRadius: "10px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "#c1c1c1 !important",
+              borderRadius: "10px",
+              backgroundClip: "content-box",
+              border: "2px solid transparent",
+            },
           },
         }}
       />

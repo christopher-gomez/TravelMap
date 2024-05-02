@@ -290,6 +290,7 @@ const MapView = () => {
       const marker = createMarker({
         maps,
         map,
+        title: item.title,
         position: item.position,
         icon:
           typeof item.icon !== "object" &&
@@ -363,6 +364,7 @@ const MapView = () => {
     if (itineraryData !== null && map !== undefined && maps !== undefined) {
       CustomOverlayFactory.current = new CustomOverlayContainerFactory(maps);
       const places = parseItineraryDataLocations(itineraryData);
+      placesService.current = new maps.places.PlacesService(map);
       createMarkers(places, map, maps);
       // createMarkers(itineraryData);
     }
@@ -1287,17 +1289,89 @@ const MapView = () => {
     return overlay;
   }
 
-  function createMarker({ label, maps, map, position, title, icon, priority }) {
+  function createMarker({
+    label,
+    maps,
+    map,
+    position,
+    title,
+    icon,
+    priority,
+    getPlaceDetails = true,
+  }) {
+    const _position = new maps.LatLng(position.lat, position.lng);
     const marker = new maps.Marker({
       label,
       map,
-      position: new maps.LatLng(position.lat, position.lng),
+      position: _position,
       title,
       icon,
     });
     marker["priority"] = priority;
+    marker["info"] = title;
+
+    if (getPlaceDetails) {
+      placesService.current.findPlaceFromQuery(
+        {
+          query: title,
+          fields: ["place_id"],
+        },
+        function (results, status) {
+          if (status === maps.places.PlacesServiceStatus.OK) {
+            // Assuming the first result is the one we want
+            console.log("got id for " + title + ": " + results[0].place_id);
+            marker["placeId"] = results[0].place_id;
+            getPlacePhoto(results[0].place_id, marker);
+          } else {
+            console.error("could not get id for " + title);
+            setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
+          }
+        }
+      );
+      // placesService.current.nearbySearch(
+      //   {
+      //     location: _position,
+      //     radius: 50,
+      //     // type: ["point_of_interest"],
+      //   },
+      //   (results, status) => {
+      //     if (status === maps.places.PlacesServiceStatus.OK) {
+      //     } else {
+      //       console.error("could not get id for " + title);
+      //       setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
+      //     }
+      //   }
+      // );
+    }
 
     return marker;
+  }
+
+  const [markersWithoutPhotos, setMarkersWithoutPhotos] = useState([]);
+
+  function getPlacePhoto(placeId, marker) {
+    placesService.current.getDetails(
+      {
+        placeId: placeId,
+        fields: ["photo"],
+      },
+      (place, status) => {
+        if (
+          status === mapsRef.current.places.PlacesServiceStatus.OK &&
+          place.photos &&
+          place.photos.length > 0
+        ) {
+          console.log("got photo for " + marker["info"]);
+          marker["photo"] = place.photos[0].getUrl({
+            maxWidth: 400,
+            maxHeight: 400,
+          });
+        } else {
+          console.error("could not get photo for " + marker["info"]);
+          setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
+        }
+      }
+    );
   }
 
   const clusterOverlaysRef = React.useRef({});
@@ -1371,8 +1445,10 @@ const MapView = () => {
           }
 
           const m = createMarker({
+            getPlaceDetails: false,
             maps,
             map,
+            title: count + "Marker Cluster",
             position: { lat: _position.lat(), lng: _position.lng() },
             icon: important
               ? {
@@ -1491,6 +1567,8 @@ const MapView = () => {
 
     setMarkerCluster(markerCluster);
   }, [maps, markers]);
+
+  const placesService = useRef(null);
 
   const onGoogleApiLoaded = ({ map, maps }) => {
     // const data = JSON.parse(JSON.stringify(testData));

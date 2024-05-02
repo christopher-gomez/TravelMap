@@ -57,6 +57,7 @@ export default function MapDrawer({
   let content = focusedMarker ? (
     <POIDetails
       icon={icon}
+      image={focusedMarker.photo}
       title={title}
       day={day}
       date={date}
@@ -68,6 +69,7 @@ export default function MapDrawer({
       <>
         <POIDetails
           icon={m.icon}
+          image={m.photo}
           title={m.info}
           day={m.day}
           date={m.date}
