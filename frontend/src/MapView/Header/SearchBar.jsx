@@ -369,7 +369,8 @@ export default function SearchBar({
 
                 endAdornment: inputValue ? (
                   <IconButton
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       hint.current = "";
                       setInputValue("");
                       if (onSearch) {
