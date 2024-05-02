@@ -48,10 +48,10 @@ export default function AppHeader({
           <Grid
             container
             alignItems="center"
-            spacing={1}
+            spacing={focusedMarker || focusedCluster ? 4 : 1}
             style={{ flexWrap: "wrap" }}
           >
-            <Grid item xs={12} sm={"auto"}>
+            <Grid item xs={12} sm={"auto"} sx={{marginTop: '1em'}}>
               <SearchBar
                 markers={markers}
                 onSearch={onSearch}
@@ -69,6 +69,7 @@ export default function AppHeader({
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
+                  marginTop: "1em",
                 }}
               >
                 {/* <Chip
@@ -107,7 +108,7 @@ export default function AppHeader({
             focusedCluster={focusedCluster}
             focusedMarker={focusedMarker}
           /> */}
-          {/* {process.env.NODE_ENV === "development" && (
+          {process.env.NODE_ENV === "development" && (
             <button
               onClick={() => {
                 setDevOpen(true);
@@ -115,10 +116,11 @@ export default function AppHeader({
             >
               Set Locations
             </button>
-          )} */}
+          )}
         </Toolbar>
       </AppBar>
-      {/* <DevDialog items={noLocationItems} open={devOpen} setOpen={setDevOpen} /> */}
+
+      <DevDialog items={noLocationItems} open={devOpen} setOpen={setDevOpen} />
       <FilterDialog
         open={filtersOpen}
         setOpen={setFiltersOpen}

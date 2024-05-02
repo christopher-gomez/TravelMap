@@ -35,7 +35,7 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
           },
           ".MuiDrawer-root > .MuiPaper-root": {
             pointerEvents: "all",
-            overflow: "visible", // Set overflow to hidden to establish a block formatting context
+            overflowY: "auto", // Set overflow to hidden to establish a block formatting context
             display: "flex", // Make this a flex container
             flexDirection: "column", // Stack children vertically
             borderRadius: "0em 1em 0em 0em",
@@ -43,8 +43,9 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
             paddingTop: "64px",
             paddingBottom: "0",
             minWidth: "408px",
-            maxWidth: "408px",
+            maxWidth: "420px",
             height: "100%", // Set the height to 100% of the viewport
+            position: 'relative',            
           },
         }}
       />
@@ -59,7 +60,7 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
         onOpen={toggleDrawer(true)}
         hideBackdrop
       >
-        <div
+        {/* <div
           style={{
             position: "absolute",
             bottom: "0",
@@ -75,7 +76,7 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
           <IconButton onClick={toggleDrawer(false)}>
             <ArrowBackIos />
           </IconButton>
-        </div>
+        </div> */}
         {DrawerContent}
       </Drawer>
     </React.Fragment>

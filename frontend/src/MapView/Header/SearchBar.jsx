@@ -24,6 +24,7 @@ const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
     : "rgba(255, 255, 255, 0.85)" /* Slightly transparent */,
   backdropFilter: "blur(10px)",
   marginLeft: 0,
+  // marginTop: '1em',
   width: "100%",
   borderRadius: isFocused ? "1em 1em 0 0" : "5em",
   transition: theme.transitions.create(["width", "margin", "background-color"]),
@@ -134,6 +135,14 @@ export default function SearchBar({
 }) {
   const hint = React.useRef("");
   const [inputValue, setInputValue] = React.useState("");
+
+  React.useEffect(() => {
+    if (focusedMarker) {
+      setInputValue(focusedMarker.info);
+    } else if (focusedCluster) {
+      setInputValue("Multiple locations");
+    }
+  });
 
   const [inputFocused, setInputFocused] = React.useState(false);
 

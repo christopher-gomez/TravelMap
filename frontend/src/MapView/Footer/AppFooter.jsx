@@ -12,6 +12,7 @@ export default function AppFooter({
   focusedMarker,
   focusedCluster,
   onDrawerClose,
+  setFocusedMarker,
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -46,6 +47,7 @@ export default function AppFooter({
         onHeaderHeightChange={(height) => {
           setDRAWER_HEADER_HEIGHT(height);
         }}
+        setFocusedMarker={setFocusedMarker}
       />
     </>
   );

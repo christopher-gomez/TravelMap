@@ -16,6 +16,7 @@ export default function MapDrawer({
   drawerHeaderHeight,
   onClose,
   onHeaderHeightChange,
+  setFocusedMarker,
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -23,6 +24,11 @@ export default function MapDrawer({
       : focusedMarker
       ? focusedMarker.info
       : focusedCluster.markers.map((m) => m.info);
+  let icon = focusedMarker
+    ? focusedMarker.icon
+    : focusedCluster
+    ? focusedCluster.icon
+    : null;
   let day =
     focusedCluster === null && focusedMarker === null
       ? null
@@ -48,6 +54,30 @@ export default function MapDrawer({
       ? focusedMarker.tags
       : [];
 
+  let content = focusedMarker ? (
+    <POIDetails
+      icon={icon}
+      title={title}
+      day={day}
+      date={date}
+      description={description}
+      tags={tags}
+    />
+  ) : focusedCluster ? (
+    focusedCluster.markers.map((m) => (
+      <POIDetails
+        icon={m.icon}
+        title={m.info}
+        day={m.day}
+        date={m.date}
+        hideDescription={true}
+        onClick={() => setFocusedMarker(m)}
+        // description={m.description}
+        // tags={m.tags}
+      />
+    ))
+  ) : null;
+
   return isTouchDevice() ? (
     <SwipeableEdgeDrawer
       onHeightChange={onHeightChange}
@@ -68,15 +98,7 @@ export default function MapDrawer({
     <StandardDrawer
       open={focusedCluster || focusedMarker}
       onClose={onClose}
-      DrawerContent={
-        <POIDetails
-          title={title}
-          day={day}
-          date={date}
-          description={description}
-          tags={tags}
-        />
-      }
+      DrawerContent={content}
     />
   );
 }

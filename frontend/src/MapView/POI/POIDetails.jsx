@@ -4,9 +4,22 @@ import { Box, Skeleton } from "@mui/material";
 
 var options = { weekday: "short", month: "short", day: "numeric" };
 
-export const POIDetails = ({ title, tags, description, day, date }) => {
+export const POIDetails = ({
+  title,
+  icon,
+  tags,
+  description,
+  day,
+  date,
+  hideDescription,
+  onClick,
+}) => {
   return (
-    <div className="content">
+    <div
+      className="content"
+      style={{ cursor: onClick ? "pointer" : "default" }}
+      onClick={onClick}
+    >
       {/* {date && (
         <span className="poi-date">{`${new Date(date.start).toLocaleDateString(
           "en-US",
@@ -24,27 +37,32 @@ export const POIDetails = ({ title, tags, description, day, date }) => {
             : "Day: " + day}
         </span>
       )} */}
-      {title &&
-        (Array.isArray(title) ? (
-          title.map((t, i) => (
-            <h1 className="poi-title" key={title + "-title"}>
-              {t}
-              {i !== title.length - 1 && ","}
-            </h1>
-          ))
-        ) : (
-          <h1 className="poi-title">{title}</h1>
-        ))}
+
+      {title && (
+        <>
+          {icon && (
+            <img src={icon.url} style={{ height: "50px", width: "50px" }} />
+          )}
+          {Array.isArray(title) ? (
+            title.map((t, i) => (
+              <h1 className="poi-title" key={title + "-title"}>
+                {t}
+                {i !== title.length - 1 && ","}
+              </h1>
+            ))
+          ) : (
+            <h1 className="poi-title">{title}</h1>
+          )}
+        </>
+      )}
       {(day || date) && (
         <div
           style={{
             display: "flex",
             flexFlow: "row",
-            alignContent: "center",
-            justifyContent: "center",
+            placeContent: "center",
             alignItems: "center",
-            marginBottom: ".5em",
-            marginTop: ".5em",
+            // width: "100%",
           }}
         >
           {date && (
@@ -76,7 +94,7 @@ export const POIDetails = ({ title, tags, description, day, date }) => {
           ))}
         </div>
       )}
-      {description && (
+      {description && !hideDescription && (
         <p
           className="poi-description"
           style={{ marginTop: "1em", marginBottom: 0 }}
@@ -84,12 +102,21 @@ export const POIDetails = ({ title, tags, description, day, date }) => {
           {description}
         </p>
       )}
-      {!description && (
+      {!description && !hideDescription && (
         <div
           className="poi-description"
-          style={{ marginTop: "1em", marginBottom: 0, width: "100%", height: "100%" }}
+          style={{
+            marginTop: "1em",
+            marginBottom: 0,
+            width: "100%",
+            height: "100%",
+          }}
         >
-          <Skeleton height={"100%"} width={"100%"} sx={{transform: "none !important"}}/>
+          <Skeleton
+            height={"100%"}
+            width={"100%"}
+            sx={{ transform: "none !important" }}
+          />
         </div>
       )}
 

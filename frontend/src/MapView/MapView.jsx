@@ -79,7 +79,7 @@ const MapView = () => {
     const fetchItineraryData = async () => {
       const query = await queryDatabase(NOTION_QUERY);
       if (query.results && query.results.length > 0) {
-        console.log("Itinerary data fetched", query);
+        // console.log("Itinerary data fetched", query);
         setItineraryData(query.results);
         // console.log(query.results);
 
@@ -170,6 +170,10 @@ const MapView = () => {
             icon:
               item.properties.mapIconKey.rich_text.length > 0
                 ? item.properties.mapIconKey.rich_text[0].plain_text
+                : item.icon && item.icon.type === "emoji"
+                ? { type: "emoji", value: item.icon.emoji }
+                : item.icon && item.icon.type === "external"
+                ? item.icon.external.url
                 : null,
             priority: item.properties.mapIconPriority.number ?? 0,
             description:
@@ -214,6 +218,10 @@ const MapView = () => {
           icon:
             item.properties.mapIconKey.rich_text.length > 0
               ? item.properties.mapIconKey.rich_text[0].plain_text
+              : item.icon && item.icon.type === "emoji"
+              ? { type: "emoji", value: item.icon.emoji }
+              : item.icon && item.icon.type === "external"
+              ? item.icon.external.url
               : null,
           priority: item.properties.mapIconPriority.number ?? 0,
           description:
@@ -284,7 +292,10 @@ const MapView = () => {
         map,
         position: item.position,
         icon:
-          item.icon !== null && item.icon in ICON_KEYS
+          typeof item.icon !== "object" &&
+          !Array.isArray(item.icon) &&
+          item.icon !== null &&
+          item.icon in ICON_KEYS
             ? {
                 url: ICON_KEYS[item.icon].url,
                 scaledSize: new maps.Size(
@@ -292,6 +303,24 @@ const MapView = () => {
                   ICON_KEYS[item.icon].scaledSize[1]
                 ),
               }
+            : item.icon !== null
+            ? item.icon.type === "emoji"
+              ? {
+                  url:
+                    "data:image/svg+xml;charset=UTF-8," +
+                    encodeURIComponent(
+                      `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">${item.icon.value}</text></svg>`
+                    ),
+                  scaledSize: new mapsRef.current.Size(100, 100), // size of the icon
+                  origin: new mapsRef.current.Point(0, 0), // origin
+                  anchor: new mapsRef.current.Point(50, 50), // anchor
+                }
+              : {
+                  url: item.icon,
+                  scaledSize: new mapsRef.current.Size(100, 100), // size of the icon
+                  origin: new mapsRef.current.Point(0, 0), // origin
+                  anchor: new mapsRef.current.Point(50, 50), // anchor
+                }
             : null,
         priority: item.priority,
       });
@@ -316,7 +345,7 @@ const MapView = () => {
         offsetY:
           item.icon !== null && item.icon in ICON_KEYS
             ? ICON_KEYS[item.icon].offsetY
-            : 5,
+            : 20,
       });
 
       // populateInfoWindow(infoDiv, "Header Info", "Title", "This is the main content body.", "Other relevant information.");
@@ -346,6 +375,7 @@ const MapView = () => {
       const isMarkerVisible = bounds.contains(focusedMarkerPosition);
 
       if (!isMarkerVisible) {
+        // console.log("marker no longer visible, setting null");
         setFocusedMarker(null);
       }
     }
@@ -379,6 +409,12 @@ const MapView = () => {
 
     if (map) {
       map.addListener("dragend", onPan);
+      // map.maxZoom = 20;
+      map.addListener("bounds_changed", () => {
+        if (map.getZoom() > 20) {
+          map.setZoom(20);
+        }
+      });
     }
   }, [map]);
 
@@ -813,6 +849,7 @@ const MapView = () => {
 
     if (_markers.length > 0) {
       if (_markers.length === 1) {
+        // console.log("render markers setting focused marker index 0");
         setFocusedMarker(_markers[0]);
         offsetCenter(_markers[0].position, 0, 70);
         return;
@@ -835,7 +872,7 @@ const MapView = () => {
   useEffect(() => {
     if (currentDayFilter === null) return;
 
-    console.log("setting timeline activities");
+    // console.log("setting timeline activities");
 
     const activities = renderedMarkers
       .reduce((activities, m) => {
@@ -920,10 +957,10 @@ const MapView = () => {
     const prevZoom = currentZoomRef.current;
     const curZoom = mapRef.current.getZoom();
 
-    if (prevZoom > curZoom) {
-      setFocusedMarker(null);
-      setFocusedCluster(null);
-    }
+    // if (prevZoom > curZoom) {
+    //   setFocusedMarker(null);
+    //   setFocusedCluster(null);
+    // }
 
     setCurrentZoom(curZoom);
 
@@ -994,10 +1031,11 @@ const MapView = () => {
 
     markerClusterRef.current.clusters.forEach((cluster) => {
       if (
-        (!focusedClusterRef.current && cluster.markers?.length > 1) ||
-        (focusedClusterRef.current !== null &&
-          focusedClusterRef.current.marker !== cluster.marker &&
-          cluster.markers?.length > 1)
+        // (!focusedClusterRef.current && cluster.markers?.length > 1) ||
+        // (focusedClusterRef.current !== null &&
+        //   focusedClusterRef.current.marker !== cluster.marker &&
+        //   cluster.markers?.length > 1)
+        true
       ) {
         cluster.markers?.forEach((marker) => {
           toggleOverlay(false, marker);
@@ -1007,7 +1045,10 @@ const MapView = () => {
 
         if (zoom < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
           toggleClusterOverlay(false, cluster);
-        } else if (zoom >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
+        } else if (
+          zoom >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL &&
+          !focusedMarkerRef.current
+        ) {
           toggleClusterOverlay(true, cluster);
         }
       } else {
@@ -1043,7 +1084,9 @@ const MapView = () => {
           focusedClusterRef.current.markers.indexOf(marker) === -1
         )
           toggleOverlay(false, marker);
-      } else if (clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1) {
+      }
+      //  if (clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1)
+      else {
         toggleOverlay(
           marker["hovered"] || marker === focusedMarkerRef.current,
           marker
@@ -1105,6 +1148,26 @@ const MapView = () => {
 
   useEffect(() => {
     focusedMarkerRef.current = focusedMarker;
+
+    if (focusedMarker) {
+      var position = focusedMarker.getPosition();
+
+      var bounds = new mapsRef.current.LatLngBounds();
+
+      //extend the bounds to include each marker's position
+      bounds.extend(position);
+
+      // markers.forEach((m) => {
+      //   toggleOverlay(true, m);
+      // });
+
+      mapRef.current.fitBounds(bounds);
+    }
+
+    // Set the map's center to the marker's position
+    // mapRef.current.setZoom(15);
+    // offsetCenter(position, 0, 70);
+    // console.log("focused marker:", focusedMarker?.info);
     renderOverlays();
   }, [focusedMarker]);
 
@@ -1112,14 +1175,25 @@ const MapView = () => {
     // Get the marker's position
     if (!mapRef.current) return;
 
-    var position = marker.getPosition();
-
     setFocusedCluster(null);
     setFocusedMarker(marker);
 
-    // Set the map's center to the marker's position
-    mapRef.current.setZoom(15);
-    offsetCenter(position, 0, 70);
+    // var position = marker.getPosition();
+
+    // var bounds = new mapsRef.current.LatLngBounds();
+
+    // //extend the bounds to include each marker's position
+    // bounds.extend(position);
+
+    // // markers.forEach((m) => {
+    // //   toggleOverlay(true, m);
+    // // });
+
+    // mapRef.current.fitBounds(bounds);
+
+    // // Set the map's center to the marker's position
+    // // mapRef.current.setZoom(15);
+    // // offsetCenter(position, 0, 70);
   };
 
   function offsetCenter(latlng, offsetx, offsety) {
@@ -1230,6 +1304,20 @@ const MapView = () => {
   useEffect(() => {
     focusedClusterRef.current = focusedCluster;
 
+    if (focusedCluster) {
+      var bounds = new maps.LatLngBounds();
+
+      //extend the bounds to include each marker's position
+      for (const marker of focusedCluster.markers)
+        bounds.extend(marker.position);
+
+      // markers.forEach((m) => {
+      //   toggleOverlay(true, m);
+      // });
+
+      map.fitBounds(bounds);
+    }
+
     renderOverlays();
   }, [focusedCluster]);
 
@@ -1246,6 +1334,10 @@ const MapView = () => {
       renderer: {
         render: (ok, stats, map) => {
           const { count, markers, _position } = ok;
+          const center = new mapsRef.current.LatLng(
+            _position.lat(),
+            _position.lng()
+          );
 
           // Choose the icon based on whether the cluster contains an important marker
 
@@ -1256,6 +1348,23 @@ const MapView = () => {
             important = valids.reduce((prev, curr) => {
               return curr.priority >= prev.priority ? curr : prev;
             });
+
+          let closestMarker = markers[0];
+          let minDistance = Number.MAX_VALUE;
+          if (!important) {
+            // Check for important markers and find the closest marker
+            markers.forEach((m) => {
+              const distance =
+                mapsRef.current.geometry.spherical.computeDistanceBetween(
+                  center,
+                  m.position
+                );
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestMarker = m;
+              }
+            });
+          }
 
           const m = createMarker({
             maps,
@@ -1269,13 +1378,14 @@ const MapView = () => {
                     ICON_KEYS[important.iconKey].scaledSize[1]
                   ),
                 }
-              : null,
+              : closestMarker.icon,
           });
 
           m["info"] = important
             ? important.info + " and " + (count - 1) + " more"
             : count + " markers";
           m.addListener("mouseover", () => {
+            // onMarkerMouseOver(m, markers.indexOf(m));
             m["hovered"] = true;
             if (zoomingRef.current) return;
 
@@ -1313,6 +1423,7 @@ const MapView = () => {
           });
 
           m.addListener("mouseout", () => {
+            // onMarkerMouseOut(m, markers.indexOf(m));
             m["hovered"] = false;
             if (zoomingRef.current) return;
 
@@ -1322,17 +1433,19 @@ const MapView = () => {
           });
 
           m.addListener("click", () => {
+            // onMarkerClick(m);
+            setFocusedMarker(null);
             setFocusedCluster({ marker: m, markers: markers });
-            var bounds = new maps.LatLngBounds();
+            // var bounds = new maps.LatLngBounds();
 
-            //extend the bounds to include each marker's position
-            for (const marker of markers) bounds.extend(marker.position);
+            // //extend the bounds to include each marker's position
+            // for (const marker of markers) bounds.extend(marker.position);
 
-            markers.forEach((m) => {
-              toggleOverlay(true, m);
-            });
+            // // markers.forEach((m) => {
+            // //   toggleOverlay(true, m);
+            // // });
 
-            map.fitBounds(bounds);
+            // map.fitBounds(bounds);
           });
 
           if (
@@ -1345,6 +1458,7 @@ const MapView = () => {
               marker: m,
               type: "title",
               title: m.info,
+              offsetY: important ? ICON_KEYS[important.iconKey].offsetY : 20,
             });
 
             overlay.setMap(null);
@@ -1674,6 +1788,7 @@ const MapView = () => {
 
           if (mapRef.current) mapRef.current.setZoom(13);
         }}
+        setFocusedMarker={setFocusedMarker}
       />
     </React.Fragment>
   );
