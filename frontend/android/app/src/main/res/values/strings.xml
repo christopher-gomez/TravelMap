@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">travelmap</string>
+    <string name="title_activity_main">travelmap</string>
+    <string name="package_name">com.christophergomez.travelmap</string>
+    <string name="custom_url_scheme">com.christophergomez.travelmap</string>
+</resources>

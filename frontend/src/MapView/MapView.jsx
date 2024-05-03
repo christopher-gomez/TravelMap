@@ -1304,7 +1304,7 @@ const MapView = () => {
       label,
       map,
       position: _position,
-      title,
+      title: '',
       icon,
     });
     marker["priority"] = priority;
