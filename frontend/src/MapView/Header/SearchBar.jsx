@@ -341,7 +341,7 @@ export default function SearchBar({
                 setInputFocused(false);
                 setOpen(false);
               }}
-              isFocused={inputFocused}
+              // isFocused={inputFocused}
               placeholder="Search…"
               onChange={(e) => {
                 const newValue = e.target.value;

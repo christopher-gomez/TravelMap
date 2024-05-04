@@ -17,6 +17,7 @@ export default function AppHeader({
   noLocationItems,
   setFocusedCluster,
   setFocusedMarker,
+  currentFilters,
 }) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [devOpen, setDevOpen] = React.useState(false);
@@ -53,7 +54,7 @@ export default function AppHeader({
             spacing={focusedMarker || focusedCluster ? 4 : 1}
             style={{ flexWrap: "wrap" }}
           >
-            <Grid item xs={12} sm={"auto"} sx={{marginTop: '1em'}}>
+            <Grid item xs={12} sm={"auto"} sx={{ marginTop: "1em" }}>
               <SearchBar
                 markers={markers}
                 onSearch={onSearch}
@@ -71,7 +72,16 @@ export default function AppHeader({
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  marginTop: "1em",
+                  "@media (max-width:679px)": {
+                    paddingTop: "1em !important",
+                    marginTop: "0", // Width for viewports >= 600px
+                  },
+                  "@media (min-width:680px)": {
+                    marginTop: "1em", // Width for viewports >= 900px
+                  },
+                  "@media (min-width:1200px)": {
+                    marginTop: "1em", // Width for viewports >= 1200px
+                  },
                 }}
               >
                 {/* <Chip
@@ -89,6 +99,7 @@ export default function AppHeader({
                   onFilterEdit={onFilterEdit}
                   setFocusedCluster={setFocusedCluster}
                   setFocusedMarker={setFocusedMarker}
+                  currentFilters={currentFilters}
                 />
               </Grid>
             )}

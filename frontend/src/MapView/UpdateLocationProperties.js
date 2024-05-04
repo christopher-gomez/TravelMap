@@ -146,3 +146,19 @@ export const findLocationLngLat = async (maps, location) => {
     return promise;
   }
 };
+
+export const updateActivityDate = async (activity) => {
+  const response = await updatePage({
+    id: activity.id,
+    properties: {
+      Date: {
+        date: {
+          start: activity.date.start,
+          end: activity.date.end,
+        },
+      },
+    },
+  });
+
+  return response;
+};

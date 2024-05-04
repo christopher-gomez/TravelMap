@@ -506,7 +506,15 @@ export default function FilterDialog({
   );
 }
 
-export function Filters({ allTags, allDays, onFilterEdit, allCities, setFocusedMarker, setFocusedCluster}) {
+export function Filters({
+  allTags,
+  allDays,
+  onFilterEdit,
+  allCities,
+  setFocusedMarker,
+  setFocusedCluster,
+  currentFilters,
+}) {
   const [filters, setFilters] = React.useState([]);
 
   React.useEffect(() => {
@@ -514,6 +522,32 @@ export function Filters({ allTags, allDays, onFilterEdit, allCities, setFocusedM
     setFocusedCluster(null);
     setFocusedMarker(null);
   }, [filters]);
+
+  React.useEffect(() => {
+    function arraysContainSameValues(arr1, arr2) {
+      // Check if the arrays are the same length
+      if (arr1.length !== arr2.length) {
+        return false;
+      }
+
+      // Sort both arrays
+      const sortedArr1 = [...arr1].sort();
+      const sortedArr2 = [...arr2].sort();
+
+      // Compare sorted arrays
+      for (let i = 0; i < sortedArr1.length; i++) {
+        if (sortedArr1[i] !== sortedArr2[i]) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    if (currentFilters && !arraysContainSameValues(filters, currentFilters)) {
+      setFilters(currentFilters);
+    }
+  }, [currentFilters]);
 
   // const [currentFilter, setCurrentFilter] = React.useState({
   //   type: null,

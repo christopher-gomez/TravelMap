@@ -10,6 +10,7 @@ require("./createEnv");
 
 const allowedOrigins = [
     'http://localhost:3000',
+    'https://localhost:3000',
     "http://travelmap2-414205.wl.r.appspot.com/",
     "https://travelmap2-414205.wl.r.appspot.com/"
 ];
@@ -33,6 +34,7 @@ var server = require("http").createServer(app);
 
 app.use("/maps", require("./api/maps")(app));
 app.use("/notion", require("./api/notion")(app));
+app.use("/google", require("./api/google")(app));
 
 if (process.env.NODE_ENV === "production") {
     app.use(

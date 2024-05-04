@@ -11,6 +11,9 @@ steps:
     - 'NOTION_TOKEN=${_NOTION_TOKEN}'
     - 'FAMILY_NOTION_DATABASE_ID=${_FAMILY_NOTION_DATABASE_ID}'
     - 'FAMILY_NOTION_PAGE_ID=${_FAMILY_NOTION_PAGE_ID}'
+    - 'HANNA_EMAIL=${_HANNA_EMAIL}
+    - 'ADAM_EMAIL=${_ADAM_EMAIL}'
+    - 'CHRIS_EMAIL=${_CHRIS_EMAIL}'
 - name: node:16.0.0
   entrypoint: npm
   args: ["run", "build"]

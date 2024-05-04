@@ -46,8 +46,9 @@ export default {
     },
     sushi: {
         url: SushiIcon,
-        scaledSize: [50, 50],
+        scaledSize: [35, 35],
         offsetY: 0,
+        notImportant: true
     },
     ramen: {
         url: RamenIcon,
@@ -138,6 +139,7 @@ export default {
         url: KonbiniIcon,
         scaledSize: [50, 50],
         offsetY: -5,
+        notImportant: true,
     },
     meijiJingu: {
         url: MeijiJinguIcon,

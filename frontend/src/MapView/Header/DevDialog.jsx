@@ -25,10 +25,6 @@ const BootstrapDialog = styled(Dialog)(({ theme }) => ({
 export default function DevDialog({ open, setOpen, items }) {
   const [locationState, setLocationState] = React.useState({});
 
-  React.useEffect(() => {
-    console.log(locationState);
-  }, [locationState]);
-
   const handleClose = () => {
     setOpen(false);
   };
@@ -62,6 +58,7 @@ export default function DevDialog({ open, setOpen, items }) {
       <DialogContent dividers>
         {items.map((item, i) => (
           <Box
+            key={item.properties.Activity.title[0].plain_text + "-dev-box"}
             sx={{
               display: "flex",
               flexFlow: "column",
@@ -110,7 +107,6 @@ export default function DevDialog({ open, setOpen, items }) {
                     id: item.id,
                     location: locationState[item.id],
                   });
-                  console.log("saved");
                 }}
               >
                 Save

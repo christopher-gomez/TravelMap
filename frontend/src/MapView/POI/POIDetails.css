@@ -40,7 +40,7 @@
   }
 }
 
-.content.mobile{
+.content.mobile {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -113,7 +113,11 @@
   right: 0;
   bottom: 0;
   height: 100px; /* Height of the fade effect */
-  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 1)
+  );
   pointer-events: none; /* Prevent the fade effect from blocking clicks */
 }
 
@@ -123,7 +127,11 @@
   right: 0;
   top: 0;
   height: 50px; /* Height of the fade effect */
-  background-image: linear-gradient(to top, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+  background-image: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 1)
+  );
   pointer-events: none; /* Prevent the fade effect from blocking clicks */
 }
 
@@ -238,7 +246,7 @@
 .poi-tag {
   display: inline-block;
   font-family: "Fredoka", sans-serif;
-  padding: .25em 1.5em; /* Adjust padding as needed */
+  padding: 0.25em 1.5em; /* Adjust padding as needed */
   border-radius: 2em; /* Half of the height for a rounded shape */
   color: #fff; /* Example text color */
   box-shadow: 0 0 3.5px 0px rgba(0, 0, 0, 0.47); /* Example shadow */
@@ -247,11 +255,33 @@
   font-weight: 600;
   font-style: italic;
   text-shadow: -1px -1px 0 #000, /* top left shadow */ 1px -1px 0 #000,
-  /* top right shadow */ -1px 1px 0 #000,
-  /* bottom left shadow */ 1px 1px 0 #000; /* bottom right shadow */
+    /* top right shadow */ -1px 1px 0 #000,
+    /* bottom left shadow */ 1px 1px 0 #000; /* bottom right shadow */
   white-space: nowrap; /* Prevent text from wrapping */
   backdrop-filter: blur(2px); /* Slightly less blur for sharpness */
   -webkit-backdrop-filter: blur(2px); /* Fallback for Safari */
   /* Simplify border and shadow to align with classic video game aesthetics */
   border: 2px solid #ffee00; /* Gold border for a touch of vibrancy */
+}
+
+.poi-related {
+  display: inline-block;
+  font-family: "Fredoka", sans-serif;
+  padding: 0.25em 1.5em; /* Adjust padding as needed */
+  border-radius: 2em; /* Half of the height for a rounded shape */
+  color: #000000; /* Example text color */
+  box-shadow: 0 0 3.5px 0px rgba(0, 0, 0, 0.47); /* Example shadow */
+  min-width: 25px;
+  font-size: 0.75em;
+  font-weight: 600;
+  font-style: italic;
+  text-shadow: -1px -1px 0 #ffffff, /* top left shadow */ 1px -1px 0 #ffffff,
+    /* top right shadow */ -1px 1px 0 #ffffff,
+    /* bottom left shadow */ 1px 1px 0 #ffffff; /* bottom right shadow */
+  white-space: nowrap; /* Prevent text from wrapping */
+  backdrop-filter: blur(2px); /* Slightly less blur for sharpness */
+  -webkit-backdrop-filter: blur(2px); /* Fallback for Safari */
+  /* Simplify border and shadow to align with classic video game aesthetics */
+  border: 2px solid #ffee00; /* Gold border for a touch of vibrancy */
+  cursor: pointer;
 }

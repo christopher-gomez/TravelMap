@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import GoogleMapReact from "google-map-react";
+import dayjs from "dayjs";
 // import testData from "./MapTestData.json";
 import TransitStyle from "./MapStyles/TransitStyle.json";
 import DefaultStyle from "./MapStyles/DefaultStyle.json";
@@ -24,6 +25,10 @@ import AppHeader from "./Header/MapHeader";
 import { FILTER_PROPERTIES, FILTER_TYPE } from "./Header/FilterDialog";
 import SwipeableEdgeDrawer from "../Util/SwipeableEdgeDrawer";
 import AppFooter from "./Footer/AppFooter";
+import { getFamilyGoogleUsers } from "../Api/Google";
+import { IconButton } from "@mui/material";
+import { ArrowBack, ArrowForward } from "@mui/icons-material";
+import { updateActivityDate } from "./UpdateLocationProperties";
 
 // import {
 //   findLocationLngLat,
@@ -35,8 +40,8 @@ import AppFooter from "./Footer/AppFooter";
 
 const OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL = 100;
 const timeOrder = {
-  "All Day": 0,
-  Morning: 1,
+  Morning: 0,
+  "All Day": 1,
   Afternoon: 2,
   Evening: 3,
   Night: 4,
@@ -148,6 +153,7 @@ const MapView = () => {
   function parseItineraryDataLocations(data) {
     const places = [];
     const unknownPlaces = [];
+    console.log("data", data);
     data.forEach((item) => {
       if (
         item.properties.Location.rich_text.length === 0 ||
@@ -206,6 +212,12 @@ const MapView = () => {
               item.properties.City.multi_select.length > 0
                 ? item.properties.City.multi_select.map((city) => city.name)
                 : null,
+            related:
+              item.properties["Related Agendas"].relation.length > 0
+                ? item.properties["Related Agendas"].relation.map(
+                    (agenda) => agenda.id
+                  )
+                : null,
           });
         });
       } catch (error) {
@@ -253,6 +265,12 @@ const MapView = () => {
           city:
             item.properties.City.multi_select.length > 0
               ? item.properties.City.multi_select.map((city) => city.name)
+              : null,
+          related:
+            item.properties["Related Agendas"].relation.length > 0
+              ? item.properties["Related Agendas"].relation.map(
+                  (agenda) => agenda.id
+                )
               : null,
         });
       }
@@ -337,6 +355,7 @@ const MapView = () => {
       marker["id"] = item.id;
       marker["timelineOverride"] = item.timelineOverride;
       marker["city"] = item.city;
+      marker["related"] = item.related;
 
       markers.push(marker);
 
@@ -430,6 +449,30 @@ const MapView = () => {
 
   const [preferredTravelMode, setPreferredTravelMode] = useState(null);
 
+  const [routeDriveTime, setRouteDriveTime] = useState(null);
+  const [routeDriveDistance, setRouteDriveDistance] = useState(null);
+  const [routeWalkTime, setRouteWalkTime] = useState(null);
+  const [routeWalkDistance, setRouteWalkDistance] = useState(null);
+
+  function secondsToTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    const hoursDisplay =
+      hours > 0 ? `${hours} hour${hours > 1 ? "s" : ""}` : "";
+    const minutesDisplay =
+      minutes > 0 ? `${minutes} minute${minutes > 1 ? "s" : ""}` : "";
+
+    if (hoursDisplay && minutesDisplay) {
+      return `${hoursDisplay} and ${minutesDisplay}`;
+    }
+    return hoursDisplay || minutesDisplay || "0 minutes";
+  }
+  function metersToMiles(meters) {
+    const miles = meters * 0.000621371;
+    return `${miles.toFixed(3)} miles`;
+  }
+
   function calculateRoute(start, end, waypoints) {
     if (!directionsService || !directionsRenderer) return;
 
@@ -438,22 +481,53 @@ const MapView = () => {
       mapsRef.current.geometry.spherical.computeDistanceBetween(start, end);
     const distanceInMiles = distanceInMeters * 0.000621371;
 
-    const travelMode =
-      preferredTravelMode ?? distanceInMiles <= mileThreshold
-        ? "WALKING"
-        : "DRIVING";
+    const travelMode = "DRIVING"; // "WALKING", "BICYCLING", "TRANSIT
 
-    const request = {
+    const driveRequest = {
       origin: start,
       destination: end,
       travelMode,
       waypoints: waypoints,
     };
 
-    directionsService.route(request, (result, status) => {
+    directionsService.route(driveRequest, (result, status) => {
       if (status === "OK") {
+        console.log("Route calculated", result);
         directionsRenderer.setMap(mapRef.current);
         directionsRenderer.setDirections(result);
+        let driveDuration = 0;
+        let driveDistance = 0;
+        result.routes[0].legs.forEach((leg) => {
+          driveDuration += leg.duration.value;
+          driveDistance += leg.distance.value;
+        });
+
+        setRouteDriveTime(secondsToTime(driveDuration));
+        setRouteDriveDistance(metersToMiles(driveDistance));
+
+        const walkRequest = {
+          origin: start,
+          destination: end,
+          travelMode: "WALKING",
+          waypoints: waypoints,
+        };
+
+        directionsService.route(walkRequest, (result, status) => {
+          if (status === "OK") {
+            console.log("Route calculated", result);
+
+            let walkDuration = 0;
+            let walkDistance = 0;
+            result.routes[0].legs.forEach((leg) => {
+              walkDuration += leg.duration.value;
+
+              walkDistance += leg.distance.value;
+            });
+
+            setRouteWalkTime(secondsToTime(walkDuration));
+            setRouteWalkDistance(metersToMiles(walkDistance));
+          }
+        });
       }
     });
   }
@@ -501,29 +575,29 @@ const MapView = () => {
   const calculateDay = (activityDate) => {
     if (!activityDate) return null;
 
-    const tripStart = new Date(tripDateRange.current.start);
-    const activityStart = new Date(activityDate.start);
+    const tripStart = dayjs(tripDateRange.current.start);
+    const activityStart = dayjs(activityDate.start);
     const activityEnd = activityDate.end
-      ? new Date(activityDate.end)
+      ? dayjs(activityDate.end)
       : activityStart;
 
     // Calculate the start and end day numbers
     const startDay =
       Math.ceil((activityStart - tripStart) / (1000 * 60 * 60 * 24)) + 1;
     const endDay =
-      Math.ceil((activityEnd - tripStart) / (1000 * 60 * 60 * 24)) + 1;
+      Math.floor((activityEnd - tripStart) / (1000 * 60 * 60 * 24)) + 1;
 
     // Generate an array of day numbers if there are multiple days
-    if (startDay !== endDay) {
+    if (activityDate.end) {
       const dayNumbers = [];
       for (let i = startDay; i <= endDay; i++) {
-        dayNumbers.push(i);
+        dayNumbers.push(i - 1);
       }
       return dayNumbers;
     }
 
     // If the activity is only one day, return an array with that single number
-    return startDay;
+    return startDay - 1;
   };
 
   const tripDateRange = useRef(null);
@@ -665,6 +739,8 @@ const MapView = () => {
     markers,
   ]);
 
+  const firstRender = useRef(true);
+
   const renderMarkers = () => {
     if (!map || !maps || !markers) return;
 
@@ -728,6 +804,8 @@ const MapView = () => {
               return false;
           }
         }
+
+        if (!m.time && !m.timelineOverride) return false;
 
         if (Array.isArray(m.day)) {
           switch (filter.type) {
@@ -831,9 +909,9 @@ const MapView = () => {
 
     // Filter for target info
     if (markerInfoFilter) {
-      _markers = _markers.filter((m) => {
-        return m.info.toLowerCase().includes(markerInfoFilter.toLowerCase());
-      });
+      // _markers = _markers.filter((m) => {
+      //   return m.info.toLowerCase().includes(markerInfoFilter.toLowerCase());
+      // });
     }
 
     _markers.forEach((m) => {
@@ -856,19 +934,32 @@ const MapView = () => {
     if (_markers.length > 0) {
       if (_markers.length === 1) {
         // console.log("render markers setting focused marker index 0");
-        setFocusedMarker(_markers[0]);
-        offsetCenter(_markers[0].position, 0, 70);
-        return;
+        if (_markers.length === 1) {
+          // setFocusedMarker(_markers[0]);
+          // offsetCenter(_markers[0].position, 0, 70);
+        }
+        // return;
+      }
+      const boundMarkers = markerInfoFilter
+        ? _markers.filter((m) => {
+            return m.info
+              .toLowerCase()
+              .includes(markerInfoFilter.toLowerCase());
+          })
+        : _markers;
+
+      if (firstRender.current) {
+        var bounds = new maps.LatLngBounds();
+
+        //extend the bounds to include each marker's position
+        for (const marker of boundMarkers) bounds.extend(marker.position);
+
+        // if (boundMarkers.length === 1) offsetCenter(_markers[0].position, 0, 70);
+        map.fitBounds(bounds);
+        firstRender.current = false;
       }
 
-      var bounds = new maps.LatLngBounds();
-      //extend the bounds to include each marker's position
-      for (const marker of _markers) bounds.extend(marker.position);
-
-      map.fitBounds(
-        bounds,
-        dayFilters.length === 1 && dayFilters[0].value.includes("All") ? 0 : 300
-      );
+      if (boundMarkers.length === 1) setFocusedMarker(boundMarkers[0]);
     }
   };
 
@@ -1155,23 +1246,26 @@ const MapView = () => {
   useEffect(() => {
     focusedMarkerRef.current = focusedMarker;
 
-    if (focusedMarker) {
-      var position = focusedMarker.getPosition();
+    // if (focusedMarker) {
+    //   var position = focusedMarker.getPosition();
 
-      var bounds = new mapsRef.current.LatLngBounds();
+    //   var bounds = new mapsRef.current.LatLngBounds();
 
-      //extend the bounds to include each marker's position
-      bounds.extend(position);
+    //   //extend the bounds to include each marker's position
+    //   bounds.extend(position);
 
-      // markers.forEach((m) => {
-      //   toggleOverlay(true, m);
-      // });
+    //   // markers.forEach((m) => {
+    //   //   toggleOverlay(true, m);
+    //   // });
 
-      mapRef.current.fitBounds(bounds);
-    }
+    //   mapRef.current.fitBounds(bounds);
+    // }
 
     // Set the map's center to the marker's position
     // mapRef.current.setZoom(15);
+    if (focusedMarker) {
+      mapRef.current.panTo(focusedMarker.position);
+    }
     // offsetCenter(position, 0, 70);
     // console.log("focused marker:", focusedMarker?.info);
     renderOverlays();
@@ -1304,7 +1398,7 @@ const MapView = () => {
       label,
       map,
       position: _position,
-      title: '',
+      title: "",
       icon,
     });
     marker["priority"] = priority;
@@ -1319,7 +1413,7 @@ const MapView = () => {
         function (results, status) {
           if (status === maps.places.PlacesServiceStatus.OK) {
             // Assuming the first result is the one we want
-            console.log("got id for " + title + ": " + results[0].place_id);
+            // console.log("got id for " + title + ": " + results[0].place_id);
             marker["placeId"] = results[0].place_id;
             getPlacePhoto(results[0].place_id, marker);
           } else {
@@ -1349,6 +1443,93 @@ const MapView = () => {
 
   const [markersWithoutPhotos, setMarkersWithoutPhotos] = useState([]);
 
+  const [mapLocked, setMapLocked] = useState(false);
+
+  // const [googleAuth, setGoogleAuth] = useState(null);
+
+  const loadGoogleScript = () => {
+    if (inittedGoogleSignIn.current) return;
+
+    inittedGoogleSignIn.current = true;
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => initGoogleSignIn();
+    document.body.appendChild(script);
+  };
+
+  const inittedGoogleSignIn = useRef(false);
+
+  function initGoogleSignIn() {
+    // if (inittedGoogleSignIn.current) return;
+
+    console.log("init google sign in");
+    inittedGoogleSignIn.current = true;
+    window.google.accounts.id.initialize({
+      client_id:
+        "620708696585-c3cic34ecbdjsbh1jv49nqna5s5aoe4k.apps.googleusercontent.com",
+      callback: handleCredentialResponse,
+      auto_select: true,
+    });
+
+    if (localStorage.getItem("googleSignInToken")) {
+      const jwt = localStorage.getItem("googleSignInToken");
+      const { exp } = JSON.parse(atob(jwt.split(".")[1]));
+      if (exp * 1000 < Date.now()) {
+        localStorage.removeItem("googleSignInToken");
+      } else {
+        console.log("previous valid sign in token found");
+        setSignInToken(jwt);
+      }
+    }
+  }
+
+  const [signInToken, setSignInToken] = useState(null);
+  const [googleAccount, setGoogleAccount] = useState(null);
+
+  useEffect(() => {
+    const validateToken = async () => {
+      const data = JSON.parse(atob(signInToken.split(".")[1]));
+      const users = await getFamilyGoogleUsers();
+      if (users.includes(data.email)) {
+        console.log("Got google id");
+        setGoogleAccount(data);
+        localStorage.setItem("googleSignInToken", signInToken);
+      } else {
+        console.log("Invalid google id");
+        setSignInToken(null);
+      }
+    };
+    if (signInToken) {
+      validateToken();
+    } else {
+      console.log("No google id");
+      setGoogleAccount(null);
+      localStorage.removeItem("googleSignInToken");
+    }
+  }, [signInToken]);
+
+  async function handleCredentialResponse(response) {
+    setSignInToken(response.credential);
+  }
+
+  useEffect(() => {
+    // if (googleAuth === null) {
+    // }
+    if (!inittedGoogleSignIn.current) loadGoogleScript();
+  }, []);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setOptions({
+        gestureHandling: mapLocked ? "none" : "greedy",
+        scrollwheel: !mapLocked,
+        disableDoubleClickZoom: mapLocked,
+      });
+    }
+  }, [mapLocked]);
+
   function getPlacePhoto(placeId, marker) {
     placesService.current.getDetails(
       {
@@ -1361,11 +1542,15 @@ const MapView = () => {
           place.photos &&
           place.photos.length > 0
         ) {
-          console.log("got photo for " + marker["info"]);
-          marker["photo"] = place.photos[0].getUrl({
-            maxWidth: 400,
-            maxHeight: 400,
-          });
+          // console.log(
+          //   `got ${place.photos.length} photo(s) for ${marker["info"]}`
+          // );
+          marker["photo"] = place.photos.map((photo) =>
+            photo.getUrl({
+              maxWidth: 400,
+              maxHeight: 400,
+            })
+          );
         } else {
           console.error("could not get photo for " + marker["info"]);
           setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
@@ -1382,19 +1567,19 @@ const MapView = () => {
   useEffect(() => {
     focusedClusterRef.current = focusedCluster;
 
-    if (focusedCluster) {
-      var bounds = new maps.LatLngBounds();
+    // if (focusedCluster) {
+    //   var bounds = new maps.LatLngBounds();
 
-      //extend the bounds to include each marker's position
-      for (const marker of focusedCluster.markers)
-        bounds.extend(marker.position);
+    //   //extend the bounds to include each marker's position
+    //   for (const marker of focusedCluster.markers)
+    //     bounds.extend(marker.position);
 
-      // markers.forEach((m) => {
-      //   toggleOverlay(true, m);
-      // });
+    //   // markers.forEach((m) => {
+    //   //   toggleOverlay(true, m);
+    //   // });
 
-      map.fitBounds(bounds);
-    }
+    //   map.fitBounds(bounds);
+    // }
 
     renderOverlays();
   }, [focusedCluster]);
@@ -1444,6 +1629,12 @@ const MapView = () => {
             });
           }
 
+          if (important) {
+            if (ICON_KEYS[important.iconKey].notImportant) {
+              important = null;
+            }
+          }
+
           const m = createMarker({
             getPlaceDetails: false,
             maps,
@@ -1474,7 +1665,7 @@ const MapView = () => {
             markersRef.current.forEach((m) => {
               if (markers.indexOf(m) !== -1) return;
 
-              toggleOverlay(false, m);
+              if (m !== focusedMarkerRef.current) toggleOverlay(false, m);
             });
 
             if (markerClusterRef.current) {
@@ -1610,6 +1801,8 @@ const MapView = () => {
   useEffect(() => {
     if (!routing) {
       setRoutingData([]);
+      setRouteDriveTime(null);
+      setRouteDriveDistance(null);
     } else {
       setRoutingData([
         timelineActivities[0],
@@ -1664,6 +1857,7 @@ const MapView = () => {
         allTags={allTags}
         focusedMarker={focusedMarker}
         focusedCluster={focusedCluster}
+        currentFilters={markerPropertyFilters}
         onSearch={(search) => {
           setFocusedMarker(null);
           setFocusedCluster(null);
@@ -1768,29 +1962,150 @@ const MapView = () => {
               >
                 {routing ? <CancelIcon /> : <ForkLeftIcon />}
               </div>
-              <h2
-                style={{
-                  fontFamily: "'Indie Flower', cursive",
-                  paddingTop: "16px",
-                  paddingLeft: "16px",
-                  marginTop: "32px",
-                  marginBottom: "0px",
-                }}
-              >
-                Day {currentDayFilter}
-              </h2>
-              {routing && (
-                <h3
+              <div style={{ display: "flex" }}>
+                <h2
                   style={{
                     fontFamily: "'Indie Flower', cursive",
-                    paddingLeft: "32px",
-                    marginTop: "0px",
+                    paddingTop: "16px",
+                    paddingLeft: "16px",
+                    marginTop: "32px",
+                    marginBottom: "0px",
+                    textDecoration: "underline",
                   }}
                 >
-                  Routing
-                </h3>
+                  Day {currentDayFilter}
+                </h2>
+                {!routing && (
+                  <div style={{ display: "flex", placeItems: "end" }}>
+                    <IconButton
+                      onClick={() => {
+                        let prevDay = currentDayFilter - 1;
+                        if (
+                          prevDay <
+                          Math.min(
+                            ...markerDays.filter((x) => Number.isInteger(x))
+                          )
+                        )
+                          prevDay = Math.min(
+                            ...markerDays.filter((x) => Number.isInteger(x))
+                          );
+                        let newFilters = markerPropertyFilters.filter(
+                          (filter) => {
+                            return filter.property !== FILTER_PROPERTIES.day;
+                          }
+                        );
+                        newFilters.push({
+                          type: FILTER_TYPE.INCLUDE,
+                          property: FILTER_PROPERTIES.day,
+                          value: [prevDay],
+                        });
+
+                        setMarkerPropertyFilters(newFilters);
+                      }}
+                    >
+                      <ArrowBack />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => {
+                        let nextDay = currentDayFilter + 1;
+                        if (
+                          nextDay >
+                          Math.max(
+                            ...markerDays.filter((x) => Number.isInteger(x))
+                          )
+                        )
+                          nextDay = Math.max(
+                            ...markerDays.filter((x) => Number.isInteger(x))
+                          );
+                        let newFilters = markerPropertyFilters.filter(
+                          (filter) => {
+                            return filter.property !== FILTER_PROPERTIES.day;
+                          }
+                        );
+                        newFilters.push({
+                          type: FILTER_TYPE.INCLUDE,
+                          property: FILTER_PROPERTIES.day,
+                          value: [nextDay],
+                        });
+
+                        setMarkerPropertyFilters(newFilters);
+                      }}
+                    >
+                      <ArrowForward />
+                    </IconButton>
+                  </div>
+                )}
+              </div>
+              {routing && (
+                <>
+                  <h3
+                    style={{
+                      fontFamily: "'Indie Flower', cursive",
+                      paddingLeft: "32px",
+                      margin: "0px",
+                    }}
+                  >
+                    Routing
+                  </h3>
+                  {routeDriveTime && routeDriveDistance && (
+                    <div
+                      style={{
+                        paddingLeft: "46px",
+                        marginTop: "0px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontFamily: "'Indie Flower', cursive",
+                          margin: "0px",
+                        }}
+                      >
+                        Driving: {routeDriveTime}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: "'Indie Flower', cursive",
+                          paddingLeft: "16px",
+                          margin: "0px",
+                        }}
+                      >
+                        {routeDriveDistance}
+                      </p>
+                    </div>
+                  )}
+
+                  {routeWalkTime && routeWalkDistance && (
+                    <div
+                      style={{
+                        paddingLeft: "46px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontFamily: "'Indie Flower', cursive",
+                          margin: "0px",
+                        }}
+                      >
+                        Walking: {routeWalkTime}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: "'Indie Flower', cursive",
+                          paddingLeft: "16px",
+                          marginTop: "0px",
+                        }}
+                      >
+                        {routeWalkDistance}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
               <Timeline
+                driveDuration={routeDriveTime}
+                walkDuration={routeWalkTime}
+                driveDistance={routeDriveDistance}
+                walkDistance={routeWalkDistance}
                 selectedActivities={routingData
                   .slice(0, 2)
                   .map((data) => data.index)}
@@ -1864,8 +2179,12 @@ const MapView = () => {
         currentRenderType={currentRenderType}
         setCurrentMapStyle={setCurrentMapStyle}
         setCurrentRenderType={setCurrentRenderType}
+        offsetCenter={offsetCenter}
         focusedCluster={focusedCluster}
         focusedMarker={focusedMarker}
+        setMapLocked={setMapLocked}
+        mapLocked={mapLocked}
+        allMarkers={markers}
         onDrawerClose={() => {
           setFocusedMarker(null);
           setFocusedCluster(null);
@@ -1873,6 +2192,14 @@ const MapView = () => {
           if (mapRef.current) mapRef.current.setZoom(13);
         }}
         setFocusedMarker={setFocusedMarker}
+        signInToken={signInToken}
+        setSignInToken={setSignInToken}
+        googleAccount={googleAccount}
+        onUpdateDate={(date) => {
+          if (!focusedMarker) return;
+          updateActivityDate(focusedMarker);
+        }}
+        calculateDay={calculateDay}
       />
     </React.Fragment>
   );

@@ -12,6 +12,10 @@ export default function ActivityTimeline({
   activities,
   selectedActivities,
   onActivityClick,
+  driveDuration,
+  walkDuration,
+  driveDistance,
+  walkDistance,
 }) {
   return (
     <Timeline position="right" sx={{ fontFamily: "'Indie Flower', cursive" }}>

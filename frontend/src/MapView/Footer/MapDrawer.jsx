@@ -17,6 +17,11 @@ export default function MapDrawer({
   onClose,
   onHeaderHeightChange,
   setFocusedMarker,
+  allMarkers,
+  offsetCenter,
+  googleAccount,
+  onUpdateDate,
+  calculateDay,
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -53,6 +58,11 @@ export default function MapDrawer({
       : focusedMarker
       ? focusedMarker.tags
       : [];
+  let related = focusedMarker
+    ? focusedMarker.related
+      ? allMarkers.filter((m) => focusedMarker.related.includes(m.id))
+      : []
+    : [];
 
   let content = focusedMarker ? (
     <POIDetails
@@ -68,6 +78,13 @@ export default function MapDrawer({
         focusedMarker.description === null
       }
       tags={tags}
+      related={related}
+      setFocusedMarker={setFocusedMarker}
+      offsetCenter={offsetCenter}
+      googleAccount={googleAccount}
+      onUpdateDate={onUpdateDate}
+      calculateDay={calculateDay}
+      marker={focusedMarker}
     />
   ) : focusedCluster ? (
     focusedCluster.markers.map((m, i) => (
@@ -108,7 +125,10 @@ export default function MapDrawer({
     />
   ) : (
     <StandardDrawer
-      open={focusedCluster || focusedMarker}
+      open={
+        (focusedCluster !== null && focusedCluster !== undefined) ||
+        (focusedMarker !== undefined && focusedMarker !== null)
+      }
       onClose={onClose}
       DrawerContent={content}
     />
