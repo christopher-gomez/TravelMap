@@ -64,6 +64,8 @@ export default function MapDrawer({
       : []
     : [];
 
+  let link = focusedMarker ? focusedMarker.link : null;
+
   let content = focusedMarker ? (
     <POIDetails
       icon={icon}
@@ -85,6 +87,7 @@ export default function MapDrawer({
       onUpdateDate={onUpdateDate}
       calculateDay={calculateDay}
       marker={focusedMarker}
+      link={link}
     />
   ) : focusedCluster ? (
     focusedCluster.markers.map((m, i) => (
@@ -107,23 +110,7 @@ export default function MapDrawer({
     ))
   ) : null;
 
-  return isTouchDevice() ? (
-    <SwipeableEdgeDrawer
-      onHeightChange={onHeightChange}
-      hidden={!focusedMarker && !focusedCluster}
-      headerHeight={drawerHeaderHeight}
-      HeaderContent={
-        <POIDetailsTitle title={title} tags={tags} day={day} date={date} />
-      }
-      DrawerContent={
-        description !== "" ? (
-          <POIDetailsDescription description={description} />
-        ) : null
-      }
-      onClose={onClose}
-      onHeaderHeightChange={onHeaderHeightChange}
-    />
-  ) : (
+  return (
     <StandardDrawer
       open={
         (focusedCluster !== null && focusedCluster !== undefined) ||
@@ -133,4 +120,23 @@ export default function MapDrawer({
       DrawerContent={content}
     />
   );
+  //  isTouchDevice() ? (
+  //   <SwipeableEdgeDrawer
+  //     onHeightChange={onHeightChange}
+  //     hidden={!focusedMarker && !focusedCluster}
+  //     headerHeight={drawerHeaderHeight}
+  //     HeaderContent={
+  //       <POIDetailsTitle title={title} tags={tags} day={day} date={date} />
+  //     }
+  //     DrawerContent={
+  //       description !== "" ? (
+  //         <POIDetailsDescription description={description} />
+  //       ) : null
+  //     }
+  //     onClose={onClose}
+  //     onHeaderHeightChange={onHeaderHeightChange}
+  //   />
+  // ) : (
+
+  // );
 }

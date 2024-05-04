@@ -218,6 +218,7 @@ const MapView = () => {
                     (agenda) => agenda.id
                   )
                 : null,
+            link: item.properties.Link.url ? item.properties.Link.url : null,
           });
         });
       } catch (error) {
@@ -272,6 +273,7 @@ const MapView = () => {
                   (agenda) => agenda.id
                 )
               : null,
+          link: item.properties.Link.url ? item.properties.Link.url : null,
         });
       }
     });
@@ -356,6 +358,7 @@ const MapView = () => {
       marker["timelineOverride"] = item.timelineOverride;
       marker["city"] = item.city;
       marker["related"] = item.related;
+      marker["link"] = item.link;
 
       markers.push(marker);
 
@@ -659,7 +662,8 @@ const MapView = () => {
 
     days.sort((a, b) => a - b);
     // days.unshift("All");
-    days.push("General");
+    // days.push("General");
+    days.push("Not Set");
 
     setMarkerDays(days);
     markersRef.current = markers;
@@ -795,7 +799,7 @@ const MapView = () => {
               return false;
           }
         }
-        if (filter.value.includes("General") && !m.day) {
+        if (filter.value.includes("Not Set") && !m.day) {
           switch (filter.type) {
             case FILTER_TYPE.MATCH:
             case FILTER_TYPE.INCLUDE:
@@ -973,7 +977,7 @@ const MapView = () => {
 
     const activities = renderedMarkers
       .reduce((activities, m) => {
-        const { id, info, time, timelineOverride } = m;
+        let { id, info, time, timelineOverride, tags } = m;
         // Check if there's an override for the current day filter
         if (
           timelineOverride &&
@@ -1001,8 +1005,18 @@ const MapView = () => {
               marker: m,
             });
           }
-        } else if (timelineOverride && timelineOverride.misc) {
+        } else if (
+          (timelineOverride && timelineOverride.misc) ||
+          (tags !== undefined &&
+            tags !== null &&
+            tags.includes("Accommodation"))
+        ) {
           // Check for miscellaneous override
+          if (!timelineOverride) {
+            timelineOverride = {
+              misc: [1, 4],
+            };
+          }
           const miscOverride = timelineOverride.misc;
           if (Array.isArray(miscOverride)) {
             // Use the misc override if the current day filter is not found
@@ -1893,7 +1907,7 @@ const MapView = () => {
       {/* Timeline */}
       {currentDayFilter !== null &&
         currentDayFilter !== "All" &&
-        currentDayFilter !== "General" &&
+        currentDayFilter !== "Not Set" &&
         timelineActivities.length > 0 && (
           <>
             <div

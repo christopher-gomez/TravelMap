@@ -123,7 +123,7 @@ export default function AppHeader({
             focusedCluster={focusedCluster}
             focusedMarker={focusedMarker}
           /> */}
-          {process.env.NODE_ENV === "development" && (
+          {/* {process.env.NODE_ENV === "development" && (
             <button
               onClick={() => {
                 setDevOpen(true);
@@ -131,11 +131,11 @@ export default function AppHeader({
             >
               Set Locations
             </button>
-          )}
+          )} */}
         </Toolbar>
       </AppBar>
 
-      <DevDialog items={noLocationItems} open={devOpen} setOpen={setDevOpen} />
+      {/* <DevDialog items={noLocationItems} open={devOpen} setOpen={setDevOpen} /> */}
       <FilterDialog
         open={filtersOpen}
         setOpen={setFiltersOpen}

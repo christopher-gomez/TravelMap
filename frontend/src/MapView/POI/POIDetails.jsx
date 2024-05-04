@@ -58,10 +58,16 @@ const DateSetter = ({
         >
           {date && (
             <span className="poi-date row">
-              {`${new Date(dayjs(date.start)).toLocaleDateString("en-US", options)}${
+              {`${new Date(dayjs(date.start)).toLocaleDateString(
+                "en-US",
+                options
+              )}${
                 date.end
                   ? " - " +
-                    new Date(dayjs(date.end)).toLocaleDateString("en-US", options)
+                    new Date(dayjs(date.end)).toLocaleDateString(
+                      "en-US",
+                      options
+                    )
                   : ""
               }`}{" "}
               -{" "}
@@ -156,6 +162,7 @@ export const POIDetails = ({
   onUpdateDate,
   marker,
   calculateDay,
+  link,
 }) => {
   const [curImageIndex, setCurImageIndex] = useState(0);
 
@@ -272,8 +279,8 @@ export const POIDetails = ({
         googleAccount={googleAccount}
         day={_day}
         onUpdateDate={(date) => {
-          if(!calculateDay) return;
-          
+          if (!calculateDay) return;
+
           console.log("updating date", date);
           if (!date.start && !date.end) {
             return;
@@ -283,7 +290,7 @@ export const POIDetails = ({
 
           if (marker) {
             marker["date"] = date;
-            marker["day"] = day
+            marker["day"] = day;
           }
 
           setDate(date);
@@ -291,6 +298,11 @@ export const POIDetails = ({
           onUpdateDate(date);
         }}
       />
+      {link && (
+        <a href={link} target="_blank" rel="noreferrer">
+          Website
+        </a>
+      )}
       {tags && (
         <div className="poi-tags" style={{ marginTop: "1em" }}>
           {tags.map((tag, i) => (
