@@ -1,7 +1,7 @@
 const server =
     process.env.NODE_ENV === "production" ? "" : "http://localhost:8080";
 
-export const queryDatabase = async ({ id, filter, sorts }) => {
+export const queryDatabase = async ({ id, filter, sorts, cursor }) => {
     id = id ?? ""
     const queryResponse = await fetch(server + "/notion/database/" + id, {
         method: "POST",
@@ -11,6 +11,7 @@ export const queryDatabase = async ({ id, filter, sorts }) => {
         body: JSON.stringify({
             filter: filter ?? {},
             sorts: sorts ?? [],
+            start_cursor: cursor
         }),
     });
     const queryData = await queryResponse.json();

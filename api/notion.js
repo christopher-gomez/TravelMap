@@ -38,6 +38,7 @@ module.exports = function (app) {
                 database_id: id,
                 filter: req.body.filter,
                 sorts: req.body.sorts,
+                start_cursor: req.body.start_cursor !== null ? req.body.start_cursor : undefined,
             });
 
             res.send(response);

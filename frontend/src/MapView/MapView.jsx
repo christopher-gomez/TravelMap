@@ -81,31 +81,65 @@ const MapView = () => {
       setFetchingKey(false);
     };
 
-    const fetchItineraryData = async () => {
-      const query = await queryDatabase(NOTION_QUERY);
-      if (query.results && query.results.length > 0) {
-        // console.log("Itinerary data fetched", query);
-        setItineraryData(query.results);
-        // console.log(query.results);
+    async function fetchAllPages(startCursor) {
+      let results = [];
+      let hasMore = true;
+      let cursor = startCursor;
 
-        // const data = JSON.parse(JSON.stringify(PlacesData));
-
-        // const mappedData = data.map((item) => ({
-        //   id: item.id,
-        //   location: item.location,
-        // }));
-
-        // console.log(mappedData)
-
-        // await updateLocationProperties(mappedData);
-
-        // console.log(JSON.stringify(query, null, 2));
+      while (hasMore) {
+        const response = await fetch(
+          `https://api.notion.com/v1/databases/YOUR_DATABASE_ID/query`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer YOUR_INTEGRATION_TOKEN`,
+              "Notion-Version": "2021-05-13",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              start_cursor: cursor,
+            }),
+          }
+        );
+        const data = await response.json();
+        results = results.concat(data.results);
+        hasMore = data.has_more;
+        cursor = data.next_cursor; // Update cursor to the next cursor from response
       }
+
+      return results;
+    }
+
+    const fetchItineraryData = async (startCursor) => {
+      let results = [];
+      let hasMore = true;
+      let cursor = startCursor;
+
+      // const query = await queryDatabase({ ...NOTION_QUERY, cursor: cursor });
+      // if (query.results && query.results.length > 0) {
+      //   console.log("Itinerary data fetched", query);
+      //   setItineraryData(query.results);
+      //   // console.log(query.results);
+      // }
+
+      while (hasMore) {
+        const data = await queryDatabase({
+          ...NOTION_QUERY,
+          cursor: cursor,
+        });
+
+        console.log('got data', data);
+        results = results.concat(data.results);
+        hasMore = data.has_more;
+        cursor = data.next_cursor; // Update cursor to the next cursor from response
+      }
+
+      setItineraryData(results);
     };
 
     if (!fetchedAPIKey) fetchAPIKey();
 
-    if (!itineraryData) fetchItineraryData();
+    if (!itineraryData) fetchItineraryData(null);
   }, []);
 
   // useEffect(() => {
