@@ -4,6 +4,7 @@ import SatelliteAltIcon from "@mui/icons-material/SatelliteAlt";
 import DirectionsTransitIcon from "@mui/icons-material/DirectionsTransit";
 import MapIcon from "@mui/icons-material/Map";
 import { Google, Lock, LockOpen, Logout } from "@mui/icons-material";
+import { PromptSignIn, SignOut } from "../../Util/GooglePrompt";
 
 export default function MapFAB({
   currentRenderType,
@@ -13,37 +14,23 @@ export default function MapFAB({
   drawerHeight,
   mapLocked,
   setMapLocked,
-  signInToken,
-  setSignInToken,
+  // signInToken,
+  // setSignInToken,
   googleAccount,
+  setErrorPopupOpen,
 }) {
   const speedDialActions = [
     {
-      icon: signInToken ? <Logout /> : <Google />,
-      name: signInToken ? "Sign out" : "Sign in with Google",
+      icon: googleAccount ? <Logout /> : <Google />,
+      name: googleAccount ? "Sign out" : "Sign in with Google",
       onClick: () => {
-        if (window.google && !signInToken) {
-          window.google.accounts.id.prompt((notification) => {
-            if (
-              notification.isNotDisplayed() ||
-              notification.isSkippedMoment()
-            ) {
-              // Handle the failure to display or user skipping the sign-in prompt
-              console.log("Sign-in prompt not displayed or was skipped.");
-            }
+        if (!googleAccount) {
+          PromptSignIn(() => {
+            setErrorPopupOpen(true);
           });
-        } else if (window.google && googleAccount) {
-          // window.google.accounts.id.disableAutoSelect();
-          // window.google.accounts.id.disablePrompt();
-          console.log("Revoking token");
-          window.google.accounts.id.revoke(googleAccount.email, (done) => {
-            console.log("consent revoked", done);
-            window.location.reload();
-          });
-          setSignInToken(null);
-          // localStorage.removeItem("googleSignInToken");
-        } else {
-          console.log("Google API not loaded");
+        } else if (googleAccount) {
+          SignOut(googleAccount);
+          // setSignInToken(null);
         }
       },
     },

@@ -39,9 +39,7 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
             display: "flex", // Make this a flex container
             flexDirection: "column", // Stack children vertically
             borderRadius: "0em 1em 0em 0em",
-            padding: "2em",
-            paddingTop: "64px",
-            paddingBottom: "0",
+            padding: "0",
             minWidth: "420px",
             maxWidth: "420px",
             height: "100%", // Set the height to 100% of the viewport
@@ -73,7 +71,10 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
         PaperProps={{ style: { zIndex: 1 } }}
         open={drawerOpen}
         onClose={toggleDrawer(false)}
-        onOpen={toggleDrawer(true)}
+        onOpen={() => {
+          console.log("onOpen");
+          toggleDrawer(true);
+        }}
         hideBackdrop
       >
         {/* <div

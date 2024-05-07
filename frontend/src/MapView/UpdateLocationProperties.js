@@ -4,7 +4,9 @@ import { updatePage } from "../Api/Notion";
  *
  * @param {Array<{id: string, location: string}>} locations
  */
-export const updateLocationProperties = async (loc) => {
+export const updateLocationProperties = async (loc, googleAccount) => {
+  if (!googleAccount) return;
+
   if (Array.isArray(loc)) {
     loc.forEach(async (location) => {
       const response = await updatePage({
@@ -147,7 +149,9 @@ export const findLocationLngLat = async (maps, location) => {
   }
 };
 
-export const updateActivityDate = async (activity) => {
+export const updateActivityDate = async (activity, googleAccount) => {
+  if (!googleAccount) return;
+
   const response = await updatePage({
     id: activity.id,
     properties: {
@@ -155,6 +159,65 @@ export const updateActivityDate = async (activity) => {
         date: {
           start: activity.date.start,
           end: activity.date.end,
+        },
+      },
+    },
+  });
+
+  return response;
+};
+
+export const updateActivityTitle = async (activity, googleAccount) => {
+  if (!googleAccount) return;
+
+  const response = await updatePage({
+    id: activity.id,
+    properties: {
+      Activity: {
+        title: [
+          {
+            type: "text",
+            text: {
+              content: activity.info,
+            },
+            plain_text: activity.info,
+          },
+        ],
+      },
+    },
+  });
+
+  return response;
+};
+
+export const updateActivityTags = async (activity, googleAccount) => {
+  if (!googleAccount) return;
+
+  const response = await updatePage({
+    id: activity.id,
+    properties: {
+      Tags: {
+        multi_select: activity.tags.map((tag) => {
+          return {
+            name: tag,
+          };
+        }),
+      },
+    },
+  });
+
+  return response;
+};
+
+export const updateActivityTime = async (activity, googleAccount) => {
+  if (!googleAccount) return;
+
+  const response = await updatePage({
+    id: activity.id,
+    properties: {
+      Time: {
+        select: {
+          name: activity.time,
         },
       },
     },

@@ -20,8 +20,14 @@ export default function MapDrawer({
   allMarkers,
   offsetCenter,
   googleAccount,
+  setLoginPopupOpen,
   onUpdateDate,
   calculateDay,
+  onUpdateTitle,
+  allTags,
+  onTagsUpdated,
+  allTimes,
+  onTimeUpdated,
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -66,6 +72,8 @@ export default function MapDrawer({
 
   let link = focusedMarker ? focusedMarker.link : null;
 
+  let time = focusedMarker ? focusedMarker.time : null;
+
   let content = focusedMarker ? (
     <POIDetails
       icon={icon}
@@ -73,6 +81,7 @@ export default function MapDrawer({
       title={title}
       day={day}
       date={date}
+      time={time}
       description={description}
       hideDescription={
         focusedMarker.description === "" ||
@@ -84,10 +93,16 @@ export default function MapDrawer({
       setFocusedMarker={setFocusedMarker}
       offsetCenter={offsetCenter}
       googleAccount={googleAccount}
+      setLoginPopupOpen={setLoginPopupOpen}
       onUpdateDate={onUpdateDate}
       calculateDay={calculateDay}
       marker={focusedMarker}
       link={link}
+      onUpdateTitle={onUpdateTitle}
+      allTags={allTags}
+      onTagsUpdated={onTagsUpdated}
+      allTimes={allTimes}
+      onTimeUpdated={onTimeUpdated}
     />
   ) : focusedCluster ? (
     focusedCluster.markers.map((m, i) => (
@@ -98,6 +113,7 @@ export default function MapDrawer({
           title={m.info}
           day={m.day}
           date={m.date}
+          time={m.time}
           hideDescription={true}
           onClick={() => setFocusedMarker(m)}
           // description={m.description}

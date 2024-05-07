@@ -53,13 +53,13 @@
 }
 
 .content {
-  padding: 20px;
+  padding: 2em;
+  padding-top: 0;
+  padding-bottom: 20px;
   display: flex;
   flex-direction: column;
   align-items: center; /* Center children horizontally */
   overflow-y: visible;
-  padding-left: 0;
-  padding-right: 0;
 }
 
 .slide-in-div button {
@@ -79,7 +79,7 @@
 .poi-title {
   margin-bottom: 0;
   margin-top: 0;
-  display: flex;
+  display: inline;
   color: black !important;
   text-align: center;
   font-family: "Indie Flower", cursive; /* The fun, whimsical font */
@@ -159,7 +159,7 @@
 
 .poi-date {
   display: block; /* Or inline-block, depending on your design */
-  text-align: left;
+  text-align: center;
   font-style: italic;
   align-self: flex-start;
   font-weight: bolder;
@@ -180,6 +180,22 @@
   text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
     /* top right shadow */ -1px 1px 0 #fff,
     /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
+}
+
+.poi-time {
+  display: flex; /* Or inline-block, depending on your design */
+  text-align: center;
+  font-style: italic;
+  align-self: center;
+  font-weight: bolder;
+  font-size: 0.8em;
+  color: black !important;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+  margin-top: 0;
+  margin-bottom: -4px;
+  overflow: visible;
+  font-size: 0.8em !important;
 }
 
 .poi-date.row {
@@ -218,7 +234,7 @@
   justify-content: center;
   justify-items: center;
   width: 100%;
-  margin-top: 5px;
+  margin-top: 1em;
 }
 
 .poi-tags.row {
@@ -230,7 +246,6 @@
   justify-content: center;
   justify-items: center;
   margin: 0;
-  margin-top: 8px;
 }
 
 @media only screen and (max-width: 768px) {
@@ -262,6 +277,12 @@
   -webkit-backdrop-filter: blur(2px); /* Fallback for Safari */
   /* Simplify border and shadow to align with classic video game aesthetics */
   border: 2px solid #ffee00; /* Gold border for a touch of vibrancy */
+}
+
+.poi-image-container {
+  -webkit-box-shadow: inset 0px -11px 17px 0px rgba(0, 0, 0, 0.41);
+  -moz-box-shadow: inset 0px -11px 17px 0px rgba(0, 0, 0, 0.41);
+  box-shadow: inset 0px -11px 17px 0px rgba(0, 0, 0, 0.41);
 }
 
 .poi-related {

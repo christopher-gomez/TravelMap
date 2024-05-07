@@ -15,13 +15,18 @@ export default function AppFooter({
   setFocusedMarker,
   mapLocked,
   setMapLocked,
-  signInToken,
-  setSignInToken,
   googleAccount,
+  setLoginPopupOpen,
+  setErrorPopupOpen,
   allMarkers,
   offsetCenter,
   onUpdateDate,
-  calculateDay
+  calculateDay,
+  onUpdateTitle,
+  allTags,
+  onTagsUpdated,
+  allTimes,
+  onTimeUpdated,
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -47,9 +52,8 @@ export default function AppFooter({
         focusedCluster={focusedCluster}
         mapLocked={mapLocked}
         setMapLocked={setMapLocked}
-        signInToken={signInToken}
-        setSignInToken={setSignInToken}
         googleAccount={googleAccount}
+        setErrorPopupOpen={setErrorPopupOpen}
       />
       <MapDrawer
         onHeightChange={(height, open) => {
@@ -67,6 +71,12 @@ export default function AppFooter({
         googleAccount={googleAccount}
         onUpdateDate={onUpdateDate}
         calculateDay={calculateDay}
+        onUpdateTitle={onUpdateTitle}
+        setLoginPopupOpen={setLoginPopupOpen}
+        allTags={allTags}
+        onTagsUpdated={onTagsUpdated}
+        allTimes={allTimes}
+        onTimeUpdated={onTimeUpdated}
       />
     </>
   );

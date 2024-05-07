@@ -107,7 +107,7 @@ const CustomPopper = styled(Popper)(({ theme }) => ({
     fontWeight: 500,
     "> .MuiAutocomplete-listbox": {
       "&::-webkit-scrollbar": {
-        "-webkit-appearance": "none",
+        "WebkitAppearance": "none",
         width: "8px",
       },
       "&::-webkit-scrollbar-track": {

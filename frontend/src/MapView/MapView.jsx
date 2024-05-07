@@ -26,9 +26,17 @@ import { FILTER_PROPERTIES, FILTER_TYPE } from "./Header/FilterDialog";
 import SwipeableEdgeDrawer from "../Util/SwipeableEdgeDrawer";
 import AppFooter from "./Footer/AppFooter";
 import { getFamilyGoogleUsers } from "../Api/Google";
-import { IconButton } from "@mui/material";
-import { ArrowBack, ArrowForward } from "@mui/icons-material";
-import { updateActivityDate } from "./UpdateLocationProperties";
+import { Box, Button, IconButton, Typography } from "@mui/material";
+import { ArrowBack, ArrowForward, Google } from "@mui/icons-material";
+import {
+  updateActivityTime,
+  updateActivityDate,
+  updateActivityTags,
+  updateActivityTitle,
+} from "./UpdateLocationProperties";
+import Popup from "../Util/Popup";
+import { PromptSignIn } from "../Util/GooglePrompt";
+import GoogleSignIn from "../Util/GoogleSignIn";
 
 // import {
 //   findLocationLngLat,
@@ -128,11 +136,13 @@ const MapView = () => {
           cursor: cursor,
         });
 
-        console.log('got data', data);
+        // console.log("got data", data);
         results = results.concat(data.results);
         hasMore = data.has_more;
         cursor = data.next_cursor; // Update cursor to the next cursor from response
       }
+
+      console.log("fetch", results);
 
       setItineraryData(results);
     };
@@ -187,7 +197,7 @@ const MapView = () => {
   function parseItineraryDataLocations(data) {
     const places = [];
     const unknownPlaces = [];
-    console.log("data", data);
+    // console.log("data", data);
     data.forEach((item) => {
       if (
         item.properties.Location.rich_text.length === 0 ||
@@ -390,6 +400,9 @@ const MapView = () => {
       marker["time"] = item.time;
       marker["id"] = item.id;
       marker["timelineOverride"] = item.timelineOverride;
+      if (marker.tags && marker.tags.includes("Accommodation")) {
+        marker.timelineOverride = { ...marker.timelineOverride, misc: [1, 4] };
+      }
       marker["city"] = item.city;
       marker["related"] = item.related;
       marker["link"] = item.link;
@@ -660,6 +673,7 @@ const MapView = () => {
     const days = [];
     const tags = [];
     const cities = [];
+    const times = [];
 
     for (const marker of markers) {
       if (marker.day) {
@@ -682,6 +696,12 @@ const MapView = () => {
         });
       }
 
+      if (marker.time) {
+        if (!times.includes(marker.time)) {
+          times.push(marker.time);
+        }
+      }
+
       if (marker.city) {
         marker.city.forEach((city) => {
           if (!cities.includes(city)) {
@@ -692,6 +712,7 @@ const MapView = () => {
     }
 
     setAllTags(tags);
+    setAllTimes(times);
     setAllCities(cities);
 
     days.sort((a, b) => a - b);
@@ -705,6 +726,7 @@ const MapView = () => {
 
   const [currentDayFilter, setCurrentDayFilter] = useState(null);
   const [allTags, setAllTags] = useState([]);
+  const [allTimes, setAllTimes] = useState([]);
   const [allCities, setAllCities] = useState([]);
   // const [cityFilter, setCityFilter] = useState("All");
   // const [includeTagsFilter, setIncludeTagsFilter] = useState([]);
@@ -986,18 +1008,20 @@ const MapView = () => {
           })
         : _markers;
 
+      var bounds = new maps.LatLngBounds();
+
+      //extend the bounds to include each marker's position
+      for (const marker of boundMarkers) bounds.extend(marker.position);
       if (firstRender.current) {
-        var bounds = new maps.LatLngBounds();
-
-        //extend the bounds to include each marker's position
-        for (const marker of boundMarkers) bounds.extend(marker.position);
-
         // if (boundMarkers.length === 1) offsetCenter(_markers[0].position, 0, 70);
         map.fitBounds(bounds);
         firstRender.current = false;
       }
 
       if (boundMarkers.length === 1) setFocusedMarker(boundMarkers[0]);
+      else {
+        map.panTo(bounds.getCenter());
+      }
     }
   };
 
@@ -1493,80 +1517,16 @@ const MapView = () => {
 
   const [mapLocked, setMapLocked] = useState(false);
 
-  // const [googleAuth, setGoogleAuth] = useState(null);
-
-  const loadGoogleScript = () => {
-    if (inittedGoogleSignIn.current) return;
-
-    inittedGoogleSignIn.current = true;
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => initGoogleSignIn();
-    document.body.appendChild(script);
-  };
-
-  const inittedGoogleSignIn = useRef(false);
-
-  function initGoogleSignIn() {
-    // if (inittedGoogleSignIn.current) return;
-
-    console.log("init google sign in");
-    inittedGoogleSignIn.current = true;
-    window.google.accounts.id.initialize({
-      client_id:
-        "620708696585-c3cic34ecbdjsbh1jv49nqna5s5aoe4k.apps.googleusercontent.com",
-      callback: handleCredentialResponse,
-      auto_select: true,
-    });
-
-    if (localStorage.getItem("googleSignInToken")) {
-      const jwt = localStorage.getItem("googleSignInToken");
-      const { exp } = JSON.parse(atob(jwt.split(".")[1]));
-      if (exp * 1000 < Date.now()) {
-        localStorage.removeItem("googleSignInToken");
-      } else {
-        console.log("previous valid sign in token found");
-        setSignInToken(jwt);
-      }
-    }
-  }
-
-  const [signInToken, setSignInToken] = useState(null);
   const [googleAccount, setGoogleAccount] = useState(null);
+  const [loginPopupOpen, setLoginPopupOpen] = useState(false);
+  const [errorPopupOpen, setErrorPopupOpen] = useState(false);
 
   useEffect(() => {
-    const validateToken = async () => {
-      const data = JSON.parse(atob(signInToken.split(".")[1]));
-      const users = await getFamilyGoogleUsers();
-      if (users.includes(data.email)) {
-        console.log("Got google id");
-        setGoogleAccount(data);
-        localStorage.setItem("googleSignInToken", signInToken);
-      } else {
-        console.log("Invalid google id");
-        setSignInToken(null);
-      }
-    };
-    if (signInToken) {
-      validateToken();
-    } else {
-      console.log("No google id");
-      setGoogleAccount(null);
-      localStorage.removeItem("googleSignInToken");
+    if (googleAccount) {
+      setLoginPopupOpen(false);
+      setErrorPopupOpen(false);
     }
-  }, [signInToken]);
-
-  async function handleCredentialResponse(response) {
-    setSignInToken(response.credential);
-  }
-
-  useEffect(() => {
-    // if (googleAuth === null) {
-    // }
-    if (!inittedGoogleSignIn.current) loadGoogleScript();
-  }, []);
+  }, [googleAccount]);
 
   useEffect(() => {
     if (mapRef.current) {
@@ -2240,14 +2200,42 @@ const MapView = () => {
           if (mapRef.current) mapRef.current.setZoom(13);
         }}
         setFocusedMarker={setFocusedMarker}
-        signInToken={signInToken}
-        setSignInToken={setSignInToken}
         googleAccount={googleAccount}
         onUpdateDate={(date) => {
           if (!focusedMarker) return;
-          updateActivityDate(focusedMarker);
+
+          updateActivityDate(focusedMarker, googleAccount);
+        }}
+        onUpdateTitle={(title) => {
+          if (!focusedMarker) return;
+
+          updateActivityTitle(focusedMarker, googleAccount);
+          overlays[getMarkerOverlayKey(focusedMarker)]?.updateProps({
+            title: title,
+          });
         }}
         calculateDay={calculateDay}
+        setLoginPopupOpen={setLoginPopupOpen}
+        setErrorPopupOpen={setErrorPopupOpen}
+        allTags={allTags}
+        onTagsUpdated={(tags) => {
+          if (!focusedMarker) return;
+
+          updateActivityTags(focusedMarker, googleAccount);
+        }}
+        allTimes={allTimes}
+        onTimeUpdated={(time) => {
+          if (!focusedMarker) return;
+
+          updateActivityTime(focusedMarker, googleAccount);
+        }}
+      />
+      <GoogleSignIn
+        onGoogleAccount={(googleAccount) => setGoogleAccount(googleAccount)}
+        loginPopupOpen={loginPopupOpen}
+        setLoginPopupOpen={setLoginPopupOpen}
+        errorPopupOpen={errorPopupOpen}
+        setErrorPopupOpen={setErrorPopupOpen}
       />
     </React.Fragment>
   );
