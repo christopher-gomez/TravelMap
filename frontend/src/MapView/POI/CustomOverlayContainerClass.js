@@ -46,6 +46,7 @@ export default class CustomOverlayContainerFactory {
 
                 // Assign the div as a property of the overlay
                 this.div = div;
+                this.div.style.userSelect = "none";
 
                 // You can append your div to the "overlayLayer" pane or "floatPane" to have it
                 // float above the map and markers.
