@@ -285,30 +285,39 @@ export default function ItineraryTimeline({
             justifyItems: "center",
             transition: "all .7s ease",
           }}
-          onClick={() => {
-            setTimelineHidden(!timelineHidden);
-          }}
         >
-          <IconButton>
+          <IconButton
+            onClick={() => {
+              setTimelineHidden(!timelineHidden);
+            }}
+          >
             {timelineHidden ? <ArrowBackIos /> : <ArrowForwardIos />}
           </IconButton>
         </div>
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            display: "flex",
-            justifyContent: "center",
-            justifyItems: "center",
-            alignContent: "center",
-            alignItems: "center",
-            padding: "10px",
-            cursor: "pointer",
-          }}
-        >
-          <IconButton>{routing ? <Cancel /> : <ForkLeft />}</IconButton>
-        </div>
+        {!suggesting && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              display: "flex",
+              justifyContent: "center",
+              justifyItems: "center",
+              alignContent: "center",
+              alignItems: "center",
+              padding: "10px",
+              cursor: "pointer",
+            }}
+          >
+            <IconButton
+              onClick={() => {
+                setRouting(!routing);
+              }}
+            >
+              {routing ? <Cancel /> : <ForkLeft />}
+            </IconButton>
+          </div>
+        )}
         <div style={{ display: "flex" }}>
           <h2
             style={{
@@ -322,58 +331,57 @@ export default function ItineraryTimeline({
           >
             Day {currentDayFilter}
           </h2>
-          {!routing && (
-            <div style={{ display: "flex", placeItems: "end" }}>
-              <IconButton
-                onClick={() => {
-                  let prevDay = currentDayFilter - 1;
-                  if (
-                    prevDay <
-                    Math.min(...allDays.filter((x) => Number.isInteger(x)))
-                  )
-                    prevDay = Math.min(
-                      ...allDays.filter((x) => Number.isInteger(x))
-                    );
-                  let newFilters = markerPropertyFilters.filter((filter) => {
-                    return filter.property !== FILTER_PROPERTIES.day;
-                  });
-                  newFilters.push({
-                    type: FILTER_TYPE.INCLUDE,
-                    property: FILTER_PROPERTIES.day,
-                    value: [prevDay],
-                  });
 
-                  setMarkerPropertyFilters(newFilters);
-                }}
-              >
-                <ArrowBack />
-              </IconButton>
-              <IconButton
-                onClick={() => {
-                  let nextDay = currentDayFilter + 1;
-                  if (
-                    nextDay >
-                    Math.max(...allDays.filter((x) => Number.isInteger(x)))
-                  )
-                    nextDay = Math.max(
-                      ...allDays.filter((x) => Number.isInteger(x))
-                    );
-                  let newFilters = markerPropertyFilters.filter((filter) => {
-                    return filter.property !== FILTER_PROPERTIES.day;
-                  });
-                  newFilters.push({
-                    type: FILTER_TYPE.INCLUDE,
-                    property: FILTER_PROPERTIES.day,
-                    value: [nextDay],
-                  });
+          <div style={{ display: "flex", placeItems: "end" }}>
+            <IconButton
+              onClick={() => {
+                let prevDay = currentDayFilter - 1;
+                if (
+                  prevDay <
+                  Math.min(...allDays.filter((x) => Number.isInteger(x)))
+                )
+                  prevDay = Math.min(
+                    ...allDays.filter((x) => Number.isInteger(x))
+                  );
+                let newFilters = markerPropertyFilters.filter((filter) => {
+                  return filter.property !== FILTER_PROPERTIES.day;
+                });
+                newFilters.push({
+                  type: FILTER_TYPE.INCLUDE,
+                  property: FILTER_PROPERTIES.day,
+                  value: [prevDay],
+                });
 
-                  setMarkerPropertyFilters(newFilters);
-                }}
-              >
-                <ArrowForward />
-              </IconButton>
-            </div>
-          )}
+                setMarkerPropertyFilters(newFilters);
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+            <IconButton
+              onClick={() => {
+                let nextDay = currentDayFilter + 1;
+                if (
+                  nextDay >
+                  Math.max(...allDays.filter((x) => Number.isInteger(x)))
+                )
+                  nextDay = Math.max(
+                    ...allDays.filter((x) => Number.isInteger(x))
+                  );
+                let newFilters = markerPropertyFilters.filter((filter) => {
+                  return filter.property !== FILTER_PROPERTIES.day;
+                });
+                newFilters.push({
+                  type: FILTER_TYPE.INCLUDE,
+                  property: FILTER_PROPERTIES.day,
+                  value: [nextDay],
+                });
+
+                setMarkerPropertyFilters(newFilters);
+              }}
+            >
+              <ArrowForward />
+            </IconButton>
+          </div>
         </div>
         {routing && (
           <>
@@ -468,7 +476,7 @@ export default function ItineraryTimeline({
           }
           onActivityMouseOut={(activity) => onActivityMouseOut(activity.marker)}
         />
-        {!suggesting && (
+        {!suggesting && !routing && (
           <Box sx={{ width: "100%", display: "flex", placeContent: "end" }}>
             <Button
               onClick={() => {
