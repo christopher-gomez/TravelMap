@@ -327,6 +327,11 @@ export default function ItineraryTimeline({
               marginTop: "32px",
               marginBottom: "0px",
               textDecoration: "underline",
+              userSelect: "none",
+              msUserSelect: "none",
+              MozUserSelect: "none",
+              WebkitUserSelect: "none",
+              WebkitTouchCallout: "none",
             }}
           >
             Day {currentDayFilter}
@@ -496,6 +501,11 @@ export default function ItineraryTimeline({
               sx={{
                 fontFamily: "'Indie Flower', cursive",
                 display: "inline",
+                userSelect: "none",
+                msUserSelect: "none",
+                MozUserSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none",
               }}
             >
               Activity Suggestions
@@ -541,6 +551,11 @@ export default function ItineraryTimeline({
                   backgroundClip: "content-box",
                   border: "2px solid transparent",
                 },
+                userSelect: "none",
+                msUserSelect: "none",
+                MozUserSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none",
               }}
             >
               {suggestedActivities.map((marker, i) => (
@@ -551,6 +566,11 @@ export default function ItineraryTimeline({
                     placeItems: "center",
                     placeContent: "center",
                     cursor: "pointer",
+                    userSelect: "none",
+                    msUserSelect: "none",
+                    MozUserSelect: "none",
+                    WebkitUserSelect: "none",
+                    WebkitTouchCallout: "none",
                   }}
                   onClick={() => {
                     onActivityClick(marker);

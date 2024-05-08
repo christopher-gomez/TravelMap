@@ -22,12 +22,28 @@ export default function ActivityTimeline({
   return (
     <Timeline
       position="right"
-      sx={{ fontFamily: "'Indie Flower', cursive", mb: 0 }}
+      sx={{
+        fontFamily: "'Indie Flower', cursive",
+        mb: 0,
+        userSelect: "none",
+        msUserSelect: "none",
+        MozUserSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
+      }}
     >
       {activities.map((activity, i) => {
         return (
           <TimelineItem
-            sx={{ fontFamily: "'Indie Flower', cursive", cursor: "pointer" }}
+            sx={{
+              fontFamily: "'Indie Flower', cursive",
+              cursor: "pointer",
+              userSelect: "none",
+              msUserSelect: "none",
+              MozUserSelect: "none",
+              WebkitUserSelect: "none",
+              WebkitTouchCallout: "none",
+            }}
             onClick={() => onActivityClick(activity)}
             onPointerOver={() => {
               onActivityMouseOver(activity);
@@ -36,7 +52,14 @@ export default function ActivityTimeline({
           >
             {activity.time && (
               <TimelineOppositeContent
-                sx={{ fontFamily: "'Indie Flower', cursive" }}
+                sx={{
+                  fontFamily: "'Indie Flower', cursive",
+                  userSelect: "none",
+                  msUserSelect: "none",
+                  MozUserSelect: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
               >
                 {activity.time}
               </TimelineOppositeContent>
@@ -71,7 +94,16 @@ export default function ActivityTimeline({
                 />
               </TimelineSeparator>
             )}
-            <TimelineContent sx={{ fontFamily: "'Indie Flower', cursive" }}>
+            <TimelineContent
+              sx={{
+                fontFamily: "'Indie Flower', cursive",
+                userSelect: "none",
+                msUserSelect: "none",
+                MozUserSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none",
+              }}
+            >
               {activity.label}
             </TimelineContent>
           </TimelineItem>
