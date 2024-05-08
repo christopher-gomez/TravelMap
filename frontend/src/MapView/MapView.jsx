@@ -7,36 +7,27 @@ import DefaultStyle from "./MapStyles/DefaultStyle.json";
 
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
-import { queryDatabase, updatePage } from "../Api/Notion";
+import { queryDatabase } from "../Api/Notion";
 import { NOTION_QUERY } from "./NotionMapQueryParams";
 import { getGoogleMapsApiKey } from "../Api/Maps";
 import CustomOverlayContainerFactory from "./POI/CustomOverlayContainerClass";
 import POILabel from "./POI/POILabel";
 import ICON_KEYS from "./POI/IconMapKeys";
-import POIDetailsCard from "./POI/POIDetails";
-import SpeedDial from "../Util/SpeedDial";
-
-import Timeline from "../Util/Timeline";
-import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
-import ForkLeftIcon from "@mui/icons-material/ForkLeft";
-import CancelIcon from "@mui/icons-material/Cancel";
 import AppHeader from "./Header/MapHeader";
 import { FILTER_PROPERTIES, FILTER_TYPE } from "./Header/FilterDialog";
-import SwipeableEdgeDrawer from "../Util/SwipeableEdgeDrawer";
 import AppFooter from "./Footer/AppFooter";
-import { getFamilyGoogleUsers } from "../Api/Google";
-import { Box, Button, IconButton, Typography } from "@mui/material";
-import { ArrowBack, ArrowForward, Google } from "@mui/icons-material";
 import {
   updateActivityTime,
   updateActivityDate,
   updateActivityTags,
   updateActivityTitle,
 } from "./UpdateLocationProperties";
-import Popup from "../Util/Popup";
-import { PromptSignIn } from "../Util/GooglePrompt";
 import GoogleSignIn from "../Util/GoogleSignIn";
+import ItineraryTimeline, {
+  timeOrder,
+  timeOverrideKeys,
+} from "./ItineraryTimeline";
+import { createCompositeIcon } from "../Util/Utils";
 
 // import {
 //   findLocationLngLat,
@@ -47,21 +38,6 @@ import GoogleSignIn from "../Util/GoogleSignIn";
 // import PlacesData from "./data.json";
 
 const OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL = 100;
-const timeOrder = {
-  Morning: 0,
-  "All Day": 1,
-  Afternoon: 2,
-  Evening: 3,
-  Night: 4,
-};
-
-const timeOverrideKeys = {
-  0: "All Day",
-  1: "Morning",
-  2: "Afternoon",
-  3: "Evening",
-  4: "Night",
-};
 
 const MapView = () => {
   const defaultProps = {
@@ -142,7 +118,7 @@ const MapView = () => {
         cursor = data.next_cursor; // Update cursor to the next cursor from response
       }
 
-      console.log("fetch", results);
+      // console.log("fetch", results);
 
       setItineraryData(results);
     };
@@ -252,6 +228,10 @@ const MapView = () => {
                     // )
                   )
                 : null,
+            placesSearchName:
+              item.properties.mapIDName.rich_text.length > 0
+                ? item.properties.mapIDName.rich_text[0].plain_text
+                : null,
             city:
               item.properties.City.multi_select.length > 0
                 ? item.properties.City.multi_select.map((city) => city.name)
@@ -306,6 +286,10 @@ const MapView = () => {
                   item.properties.mapTimelineOverride.rich_text[0].plain_text
                   // )
                 )
+              : null,
+          placesSearchName:
+            item.properties.mapIDName.rich_text.length > 0
+              ? item.properties.mapIDName.rich_text[0].plain_text
               : null,
           city:
             item.properties.City.multi_select.length > 0
@@ -388,6 +372,7 @@ const MapView = () => {
                 }
             : null,
         priority: item.priority,
+        altPlaceName: item.placesSearchName,
       });
 
       if (item.icon && item.icon in ICON_KEYS) marker["iconKey"] = item.icon;
@@ -400,6 +385,7 @@ const MapView = () => {
       marker["time"] = item.time;
       marker["id"] = item.id;
       marker["timelineOverride"] = item.timelineOverride;
+      marker["placesSearchName"] = item.placesSearchName;
       if (marker.tags && marker.tags.includes("Accommodation")) {
         marker.timelineOverride = { ...marker.timelineOverride, misc: [1, 4] };
       }
@@ -496,118 +482,6 @@ const MapView = () => {
   // const transRef = React.useRef(null);
   const [directionsService, setDirectionsService] = useState(null);
   const [directionsRenderer, setDirectionsRenderer] = useState(null);
-
-  const [preferredTravelMode, setPreferredTravelMode] = useState(null);
-
-  const [routeDriveTime, setRouteDriveTime] = useState(null);
-  const [routeDriveDistance, setRouteDriveDistance] = useState(null);
-  const [routeWalkTime, setRouteWalkTime] = useState(null);
-  const [routeWalkDistance, setRouteWalkDistance] = useState(null);
-
-  function secondsToTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    const hoursDisplay =
-      hours > 0 ? `${hours} hour${hours > 1 ? "s" : ""}` : "";
-    const minutesDisplay =
-      minutes > 0 ? `${minutes} minute${minutes > 1 ? "s" : ""}` : "";
-
-    if (hoursDisplay && minutesDisplay) {
-      return `${hoursDisplay} and ${minutesDisplay}`;
-    }
-    return hoursDisplay || minutesDisplay || "0 minutes";
-  }
-  function metersToMiles(meters) {
-    const miles = meters * 0.000621371;
-    return `${miles.toFixed(3)} miles`;
-  }
-
-  function calculateRoute(start, end, waypoints) {
-    if (!directionsService || !directionsRenderer) return;
-
-    const mileThreshold = 1; // 1 mile
-    const distanceInMeters =
-      mapsRef.current.geometry.spherical.computeDistanceBetween(start, end);
-    const distanceInMiles = distanceInMeters * 0.000621371;
-
-    const travelMode = "DRIVING"; // "WALKING", "BICYCLING", "TRANSIT
-
-    const driveRequest = {
-      origin: start,
-      destination: end,
-      travelMode,
-      waypoints: waypoints,
-    };
-
-    directionsService.route(driveRequest, (result, status) => {
-      if (status === "OK") {
-        console.log("Route calculated", result);
-        directionsRenderer.setMap(mapRef.current);
-        directionsRenderer.setDirections(result);
-        let driveDuration = 0;
-        let driveDistance = 0;
-        result.routes[0].legs.forEach((leg) => {
-          driveDuration += leg.duration.value;
-          driveDistance += leg.distance.value;
-        });
-
-        setRouteDriveTime(secondsToTime(driveDuration));
-        setRouteDriveDistance(metersToMiles(driveDistance));
-
-        const walkRequest = {
-          origin: start,
-          destination: end,
-          travelMode: "WALKING",
-          waypoints: waypoints,
-        };
-
-        directionsService.route(walkRequest, (result, status) => {
-          if (status === "OK") {
-            console.log("Route calculated", result);
-
-            let walkDuration = 0;
-            let walkDistance = 0;
-            result.routes[0].legs.forEach((leg) => {
-              walkDuration += leg.duration.value;
-
-              walkDistance += leg.distance.value;
-            });
-
-            setRouteWalkTime(secondsToTime(walkDuration));
-            setRouteWalkDistance(metersToMiles(walkDistance));
-          }
-        });
-      }
-    });
-  }
-
-  // useEffect(() => {
-  //   (async () => {
-  //     if (maps !== undefined && itineraryData !== null) {
-  //       const places = [];
-  //       for (const item of itineraryData) {
-  //         try {
-  //           const result = await findLocationLngLat(
-  //             maps,
-  //             item.properties.Activity.title[0].plain_text
-  //           );
-
-  //           console.log(result);
-
-  //           places.push({
-  //             activity: item.properties.Activity.title[0].plain_text,
-  //             id: item.id,
-  //             location: `${result.lat()}, ${result.lng()}`,
-  //           });
-  //         } catch (error) {
-  //           console.log(error);
-  //         }
-  //       }
-  //       console.log(places);
-  //     }
-  //   })();
-  // }, [maps, itineraryData]);
 
   const [markers, setMarkers] = useState([]);
   const markersRef = React.useRef(markers);
@@ -711,7 +585,10 @@ const MapView = () => {
       }
     }
 
+    tags.sort();
     setAllTags(tags);
+    times.sort((a, b) => timeOrder[a] - timeOrder[b]);
+    times.push("Not Set");
     setAllTimes(times);
     setAllCities(cities);
 
@@ -731,8 +608,15 @@ const MapView = () => {
   // const [cityFilter, setCityFilter] = useState("All");
   // const [includeTagsFilter, setIncludeTagsFilter] = useState([]);
   // const [excludeTagsFilter, setExcludeTagsFilter] = useState([]);
+  const [suggestedMarkers, setSuggestedMarkers] = useState([]);
+  const suggestedMarkersRef = React.useRef(suggestedMarkers);
+
+  useEffect(() => {
+    suggestedMarkersRef.current = suggestedMarkers;
+  }, [suggestedMarkers]);
 
   const [markerPropertyFilters, setMarkerPropertyFilters] = useState([]);
+  const markerPropertyFiltersRef = React.useRef(markerPropertyFilters);
 
   const [markerInfoFilter, setMarkerInfoFilter] = useState(null);
 
@@ -770,6 +654,8 @@ const MapView = () => {
     }
     setFocusedCluster(null);
     setFocusedMarker(null);
+
+    markerPropertyFiltersRef.current = markerPropertyFilters;
   }, [markerPropertyFilters]);
 
   useEffect(() => {
@@ -787,19 +673,14 @@ const MapView = () => {
   useEffect(() => {
     if (!markers || !maps || !map) return;
 
-    setRouting(false);
+    // setRouting(false);
     setRenderedMarkers([]);
     renderMarkers();
-  }, [
-    // currentDayFilter,
-    // includeTagsFilter,
-    // excludeTagsFilter,
-    markerPropertyFilters,
-    markerInfoFilter,
-    markers,
-  ]);
+  }, [markerPropertyFilters, markerInfoFilter, markers, suggestedMarkers]);
 
   const firstRender = useRef(true);
+
+  const shouldStackClusterIcons = useRef(false);
 
   const renderMarkers = () => {
     if (!map || !maps || !markers) return;
@@ -827,6 +708,7 @@ const MapView = () => {
     markers.forEach((marker, index) => {
       marker.setVisible(false);
       marker.setMap(null);
+      marker.setOptions({ opacity: 1.0 });
     });
 
     let dayFilters = markerPropertyFilters.filter(
@@ -855,6 +737,7 @@ const MapView = () => {
               return false;
           }
         }
+
         if (filter.value.includes("Not Set") && !m.day) {
           switch (filter.type) {
             case FILTER_TYPE.MATCH:
@@ -865,7 +748,7 @@ const MapView = () => {
           }
         }
 
-        if (!m.time && !m.timelineOverride) return false;
+        // if (!m.time && !m.timelineOverride) return false;
 
         if (Array.isArray(m.day)) {
           switch (filter.type) {
@@ -951,6 +834,49 @@ const MapView = () => {
       });
     }
 
+    let timeFilters = markerPropertyFilters.filter(
+      (f) => f.property === FILTER_PROPERTIES.time
+    );
+
+    if (timeFilters.length === 0) {
+      timeFilters.push({
+        property: FILTER_PROPERTIES.time,
+        type: FILTER_TYPE.INCLUDE,
+        value: ["All"],
+      });
+    }
+
+    for (const filter of timeFilters) {
+      _markers = _markers.filter((m) => {
+        if (filter.value.includes("All")) {
+          return true;
+        }
+
+        if (filter.value.includes("Not Set") && !m.day) {
+          switch (filter.type) {
+            case FILTER_TYPE.MATCH:
+            case FILTER_TYPE.INCLUDE:
+              return true;
+            case FILTER_TYPE.EXCLUDE:
+              return false;
+          }
+        }
+
+        if (!m.day) return false;
+
+        switch (filter.type) {
+          // case FILTER_TYPE.MATCH:
+          //   return arraysContainSameValues(m.time, filter.value);
+          case FILTER_TYPE.INCLUDE:
+            return filter.value.some((time) => m.time === time);
+          case FILTER_TYPE.EXCLUDE:
+            return !filter.value.some((time) => m.time === time);
+          default:
+            return false;
+        }
+      });
+    }
+
     // // Filter for target tags
     // if (includeTagsFilter.length > 0) {
     //   _markers = _markers.filter((m) => {
@@ -974,6 +900,17 @@ const MapView = () => {
       // });
     }
 
+    // suggestedMarkers.forEach((marker) => {
+    //   // const icon = marker.getIcon();
+    //   // icon.opacity = 0.5;
+    //   // marker.setIcon(icon);
+    // });
+
+    if (suggestedMarkers.length > 0) shouldStackClusterIcons.current = true;
+    else shouldStackClusterIcons.current = false;
+
+    _markers = [..._markers, ...suggestedMarkers];
+
     _markers.forEach((m) => {
       if (!m.visible || !m.map) {
         m.setVisible(true);
@@ -982,8 +919,9 @@ const MapView = () => {
     });
 
     if (
-      markerClusterRef.current &&
-      _markers !== markerClusterRef.current.markers
+      markerClusterRef.current
+      //  &&
+      // _markers !== markerClusterRef.current.markers
     ) {
       markerClusterRef.current.clearMarkers();
       markerClusterRef.current.addMarkers(_markers);
@@ -992,37 +930,66 @@ const MapView = () => {
     setRenderedMarkers(_markers);
 
     if (_markers.length > 0) {
-      if (_markers.length === 1) {
-        // console.log("render markers setting focused marker index 0");
-        if (_markers.length === 1) {
-          // setFocusedMarker(_markers[0]);
-          // offsetCenter(_markers[0].position, 0, 70);
-        }
-        // return;
-      }
-      const boundMarkers = markerInfoFilter
+      const boundMarkers = focusedMarker
+        ? [focusedMarker]
+        : markerInfoFilter
         ? _markers.filter((m) => {
             return m.info
               .toLowerCase()
               .includes(markerInfoFilter.toLowerCase());
           })
+        : suggestedMarkers.length > 0
+        ? suggestedMarkers
         : _markers;
 
       var bounds = new maps.LatLngBounds();
 
-      //extend the bounds to include each marker's position
-      for (const marker of boundMarkers) bounds.extend(marker.position);
+      // Extend the bounds to include each marker's position
+      for (const marker of boundMarkers) {
+        bounds.extend(marker.position);
+      }
+
       if (firstRender.current) {
-        // if (boundMarkers.length === 1) offsetCenter(_markers[0].position, 0, 70);
         map.fitBounds(bounds);
         firstRender.current = false;
       }
 
-      if (boundMarkers.length === 1) setFocusedMarker(boundMarkers[0]);
-      else {
-        map.panTo(bounds.getCenter());
+      if (boundMarkers.length === 1) {
+        setFocusedMarker(boundMarkers[0]);
+      }
+      // else {
+      function checkAndAdjustBounds() {
+        let allVisible = boundMarkers.every((marker) =>
+          map.getBounds().contains(marker.position)
+        );
+        if (
+          !allVisible ||
+          markerPropertyFilters.filter(
+            (f) =>
+              f.property === FILTER_PROPERTIES.day &&
+              f.value.length === 1 &&
+              f.value[0] !== "All"
+          ).length > 0
+        ) {
+          map.fitBounds(bounds); // Adjust the viewport if any marker is outside the current view
+        }
+      }
+
+      const boundsCenter = bounds.getCenter();
+      const mapCenter = map.getCenter();
+
+      if (!mapCenter.equals(boundsCenter)) {
+        map.panTo(boundsCenter);
+
+        const listener = maps.event.addListener(map, "idle", () => {
+          checkAndAdjustBounds();
+          maps.event.removeListener(listener);
+        });
+      } else {
+        checkAndAdjustBounds();
       }
     }
+    // }
   };
 
   const [renderedMarkers, setRenderedMarkers] = useState([]);
@@ -1030,8 +997,6 @@ const MapView = () => {
 
   useEffect(() => {
     if (currentDayFilter === null) return;
-
-    // console.log("setting timeline activities");
 
     const activities = renderedMarkers
       .reduce((activities, m) => {
@@ -1104,6 +1069,7 @@ const MapView = () => {
       }, [])
       .sort((a, b) => timeOrder[a.time] - timeOrder[b.time])
       .map((activity, i) => ({ ...activity, index: i }));
+
     setTimelineActivities(activities);
   }, [renderedMarkers]);
 
@@ -1199,30 +1165,10 @@ const MapView = () => {
     const clusteredMarkers = [];
 
     markerClusterRef.current.clusters.forEach((cluster) => {
-      if (
-        // (!focusedClusterRef.current && cluster.markers?.length > 1) ||
-        // (focusedClusterRef.current !== null &&
-        //   focusedClusterRef.current.marker !== cluster.marker &&
-        //   cluster.markers?.length > 1)
-        true
-      ) {
-        cluster.markers?.forEach((marker) => {
-          toggleOverlay(false, marker);
-
-          clusteredMarkers.push(getMarkerOverlayKey(marker));
-        });
-
-        if (zoom < OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL) {
-          toggleClusterOverlay(false, cluster);
-        } else if (
-          zoom >= OVERLAYS_ALWAYS_VISIBLE_ZOOM_LEVEL &&
-          !focusedMarkerRef.current
-        ) {
-          toggleClusterOverlay(true, cluster);
-        }
-      } else {
-        toggleClusterOverlay(false, cluster);
-      }
+      cluster.markers?.forEach((marker) => {
+        toggleOverlay(false, marker);
+        clusteredMarkers.push(getMarkerOverlayKey(marker));
+      });
     });
 
     if (
@@ -1255,19 +1201,36 @@ const MapView = () => {
           toggleOverlay(false, marker);
       }
       //  if (clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1)
-      else {
-        toggleOverlay(
-          marker["hovered"] || marker === focusedMarkerRef.current,
-          marker
-        );
-      }
+      // else {
+      //   toggleOverlay(
+      //     marker["hovered"] || marker === focusedMarkerRef.current,
+      //     marker
+      //   );
+      // }
     }
 
+    let anyHovered = false;
     markersRef.current.forEach((m) => {
       if (m.hovered) {
+        anyHovered = true;
         toggleOverlay(true, m);
       }
     });
+
+    if (!anyHovered && focusedMarkerRef.current) {
+      console.log("none hovered and focused marker");
+      // if (markerClusterRef.current.clusters.length > 0) {
+      //   console.log("current clusters: ", markerClusterRef.current.clusters);
+      // }
+
+      toggleOverlay(true, focusedMarkerRef.current);
+    } else if (
+      anyHovered &&
+      focusedMarkerRef.current &&
+      !focusedMarkerRef.current.hovered
+    ) {
+      toggleOverlay(false, focusedMarkerRef.current);
+    }
 
     markerClusterRef.current.clusters.forEach((c) => {
       if (c.marker.hovered) {
@@ -1280,6 +1243,39 @@ const MapView = () => {
     const overlayToShow = overlaysRef.current[getMarkerOverlayKey(marker)];
 
     if (overlayToShow === undefined || (active && !mapRef.current)) return;
+
+    if (active) {
+      let foundInCluster = false;
+      markerClusterRef.current.clusters?.forEach((c) => {
+        if (foundInCluster) return;
+
+        c.markers.forEach((m) => {
+          if (foundInCluster) return;
+
+          if (m === marker) {
+            foundInCluster = true;
+            overlayToShow.location = {
+              lat: c.marker.position.lat(),
+              lng: c.marker.position.lng(),
+            };
+            overlayToShow.offsetY = ICON_KEYS[marker.iconKey]
+              ? ICON_KEYS[marker.iconKey].offsetY
+              : 20;
+          }
+        });
+      });
+
+      if (!foundInCluster) {
+        overlayToShow.location = {
+          lat: marker.position.lat(),
+          lng: marker.position.lng(),
+        };
+
+        overlayToShow.offsetY = ICON_KEYS[marker.iconKey]
+          ? ICON_KEYS[marker.iconKey].offsetY
+          : 20;
+      }
+    }
 
     overlayToShow.changePane(
       active && (marker["hovered"] || marker === focusedMarkerRef.current)
@@ -1335,12 +1331,21 @@ const MapView = () => {
 
     // Set the map's center to the marker's position
     // mapRef.current.setZoom(15);
-    if (focusedMarker) {
-      mapRef.current.panTo(focusedMarker.position);
-    }
+    // if (focusedMarker) {
+    //   mapRef.current.panTo(focusedMarker.position);
+    // }
     // offsetCenter(position, 0, 70);
     // console.log("focused marker:", focusedMarker?.info);
+
+    markers.forEach((m) => {
+      if (!focusedMarker) m.setOptions({ opacity: 1 });
+      else if (m !== focusedMarker) {
+        m.setOptions({ opacity: 0.5 });
+      }
+    });
+
     renderOverlays();
+    renderMarkers();
   }, [focusedMarker]);
 
   const onMarkerClick = (marker) => {
@@ -1464,6 +1469,7 @@ const MapView = () => {
     icon,
     priority,
     getPlaceDetails = true,
+    altPlaceName = null,
   }) {
     const _position = new maps.LatLng(position.lat, position.lng);
     const marker = new maps.Marker({
@@ -1479,7 +1485,7 @@ const MapView = () => {
     if (getPlaceDetails) {
       placesService.current.findPlaceFromQuery(
         {
-          query: title,
+          query: altPlaceName ?? title,
           fields: ["place_id"],
         },
         function (results, status) {
@@ -1643,22 +1649,58 @@ const MapView = () => {
             }
           }
 
+          if (
+            markerPropertyFiltersRef.current.length > 0 &&
+            markerPropertyFiltersRef.current.filter(
+              (p) =>
+                p.property === FILTER_PROPERTIES.day &&
+                p.value.length === 1 &&
+                p.value[0] !== "All"
+            ).length > 0 &&
+            markers.find((m) => m.tags && m.tags.includes("Accommodation"))
+          ) {
+            important = markers.find(
+              (m) => m.tags && m.tags.includes("Accommodation")
+            );
+          }
+
+          if (
+            focusedMarkerRef.current &&
+            markers.indexOf(focusedMarkerRef.current) !== -1
+          ) {
+            important = focusedMarkerRef.current;
+          }
+
           const m = createMarker({
             getPlaceDetails: false,
             maps,
             map,
             title: count + "Marker Cluster",
             position: { lat: _position.lat(), lng: _position.lng() },
-            icon: important
-              ? {
-                  url: ICON_KEYS[important.iconKey].url,
-                  scaledSize: new maps.Size(
-                    ICON_KEYS[important.iconKey].scaledSize[0],
-                    ICON_KEYS[important.iconKey].scaledSize[1]
-                  ),
-                }
-              : closestMarker.icon,
+            icon:
+              important && ICON_KEYS[important.iconKey]
+                ? {
+                    url: ICON_KEYS[important.iconKey].url,
+                    scaledSize: new maps.Size(
+                      ICON_KEYS[important.iconKey].scaledSize[0],
+                      ICON_KEYS[important.iconKey].scaledSize[1]
+                    ),
+                  }
+                : closestMarker
+                ? closestMarker.icon
+                : important
+                ? important.icon
+                : null,
           });
+
+          if (
+            focusedMarkerRef.current &&
+            markers.indexOf(focusedMarkerRef.current) === -1
+          ) {
+            m.setOptions({ opacity: 0.5 });
+          } else if (!focusedMarkerRef.current) {
+            m.setOptions({ opacity: 1 });
+          }
 
           m["info"] = important
             ? important.info + " and " + (count - 1) + " more"
@@ -1668,12 +1710,18 @@ const MapView = () => {
             m["hovered"] = true;
             if (zoomingRef.current) return;
 
+            if (
+              focusedMarkerRef.current &&
+              markers.indexOf(focusedMarkerRef.current) !== -1
+            )
+              return;
+
             markerHoveredRef.current = true;
 
             markersRef.current.forEach((m) => {
               if (markers.indexOf(m) !== -1) return;
 
-              if (m !== focusedMarkerRef.current) toggleOverlay(false, m);
+              toggleOverlay(false, m);
             });
 
             if (markerClusterRef.current) {
@@ -1708,6 +1756,10 @@ const MapView = () => {
 
             markerHoveredRef.current = false;
             markerHoveredOverlayRef.current = null;
+            toggleClusterOverlay(false, {
+              marker: m,
+              markers: markers,
+            });
             renderOverlays();
           });
 
@@ -1733,11 +1785,15 @@ const MapView = () => {
               clusterOverlaysRef.current
             )
           ) {
+            // console.log("creating cluster overlay with title: ", m.info);
             const overlay = createOverlay({
               marker: m,
               type: "title",
               title: m.info,
-              offsetY: important ? ICON_KEYS[important.iconKey].offsetY : 20,
+              offsetY:
+                important && ICON_KEYS[important.iconKey]
+                  ? ICON_KEYS[important.iconKey].offsetY
+                  : 20,
             });
 
             overlay.setMap(null);
@@ -1747,6 +1803,21 @@ const MapView = () => {
           }
 
           markers.forEach((m) => (m["hovered"] = false));
+
+          // const callback = (iconURL) => {
+          //   m.setOptions({ icon: { url: iconURL } });
+          // };
+          // if (
+          //   shouldStackClusterIcons.current &&
+          //   markers.some((m) =>
+          //     suggestedMarkersRef.current.find((s) => s.id === m.id)
+          //   )
+          // ) {
+          //   createCompositeIcon(
+          //     markers.map((m) => m.icon.url),
+          //     callback
+          //   );
+          // }
 
           return m;
         },
@@ -1802,53 +1873,6 @@ const MapView = () => {
     }
   }, [currentRenderType]);
 
-  const [timelineHidden, setTimelineHidden] = useState(false);
-  const [routing, setRouting] = useState(false);
-  const [routingData, setRoutingData] = useState([]);
-
-  useEffect(() => {
-    if (!routing) {
-      setRoutingData([]);
-      setRouteDriveTime(null);
-      setRouteDriveDistance(null);
-    } else {
-      setRoutingData([
-        timelineActivities[0],
-        timelineActivities[timelineActivities.length - 1],
-      ]);
-    }
-  }, [routing]);
-
-  useEffect(() => {
-    if (!directionsService || !directionsRenderer) return;
-
-    if (routingData.length === 0) {
-      directionsRenderer.setMap(null);
-    } else {
-      if (routingData.length === 2) {
-        const waypoints = timelineActivities
-          .filter((activity, index) => {
-            const minIndex = Math.min(
-              routingData[0].index,
-              routingData[1].index
-            );
-            const maxIndex = Math.max(
-              routingData[0].index,
-              routingData[1].index
-            );
-            return index > minIndex && index < maxIndex;
-          })
-          .map((activity) => ({ location: activity.position }));
-
-        calculateRoute(
-          routingData[0].position,
-          routingData[1].position,
-          waypoints
-        );
-      }
-    }
-  }, [routingData]);
-
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   if (!fetchedAPIKey) return null;
@@ -1863,6 +1887,7 @@ const MapView = () => {
         allCities={allCities}
         markerDays={markerDays}
         allTags={allTags}
+        allTimes={allTimes}
         focusedMarker={focusedMarker}
         focusedCluster={focusedCluster}
         currentFilters={markerPropertyFilters}
@@ -1874,14 +1899,15 @@ const MapView = () => {
             setMarkerInfoFilter(null);
           } else {
             setMarkerInfoFilter(search);
+            // setFocusedMarker(markers.find(m => m.info === search));
           }
         }}
         onFilterEdit={(filters) => {
           setMarkerPropertyFilters(filters);
         }}
         onFiltersOpen={(open) => {
-          setTimelineHidden(open);
-          setFiltersOpen(open);
+          // setTimelineHidden(open);
+          // setFiltersOpen(open);
         }}
       />
       <GoogleMapReact
@@ -1903,285 +1929,23 @@ const MapView = () => {
         currentDayFilter !== "All" &&
         currentDayFilter !== "Not Set" &&
         timelineActivities.length > 0 && (
-          <>
-            <div
-              style={{
-                position: "fixed",
-                bottom: "50%",
-                transform: !timelineHidden
-                  ? "translateX(0) translateY(50%)"
-                  : "translateX(calc(100% + 20px)) translateY(50%)",
-                right: 0,
-                zIndex: 99999,
-                background: "rgba(255,255,255,.75)",
-                borderRadius: "1em 0 0 1em",
-                backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)",
-                transition: "transform 0.3s ease-in-out",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: filtersOpen ? 0 : timelineHidden ? -55 : 0,
-                  padding: "10px",
-                  cursor: filtersOpen ? "default" : "pointer",
-                  borderRadius: "1em",
-                  border: timelineHidden ? "1px solid black" : "none",
-                  backgroundColor: timelineHidden
-                    ? "rgba(255,255,255,1)"
-                    : "rgba(0,0,0,0)",
-                  display: "flex",
-                  alignContent: "center",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  justifyItems: "center",
-                  transition: "all .7s ease",
-                }}
-                onClick={() => {
-                  if (filtersOpen) return;
-
-                  setTimelineHidden(!timelineHidden);
-                }}
-              >
-                {timelineHidden ? (
-                  <ArrowBackIosIcon />
-                ) : (
-                  <ArrowForwardIosIcon />
-                )}
-              </div>
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  right: 0,
-                  display: "flex",
-                  justifyContent: "center",
-                  justifyItems: "center",
-                  alignContent: "center",
-                  alignItems: "center",
-                  padding: "10px",
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  setRouting(!routing);
-                }}
-              >
-                {routing ? <CancelIcon /> : <ForkLeftIcon />}
-              </div>
-              <div style={{ display: "flex" }}>
-                <h2
-                  style={{
-                    fontFamily: "'Indie Flower', cursive",
-                    paddingTop: "16px",
-                    paddingLeft: "16px",
-                    marginTop: "32px",
-                    marginBottom: "0px",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Day {currentDayFilter}
-                </h2>
-                {!routing && (
-                  <div style={{ display: "flex", placeItems: "end" }}>
-                    <IconButton
-                      onClick={() => {
-                        let prevDay = currentDayFilter - 1;
-                        if (
-                          prevDay <
-                          Math.min(
-                            ...markerDays.filter((x) => Number.isInteger(x))
-                          )
-                        )
-                          prevDay = Math.min(
-                            ...markerDays.filter((x) => Number.isInteger(x))
-                          );
-                        let newFilters = markerPropertyFilters.filter(
-                          (filter) => {
-                            return filter.property !== FILTER_PROPERTIES.day;
-                          }
-                        );
-                        newFilters.push({
-                          type: FILTER_TYPE.INCLUDE,
-                          property: FILTER_PROPERTIES.day,
-                          value: [prevDay],
-                        });
-
-                        setMarkerPropertyFilters(newFilters);
-                      }}
-                    >
-                      <ArrowBack />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => {
-                        let nextDay = currentDayFilter + 1;
-                        if (
-                          nextDay >
-                          Math.max(
-                            ...markerDays.filter((x) => Number.isInteger(x))
-                          )
-                        )
-                          nextDay = Math.max(
-                            ...markerDays.filter((x) => Number.isInteger(x))
-                          );
-                        let newFilters = markerPropertyFilters.filter(
-                          (filter) => {
-                            return filter.property !== FILTER_PROPERTIES.day;
-                          }
-                        );
-                        newFilters.push({
-                          type: FILTER_TYPE.INCLUDE,
-                          property: FILTER_PROPERTIES.day,
-                          value: [nextDay],
-                        });
-
-                        setMarkerPropertyFilters(newFilters);
-                      }}
-                    >
-                      <ArrowForward />
-                    </IconButton>
-                  </div>
-                )}
-              </div>
-              {routing && (
-                <>
-                  <h3
-                    style={{
-                      fontFamily: "'Indie Flower', cursive",
-                      paddingLeft: "32px",
-                      margin: "0px",
-                    }}
-                  >
-                    Routing
-                  </h3>
-                  {routeDriveTime && routeDriveDistance && (
-                    <div
-                      style={{
-                        paddingLeft: "46px",
-                        marginTop: "0px",
-                      }}
-                    >
-                      <p
-                        style={{
-                          fontFamily: "'Indie Flower', cursive",
-                          margin: "0px",
-                        }}
-                      >
-                        Driving: {routeDriveTime}
-                      </p>
-                      <p
-                        style={{
-                          fontFamily: "'Indie Flower', cursive",
-                          paddingLeft: "16px",
-                          margin: "0px",
-                        }}
-                      >
-                        {routeDriveDistance}
-                      </p>
-                    </div>
-                  )}
-
-                  {routeWalkTime && routeWalkDistance && (
-                    <div
-                      style={{
-                        paddingLeft: "46px",
-                      }}
-                    >
-                      <p
-                        style={{
-                          fontFamily: "'Indie Flower', cursive",
-                          margin: "0px",
-                        }}
-                      >
-                        Walking: {routeWalkTime}
-                      </p>
-                      <p
-                        style={{
-                          fontFamily: "'Indie Flower', cursive",
-                          paddingLeft: "16px",
-                          marginTop: "0px",
-                        }}
-                      >
-                        {routeWalkDistance}
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-              <Timeline
-                driveDuration={routeDriveTime}
-                walkDuration={routeWalkTime}
-                driveDistance={routeDriveDistance}
-                walkDistance={routeWalkDistance}
-                selectedActivities={routingData
-                  .slice(0, 2)
-                  .map((data) => data.index)}
-                activities={timelineActivities}
-                onActivityClick={(activity) => {
-                  if (routing) {
-                    let routeData = [...routingData];
-                    if (routeData.length >= 2) {
-                      routeData = [];
-                      setRoutingData([]);
-                    }
-                    routeData.push({
-                      index: activity.index,
-                      position: activity.position,
-                    });
-                    setRoutingData(routeData);
-                  } else {
-                    onMarkerClick(activity.marker);
-                  }
-                }}
-              />
-            </div>
-          </>
+          <ItineraryTimeline
+            timelineActivities={timelineActivities}
+            directionsRenderer={directionsRenderer}
+            directionsService={directionsService}
+            mapsService={maps}
+            map={map}
+            currentDayFilter={currentDayFilter}
+            allDays={markerDays}
+            markerPropertyFilters={markerPropertyFilters}
+            setMarkerPropertyFilters={setMarkerPropertyFilters}
+            onActivityClick={onMarkerClick}
+            onSetSuggested={setSuggestedMarkers}
+            allMarkers={markers}
+            onActivityMouseOver={onMarkerMouseOver}
+            onActivityMouseOut={onMarkerMouseOut}
+          />
         )}
-      {/* <POIDetailsCard
-        active={focusedMarker !== null || focusedCluster !== null}
-        title={
-          focusedCluster === null && focusedMarker === null
-            ? ""
-            : focusedMarker
-            ? focusedMarker.info
-            : focusedCluster.markers.map((m) => m.info)
-        }
-        day={
-          focusedCluster === null && focusedMarker === null
-            ? null
-            : focusedMarker
-            ? focusedMarker.day
-            : null
-        }
-        date={
-          focusedCluster === null && focusedMarker === null
-            ? null
-            : focusedMarker
-            ? focusedMarker.date
-            : null
-        }
-        description={
-          focusedCluster === null && focusedMarker === null
-            ? ""
-            : focusedMarker
-            ? focusedMarker.description
-            : ""
-        }
-        tags={
-          focusedCluster === null && focusedMarker === null
-            ? []
-            : focusedMarker
-            ? focusedMarker.tags
-            : []
-        }
-        onClose={() => {
-          setFocusedMarker(null);
-          setFocusedCluster(null);
-
-          if (mapRef.current) mapRef.current.setZoom(13);
-        }}
-      /> */}
       <AppFooter
         currentMapStyle={currentMapStyle}
         currentRenderType={currentRenderType}

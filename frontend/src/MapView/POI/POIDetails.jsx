@@ -59,12 +59,11 @@ const DateComponent = ({
   return (
     <>
       {(day || date) && !settingDate && (
-        <div
+        <Box
           style={{
-            display: "flex",
+            display: "inline-flex",
             flexFlow: "row",
-            placeContent: "center",
-            alignItems: "center",
+            placeItems: "center",
             // width: "100%",
           }}
         >
@@ -90,24 +89,33 @@ const DateComponent = ({
               {Array.isArray(day)
                 ? "Days " + day[0] + "-" + day[day.length - 1]
                 : "Day " + day}
+              {canEdit && (
+                <IconButton
+                  sx={{
+                    p: 0,
+                    position: "absolute",
+                    pl: 1,
+                    position: "absolute",
+                    height: "fit-content",
+                    placeContent: "center",
+                    placeItems: "center",
+                    verticalAlign: "middle", // Align the icon vertically with the text
+                  }}
+                  onClick={() => {
+                    if (!googleAccount) {
+                      setLoginPopupOpen(true);
+                      return;
+                    }
+
+                    setSettingDate(true);
+                  }}
+                >
+                  <Edit />
+                </IconButton>
+              )}
             </span>
           )}
-          {canEdit && (
-            <IconButton
-              sx={{ p: 0, ml: 1 }}
-              onClick={() => {
-                if (!googleAccount) {
-                  setLoginPopupOpen(true);
-                  return;
-                }
-
-                setSettingDate(true);
-              }}
-            >
-              <Edit />
-            </IconButton>
-          )}
-        </div>
+        </Box>
       )}
       {canEdit && !date && !settingDate && (
         <Button
@@ -120,13 +128,13 @@ const DateComponent = ({
 
             setSettingDate(true);
           }}
-          sx={{ mt: isEditingTitle ? 2 : 1, mb: 1}}
+          sx={{ mt: isEditingTitle ? 2 : 1, mb: 1 }}
         >
           Add Date
         </Button>
       )}
       {settingDate && (
-        <div style={{ display: "flex", flexFlow: "column", marginTop: '8px' }}>
+        <div style={{ display: "flex", flexFlow: "column", marginTop: "8px" }}>
           <div
             style={{
               display: "flex",
@@ -165,7 +173,11 @@ const DateComponent = ({
               label={<small style={{ textWrap: "nowrap" }}>End Date</small>}
             />
           </div>
-          <Button variant="contained" onClick={() => setSettingDate(false)} sx={{mb: 1}}>
+          <Button
+            variant="contained"
+            onClick={() => setSettingDate(false)}
+            sx={{ mb: 1 }}
+          >
             Done
           </Button>
         </div>
@@ -598,20 +610,6 @@ export const POIDetails = ({
         onEditingTitle={(editing) => setIsEditingTitle(editing)}
         canEdit={marker !== undefined && marker !== null}
       />
-      <Time
-        time={_time}
-        canEdit={marker !== undefined && marker !== null}
-        googleAccount={googleAccount}
-        setLoginPopupOpen={setLoginPopupOpen}
-        allTimes={allTimes}
-        onUpdateTime={(time) => {
-          if (time === _time) return;
-
-          if (marker) marker["time"] = time;
-          setTime(time);
-          if (onTimeUpdated) onTimeUpdated(time);
-        }}
-      />
       <DateComponent
         date={_date}
         googleAccount={googleAccount}
@@ -640,6 +638,20 @@ export const POIDetails = ({
         }}
         isEditingTitle={isEditingTitle}
         canEdit={marker !== undefined && marker !== null}
+      />
+      <Time
+        time={_time}
+        canEdit={marker !== undefined && marker !== null}
+        googleAccount={googleAccount}
+        setLoginPopupOpen={setLoginPopupOpen}
+        allTimes={allTimes}
+        onUpdateTime={(time) => {
+          if (time === _time) return;
+
+          if (marker) marker["time"] = time;
+          setTime(time);
+          if (onTimeUpdated) onTimeUpdated(time);
+        }}
       />
       {link && (
         <a href={link} target="_blank" rel="noreferrer">

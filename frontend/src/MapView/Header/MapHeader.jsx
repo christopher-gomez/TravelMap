@@ -8,6 +8,7 @@ export default function AppHeader({
   markers,
   markerDays,
   allTags,
+  allTimes,
   focusedMarker,
   focusedCluster,
   onSearch,
@@ -96,6 +97,7 @@ export default function AppHeader({
                   allCities={allCities}
                   allTags={allTags}
                   allDays={markerDays}
+                  allTimes={allTimes}
                   onFilterEdit={onFilterEdit}
                   setFocusedCluster={setFocusedCluster}
                   setFocusedMarker={setFocusedMarker}

@@ -63,7 +63,7 @@ export default {
     jiroSushi: {
         url: JiroIcon,
         scaledSize: [70, 70],
-        offsetY: -5,
+        offsetY: -10,
     },
     skyTree: {
         url: SkytreeIcon,

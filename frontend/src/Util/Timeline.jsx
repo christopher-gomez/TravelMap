@@ -16,14 +16,23 @@ export default function ActivityTimeline({
   walkDuration,
   driveDistance,
   walkDistance,
+  onActivityMouseOver,
+  onActivityMouseOut,
 }) {
   return (
-    <Timeline position="right" sx={{ fontFamily: "'Indie Flower', cursive" }}>
+    <Timeline
+      position="right"
+      sx={{ fontFamily: "'Indie Flower', cursive", mb: 0 }}
+    >
       {activities.map((activity, i) => {
         return (
           <TimelineItem
             sx={{ fontFamily: "'Indie Flower', cursive", cursor: "pointer" }}
             onClick={() => onActivityClick(activity)}
+            onPointerOver={() => {
+              onActivityMouseOver(activity);
+            }}
+            onPointerOut={() => onActivityMouseOut(activity)}
           >
             {activity.time && (
               <TimelineOppositeContent

@@ -32,6 +32,7 @@ export const FILTER_PROPERTIES = {
   tags: "tags",
   day: "day",
   city: "city",
+  time: "time",
 };
 
 export default function FilterDialog({
@@ -509,6 +510,7 @@ export default function FilterDialog({
 export function Filters({
   allTags,
   allDays,
+  allTimes,
   onFilterEdit,
   allCities,
   setFocusedMarker,
@@ -562,6 +564,7 @@ export function Filters({
   const [tagFilters, setTagFilters] = React.useState([]);
   const [dayFilters, setDayFilters] = React.useState([]);
   const [cityFilters, setCityFilters] = React.useState([]);
+  const [timeFilters, setTimeFilters] = React.useState([]);
 
   React.useEffect(() => {
     let newFilters = filters.filter((filter) => {
@@ -662,6 +665,39 @@ export function Filters({
     setFilters(newFilters);
   }, [cityFilters]);
 
+  React.useEffect(() => {
+    let newFilters = filters.filter((filter) => {
+      return filter.property !== FILTER_PROPERTIES.time;
+    });
+
+    if (Array.isArray(timeFilters) && timeFilters.length > 0) {
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.time,
+        value: timeFilters,
+      });
+    } else if (
+      timeFilters !== null &&
+      !Array.isArray(timeFilters) &&
+      timeFilters !== ""
+    ) {
+      const newTimeFilters = [timeFilters];
+      const filterOfTimes = filters.find((filter) => {
+        return filter.property === FILTER_PROPERTIES.time;
+      });
+      if (filterOfTimes) {
+        newTimeFilters.push(...filterOfTimes.value);
+      }
+
+      newFilters.push({
+        type: FILTER_TYPE.INCLUDE,
+        property: FILTER_PROPERTIES.time,
+        value: newTimeFilters,
+      });
+    }
+    setFilters(newFilters);
+  }, [timeFilters]);
+
   // React.useEffect(() => {
   //   setCurrentFilter({
   //     type: addingFilterType,
@@ -686,95 +722,7 @@ export function Filters({
         spacing={1}
         style={{ flexWrap: "wrap" }}
       >
-        {filters.length > 0 &&
-          filters
-            .filter((filter) => {
-              return filter.property === FILTER_PROPERTIES.tags;
-            })
-            .map(
-              (filter) =>
-                filter.value.length > 0 &&
-                filter.value.map((tag, index) => (
-                  <Grid item>
-                    <Chip
-                      variant="filled"
-                      sx={{ backgroundColor: "white" }}
-                      key={"tag-filter-" + index}
-                      label={tag}
-                      onDelete={() => {
-                        const tagFilter = filters.find((filter) => {
-                          return filter.property === FILTER_PROPERTIES.tags;
-                        });
-
-                        if (Array.isArray(tagFilter.value)) {
-                          const newTagFilters = tagFilter.value.filter(
-                            (t) => t !== tag
-                          );
-                          setTagFilters(newTagFilters);
-                        } else {
-                          setTagFilters("");
-                        }
-                      }}
-                    />
-                  </Grid>
-                ))
-            )}
-        {allTags.filter((tag) => {
-          if (filters.length === 0) return true;
-          else {
-            return !filters.find((filter) => {
-              // let oppositeType =
-              //   addingFilterType === FILTER_TYPE.INCLUDE
-              //     ? FILTER_TYPE.EXCLUDE
-              //     : FILTER_TYPE.INCLUDE;
-              return (
-                filter.property === FILTER_PROPERTIES.tags &&
-                // filter.type === oppositeType &&
-                (Array.isArray(filter.value)
-                  ? filter.value.includes(tag)
-                  : filter.value === tag)
-              );
-            });
-          }
-        }).length > 0 && (
-          <Grid item>
-            <ChipSelectMenu
-              icon={<FilterAlt />}
-              options={allTags.filter((tag) => {
-                if (filters.length === 0) return true;
-                else {
-                  return !filters.find((filter) => {
-                    // let oppositeType =
-                    //   addingFilterType === FILTER_TYPE.INCLUDE
-                    //     ? FILTER_TYPE.EXCLUDE
-                    //     : FILTER_TYPE.INCLUDE;
-                    return (
-                      filter.property === FILTER_PROPERTIES.tags &&
-                      // filter.type === oppositeType &&
-                      (Array.isArray(filter.value)
-                        ? filter.value.includes(tag)
-                        : filter.value === tag)
-                    );
-                  });
-                }
-              })}
-              label={
-                // addingFilterType === "" || addingFilterType === null
-                //   ? "Filter Tags"
-                //   : addingFilterType === "INCLUDE" ||
-                //     addingFilterType === FILTER_TYPE.MATCH
-                //   ? "Filter For Tags"
-                //   : "Filter Out Tags"
-                "Tags"
-              }
-              multiple={false}
-              onChange={(val) => {
-                setTagFilters(val);
-              }}
-              value={tagFilters}
-            />
-          </Grid>
-        )}
+        {/* Days */}
         {filters.length > 0 &&
           filters
             .filter((filter) => {
@@ -864,6 +812,97 @@ export function Filters({
             />
           </Grid>
         )}
+        {/* Times */}
+        {filters.length > 0 &&
+          filters
+            .filter((filter) => {
+              return filter.property === FILTER_PROPERTIES.time;
+            })
+            .map(
+              (filter) =>
+                filter.value.length > 0 &&
+                filter.value.map((time, index) => (
+                  <Grid item>
+                    <Chip
+                      variant="filled"
+                      sx={{ backgroundColor: "white" }}
+                      key={"time-filter-" + index}
+                      label={time}
+                      onDelete={() => {
+                        const timeFilter = filters.find((filter) => {
+                          return filter.property === FILTER_PROPERTIES.time;
+                        });
+
+                        if (Array.isArray(timeFilter.value)) {
+                          const newtimeFilters = timeFilter.value.filter(
+                            (t) => t !== time
+                          );
+                          setTimeFilters(newtimeFilters);
+                        } else {
+                          setTimeFilters("");
+                        }
+                      }}
+                    />
+                  </Grid>
+                ))
+            )}
+        {allTimes.filter((time) => {
+          if (filters.length === 0) return true;
+          else {
+            return !filters.find((filter) => {
+              // let oppositeType =
+              //   addingFilterType === FILTER_TYPE.INCLUDE
+              //     ? FILTER_TYPE.EXCLUDE
+              //     : FILTER_TYPE.INCLUDE;
+              return (
+                filter.property === FILTER_PROPERTIES.time &&
+                // filter.type === oppositeType &&
+                (Array.isArray(filter.value)
+                  ? filter.value.includes(time)
+                  : filter.value === time)
+              );
+            });
+          }
+        }).length > 0 && (
+          <Grid item>
+            <ChipSelectMenu
+              icon={<FilterAlt />}
+              options={allTimes.filter((time) => {
+                if (filters.length === 0) return true;
+                else {
+                  return !filters.find((filter) => {
+                    // let oppositeType =
+                    //   addingFilterType === FILTER_TYPE.INCLUDE
+                    //     ? FILTER_TYPE.EXCLUDE
+                    //     : FILTER_TYPE.INCLUDE;
+                    return (
+                      filter.property === FILTER_PROPERTIES.time &&
+                      // filter.type === oppositeType &&
+                      (Array.isArray(filter.value)
+                        ? filter.value.includes(time)
+                        : filter.value === time)
+                    );
+                  });
+                }
+              })}
+              label={
+                // addingFilterType === "" || addingFilterType === null
+                //   ? "Filter Tags"
+                //   : addingFilterType === "INCLUDE" ||
+                //     addingFilterType === FILTER_TYPE.MATCH
+                //   ? "Filter For Tags"
+                //   : "Filter Out Tags"
+                "Time"
+              }
+              multiple={false}
+              onChange={(val) => {
+                setTimeFilters(val);
+              }}
+              value={timeFilters}
+            />
+          </Grid>
+        )}
+        {/* Cities */}
         {filters.length > 0 &&
           filters
             .filter((filter) => {
@@ -950,6 +989,97 @@ export function Filters({
                 setCityFilters(val);
               }}
               value={cityFilters}
+            />
+          </Grid>
+        )}
+
+        {/* Tags */}
+        {filters.length > 0 &&
+          filters
+            .filter((filter) => {
+              return filter.property === FILTER_PROPERTIES.tags;
+            })
+            .map(
+              (filter) =>
+                filter.value.length > 0 &&
+                filter.value.map((tag, index) => (
+                  <Grid item>
+                    <Chip
+                      variant="filled"
+                      sx={{ backgroundColor: "white" }}
+                      key={"tag-filter-" + index}
+                      label={tag}
+                      onDelete={() => {
+                        const tagFilter = filters.find((filter) => {
+                          return filter.property === FILTER_PROPERTIES.tags;
+                        });
+
+                        if (Array.isArray(tagFilter.value)) {
+                          const newTagFilters = tagFilter.value.filter(
+                            (t) => t !== tag
+                          );
+                          setTagFilters(newTagFilters);
+                        } else {
+                          setTagFilters("");
+                        }
+                      }}
+                    />
+                  </Grid>
+                ))
+            )}
+        {allTags.filter((tag) => {
+          if (filters.length === 0) return true;
+          else {
+            return !filters.find((filter) => {
+              // let oppositeType =
+              //   addingFilterType === FILTER_TYPE.INCLUDE
+              //     ? FILTER_TYPE.EXCLUDE
+              //     : FILTER_TYPE.INCLUDE;
+              return (
+                filter.property === FILTER_PROPERTIES.tags &&
+                // filter.type === oppositeType &&
+                (Array.isArray(filter.value)
+                  ? filter.value.includes(tag)
+                  : filter.value === tag)
+              );
+            });
+          }
+        }).length > 0 && (
+          <Grid item>
+            <ChipSelectMenu
+              icon={<FilterAlt />}
+              options={allTags.filter((tag) => {
+                if (filters.length === 0) return true;
+                else {
+                  return !filters.find((filter) => {
+                    // let oppositeType =
+                    //   addingFilterType === FILTER_TYPE.INCLUDE
+                    //     ? FILTER_TYPE.EXCLUDE
+                    //     : FILTER_TYPE.INCLUDE;
+                    return (
+                      filter.property === FILTER_PROPERTIES.tags &&
+                      // filter.type === oppositeType &&
+                      (Array.isArray(filter.value)
+                        ? filter.value.includes(tag)
+                        : filter.value === tag)
+                    );
+                  });
+                }
+              })}
+              label={
+                // addingFilterType === "" || addingFilterType === null
+                //   ? "Filter Tags"
+                //   : addingFilterType === "INCLUDE" ||
+                //     addingFilterType === FILTER_TYPE.MATCH
+                //   ? "Filter For Tags"
+                //   : "Filter Out Tags"
+                "Tags"
+              }
+              multiple={false}
+              onChange={(val) => {
+                setTagFilters(val);
+              }}
+              value={tagFilters}
             />
           </Grid>
         )}
