@@ -34,6 +34,8 @@ const DateComponent = ({
   calculateDay,
   isEditingTitle,
   canEdit,
+  currentDayFilter,
+  allMarkers,
 }) => {
   const [settingDate, setSettingDate] = useState(false);
   const [hasEndDate, setHasEndDate] = useState(false);
@@ -47,14 +49,37 @@ const DateComponent = ({
 
     if (date) {
       setDateControl(date);
+    } else {
+      setDateControl({ start: null, end: null });
     }
   }, [date]);
 
   useEffect(() => {
-    if (dateControl.start || dateControl.end) {
-      onUpdateDate(dateControl);
-    }
+    onUpdateDate(dateControl);
   }, [dateControl]);
+
+  useEffect(() => {
+    if (
+      settingDate &&
+      !dateControl.start &&
+      !dateControl.end &&
+      currentDayFilter &&
+      !isNaN(currentDayFilter) &&
+      allMarkers !== undefined
+    ) {
+      const similarMarker = allMarkers.find(
+        (m) =>
+          m.date &&
+          m.day !== null &&
+          ((Array.isArray(m.day) && m.day.includes(currentDayFilter)) ||
+            m.day === currentDayFilter)
+      );
+      if (similarMarker) {
+        const targetDate = similarMarker.date;
+        setDateControl({ start: targetDate.start, end: null });
+      }
+    }
+  }, [settingDate]);
 
   return (
     <>
@@ -173,13 +198,32 @@ const DateComponent = ({
               label={<small style={{ textWrap: "nowrap" }}>End Date</small>}
             />
           </div>
-          <Button
-            variant="contained"
-            onClick={() => setSettingDate(false)}
-            sx={{ mb: 1 }}
+          <Box
+            sx={{
+              display: "flex",
+              flexFlow: "row",
+              gap: 1,
+              width: "100%",
+              placeContent: "center",
+            }}
           >
-            Done
-          </Button>
+            {(dateControl.start || dateControl.end) && (
+              <Button
+                onClick={() => {
+                  setDateControl({ start: null, end: null });
+                }}
+              >
+                Clear
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              onClick={() => setSettingDate(false)}
+              sx={{ mb: 1 }}
+            >
+              Done
+            </Button>
+          </Box>
         </div>
       )}
     </>
@@ -409,7 +453,7 @@ const Time = ({
     }
   }, [controlledTime]);
 
-  if (!time) return null;
+  // if (!time) return null;
 
   return (
     <div
@@ -422,12 +466,20 @@ const Time = ({
     >
       {allTimes && canEdit && (
         <ChipSelectMenu
-          icon={<Edit />}
-          iconPlacement="end"
+          icon={time ? <Edit /> : undefined}
+          deleteIcon={time ? <Delete /> : <Add />}
+          onDelete={time ? () => setControlledTime(null) : undefined}
+          openOnDelete={time ? false : true}
           options={allTimes.filter((opt) => {
+            if (opt === "Not Set") return false;
+
+            if (!time) return true;
+
             return time !== opt;
           })}
-          label={<p className="poi-time">{controlledTime}</p>}
+          label={
+            <p className="poi-time">{time ? controlledTime : "Add Time"}</p>
+          }
           onChange={(time) => {
             if (!googleAccount) {
               setLoginPopupOpen(true);
@@ -472,6 +524,8 @@ export const POIDetails = ({
   onTagsUpdated,
   allTimes,
   onTimeUpdated,
+  currentDayFilter,
+  allMarkers,
 }) => {
   const [curImageIndex, setCurImageIndex] = useState(0);
 
@@ -619,10 +673,30 @@ export const POIDetails = ({
           if (!calculateDay) return;
 
           if (!date.start && !date.end) {
+            console.log("date has no start or end");
+            if (_date && (_date.start !== null || _date.end !== null)) {
+              if (marker) {
+                marker["date"] = date;
+                marker["day"] = null;
+              }
+
+              setDate(null);
+              setDay(null);
+
+              if (onUpdateDate) onUpdateDate(date);
+            }
             return;
           }
 
-          if (date.start === _date.start && date.end === _date.end) return;
+          if (
+            date !== null &&
+            _date !== null &&
+            date !== undefined &&
+            _date !== undefined &&
+            date.start === _date.start &&
+            date.end === _date.end
+          )
+            return;
 
           const day = calculateDay(date);
 
@@ -638,6 +712,8 @@ export const POIDetails = ({
         }}
         isEditingTitle={isEditingTitle}
         canEdit={marker !== undefined && marker !== null}
+        currentDayFilter={currentDayFilter}
+        allMarkers={allMarkers}
       />
       <Time
         time={_time}

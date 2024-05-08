@@ -152,14 +152,13 @@ export const findLocationLngLat = async (maps, location) => {
 export const updateActivityDate = async (activity, googleAccount) => {
   if (!googleAccount) return;
 
+  const date = activity.date.start || activity.date.end ? activity.date : null;
+
   const response = await updatePage({
     id: activity.id,
     properties: {
       Date: {
-        date: {
-          start: activity.date.start,
-          end: activity.date.end,
-        },
+        date: date,
       },
     },
   });
@@ -212,13 +211,13 @@ export const updateActivityTags = async (activity, googleAccount) => {
 export const updateActivityTime = async (activity, googleAccount) => {
   if (!googleAccount) return;
 
+  let select = activity.time ? { name: activity.time } : null;
+
   const response = await updatePage({
     id: activity.id,
     properties: {
       Time: {
-        select: {
-          name: activity.time,
-        },
+        select: select,
       },
     },
   });

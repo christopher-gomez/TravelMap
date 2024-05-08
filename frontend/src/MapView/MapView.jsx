@@ -1968,6 +1968,7 @@ const MapView = () => {
         onUpdateDate={(date) => {
           if (!focusedMarker) return;
 
+          renderMarkers();
           updateActivityDate(focusedMarker, googleAccount);
         }}
         onUpdateTitle={(title) => {
@@ -1991,8 +1992,10 @@ const MapView = () => {
         onTimeUpdated={(time) => {
           if (!focusedMarker) return;
 
+          renderMarkers();
           updateActivityTime(focusedMarker, googleAccount);
         }}
+        currentDayFilter={currentDayFilter}
       />
       <GoogleSignIn
         onGoogleAccount={(googleAccount) => setGoogleAccount(googleAccount)}

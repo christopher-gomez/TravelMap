@@ -187,7 +187,9 @@ export function ChipSelectMenu({
   disabled,
   icon,
   startOpen = false,
-  iconPlacement = "start",
+  deleteIcon,
+  onDelete,
+  openOnDelete = false,
 }) {
   const theme = useTheme();
   const [personName, setPersonName] = React.useState([]);
@@ -232,10 +234,10 @@ export function ChipSelectMenu({
   return (
     <Box sx={{ display: "flex", flexFlow: "column" }}>
       <Chip
-        icon={icon && iconPlacement === "start" ? icon : undefined}
-        deleteIcon={icon && iconPlacement === "end" ? icon : undefined}
+        icon={icon}
+        deleteIcon={deleteIcon}
         onDelete={
-          icon && iconPlacement === "end" ? () => setOpen(!open) : undefined
+          onDelete ? onDelete : openOnDelete ? () => setOpen(true) : undefined
         }
         ref={chipRef}
         label={label}
@@ -243,7 +245,7 @@ export function ChipSelectMenu({
         variant="filled"
         sx={{
           backgroundColor: "white !important",
-          overflow: 'visible !important',
+          overflow: "visible !important",
           ":hovered": { backgroundColor: "white !important" },
           ":focused": { backgroundColor: "white !important" },
           "> .MuiChip-deleteIcon": {

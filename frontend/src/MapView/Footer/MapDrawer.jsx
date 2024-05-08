@@ -28,6 +28,7 @@ export default function MapDrawer({
   onTagsUpdated,
   allTimes,
   onTimeUpdated,
+  currentDayFilter,
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -103,6 +104,8 @@ export default function MapDrawer({
       onTagsUpdated={onTagsUpdated}
       allTimes={allTimes}
       onTimeUpdated={onTimeUpdated}
+      currentDayFilter={currentDayFilter}
+      allMarkers={allMarkers}
     />
   ) : focusedCluster ? (
     focusedCluster.markers.map((m, i) => (

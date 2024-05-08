@@ -27,6 +27,7 @@ export default function AppFooter({
   onTagsUpdated,
   allTimes,
   onTimeUpdated,
+  currentDayFilter,
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -77,6 +78,7 @@ export default function AppFooter({
         onTagsUpdated={onTagsUpdated}
         allTimes={allTimes}
         onTimeUpdated={onTimeUpdated}
+        currentDayFilter={currentDayFilter}
       />
     </>
   );
