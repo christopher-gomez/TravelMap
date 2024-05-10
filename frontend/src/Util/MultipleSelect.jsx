@@ -190,6 +190,7 @@ export function ChipSelectMenu({
   deleteIcon,
   onDelete,
   openOnDelete = false,
+  elRef,
 }) {
   const theme = useTheme();
   const [personName, setPersonName] = React.useState([]);
@@ -224,12 +225,13 @@ export function ChipSelectMenu({
   const [chipLeft, setChipLeft] = React.useState(0);
 
   React.useEffect(() => {
-    if (chipRef.current) {
-      const rect = chipRef.current.getBoundingClientRect();
+    if (chipRef.current || elRef) {
+      const el = elRef ?? chipRef.current;
+      const rect = el.getBoundingClientRect();
       setChipHeight(rect.top + rect.height - 10);
       setChipLeft(rect.left - 50);
     }
-  }, [chipRef.current, open]);
+  }, [chipRef.current, elRef, open]);
 
   return (
     <Box sx={{ display: "flex", flexFlow: "column" }}>

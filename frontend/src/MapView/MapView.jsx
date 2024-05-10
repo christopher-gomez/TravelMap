@@ -21,13 +21,20 @@ import {
   updateActivityDate,
   updateActivityTags,
   updateActivityTitle,
+  updateActivityEmojiIcon,
 } from "./UpdateLocationProperties";
 import GoogleSignIn from "../Util/GoogleSignIn";
 import ItineraryTimeline, {
   timeOrder,
   timeOverrideKeys,
 } from "./ItineraryTimeline";
-import { createCompositeIcon } from "../Util/Utils";
+import {
+  createCompositeIcon,
+  createEmojiIcon,
+  getUniqueCitiesFromMarkers,
+} from "../Util/Utils";
+import { Typography } from "@mui/material";
+import MapDrawer from "./Footer/MapDrawer";
 
 // import {
 //   findLocationLngLat,
@@ -352,30 +359,24 @@ const MapView = () => {
                   ICON_KEYS[item.icon].scaledSize[1]
                 ),
               }
-            : item.icon !== null
-            ? item.icon.type === "emoji"
-              ? {
-                  url:
-                    "data:image/svg+xml;charset=UTF-8," +
-                    encodeURIComponent(
-                      `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">${item.icon.value}</text></svg>`
-                    ),
-                  scaledSize: new mapsRef.current.Size(100, 100), // size of the icon
-                  origin: new mapsRef.current.Point(0, 0), // origin
-                  anchor: new mapsRef.current.Point(50, 50), // anchor
-                }
-              : {
-                  url: item.icon,
-                  scaledSize: new mapsRef.current.Size(100, 100), // size of the icon
-                  origin: new mapsRef.current.Point(0, 0), // origin
-                  anchor: new mapsRef.current.Point(50, 50), // anchor
-                }
             : null,
         priority: item.priority,
         altPlaceName: item.placesSearchName,
       });
 
+      if (item.icon && item.icon.type === "emoji") {
+        createEmojiIcon(item.icon.value, (img) => {
+          marker.setIcon({
+            url: img,
+            scaledSize: new mapsRef.current.Size(100, 100), // size of the icon
+            origin: new mapsRef.current.Point(0, 0), // origin
+            anchor: new mapsRef.current.Point(50, 50), // anchor
+          });
+        });
+      }
+
       if (item.icon && item.icon in ICON_KEYS) marker["iconKey"] = item.icon;
+      if (item.icon && item.icon.type === "emoji") marker["iconType"] = "emoji";
 
       marker["info"] = item.title;
       marker["description"] = item.description;
@@ -392,6 +393,7 @@ const MapView = () => {
       marker["city"] = item.city;
       marker["related"] = item.related;
       marker["link"] = item.link;
+      marker["overlayOffsetY"] = 20;
 
       markers.push(marker);
 
@@ -401,16 +403,19 @@ const MapView = () => {
         offsetY:
           item.icon !== null && item.icon in ICON_KEYS
             ? ICON_KEYS[item.icon].offsetY
-            : 20,
+            : marker.overlayOffsetY
+            ? marker.overlayOffsetY
+            : 0,
       });
 
       // populateInfoWindow(infoDiv, "Header Info", "Title", "This is the main content body.", "Other relevant information.");
-      overlays[getMarkerOverlayKey(marker)] = overlay;
+      // overlays[getMarkerOverlayKey(marker)] = overlay;
+      marker["overlay"] = overlay;
       index++;
     }
 
     setMarkers(markers);
-    setOverlays(overlays);
+    // setOverlays(overlays);
   };
 
   const CustomOverlayFactory = useRef(null);
@@ -419,7 +424,6 @@ const MapView = () => {
     if (itineraryData !== null && map !== undefined && maps !== undefined) {
       CustomOverlayFactory.current = new CustomOverlayContainerFactory(maps);
       const places = parseItineraryDataLocations(itineraryData);
-      placesService.current = new maps.places.PlacesService(map);
       createMarkers(places, map, maps);
       // createMarkers(itineraryData);
     }
@@ -432,7 +436,6 @@ const MapView = () => {
       const isMarkerVisible = bounds.contains(focusedMarkerPosition);
 
       if (!isMarkerVisible) {
-        // console.log("marker no longer visible, setting null");
         setFocusedMarker(null);
       }
     }
@@ -444,6 +447,7 @@ const MapView = () => {
       let totalMarkers = 0;
       for (const marker of focusedClusterRef.current.markers) {
         if (!mapBounds.contains(marker.getPosition())) {
+          // console.log("disabling marker overlay onPan: ", marker.info);
           toggleOverlay(false, marker);
           totalMarkers++;
         }
@@ -478,10 +482,6 @@ const MapView = () => {
   useEffect(() => {
     mapsRef.current = maps;
   }, [maps]);
-
-  // const transRef = React.useRef(null);
-  const [directionsService, setDirectionsService] = useState(null);
-  const [directionsRenderer, setDirectionsRenderer] = useState(null);
 
   const [markers, setMarkers] = useState([]);
   const markersRef = React.useRef(markers);
@@ -663,6 +663,15 @@ const MapView = () => {
     // console.log(currentDayFilter);
     setFocusedCluster(null);
     setFocusedMarker(null);
+
+    if (
+      currentDayFilter !== null &&
+      currentDayFilter !== "All" &&
+      currentDayFilter !== "Not Set" &&
+      !timelineOpen
+    ) {
+      setTimelineOpen(true);
+    }
   }, [currentDayFilter]);
 
   useEffect(() => {
@@ -671,11 +680,18 @@ const MapView = () => {
   }, [markerDays]);
 
   useEffect(() => {
+    setSuggestedMarkers([]);
+  }, [markerPropertyFilters, currentDayFilter]);
+
+  useEffect(() => {
     if (!markers || !maps || !map) return;
 
     // setRouting(false);
+    // console.log("focusedMarker: ", focusedMarker);
+    // console.log("markerInfoFilter: ", markerInfoFilter);
     setRenderedMarkers([]);
     renderMarkers();
+    renderOverlays();
   }, [markerPropertyFilters, markerInfoFilter, markers, suggestedMarkers]);
 
   const firstRender = useRef(true);
@@ -705,9 +721,17 @@ const MapView = () => {
       return true;
     }
 
+    renderedMarkers.forEach((m) => {
+      if (m.isPlacesPOI) {
+        m.overlay?.setMap(null);
+        // console.log("found a places poi removing from map");
+        m.setMap(null);
+      }
+    });
+
     markers.forEach((marker, index) => {
-      marker.setVisible(false);
-      marker.setMap(null);
+      // marker.setVisible(false);
+      // marker.setMap(null);
       marker.setOptions({ opacity: 1.0 });
     });
 
@@ -894,11 +918,11 @@ const MapView = () => {
     // }
 
     // Filter for target info
-    if (markerInfoFilter) {
-      // _markers = _markers.filter((m) => {
-      //   return m.info.toLowerCase().includes(markerInfoFilter.toLowerCase());
-      // });
-    }
+    // if (markerInfoFilter) {
+    //   // _markers = _markers.filter((m) => {
+    //   //   return m.info.toLowerCase().includes(markerInfoFilter.toLowerCase());
+    //   // });
+    // }
 
     // suggestedMarkers.forEach((marker) => {
     //   // const icon = marker.getIcon();
@@ -910,6 +934,13 @@ const MapView = () => {
     else shouldStackClusterIcons.current = false;
 
     _markers = [..._markers, ...suggestedMarkers];
+
+    markers.forEach((m) => {
+      if (!_markers.includes(m)) {
+        m.setVisible(false);
+        m.setMap(null);
+      }
+    });
 
     _markers.forEach((m) => {
       if (!m.visible || !m.map) {
@@ -993,9 +1024,18 @@ const MapView = () => {
   };
 
   const [renderedMarkers, setRenderedMarkers] = useState([]);
+  const renderedMarkersRef = React.useRef(renderedMarkers);
   const [timelineActivities, setTimelineActivities] = useState([]);
 
   useEffect(() => {
+    renderedMarkersRef.current = renderedMarkers;
+    renderedMarkers.forEach((m) => {
+      if (!focusedMarker) m.setOptions({ opacity: 1 });
+      else if (m !== focusedMarker) {
+        m.setOptions({ opacity: 0.5 });
+      }
+    });
+
     if (currentDayFilter === null) return;
 
     const activities = renderedMarkers
@@ -1077,13 +1117,13 @@ const MapView = () => {
     overlaysRef.current = overlays;
   }, [overlays]);
 
-  useEffect(() => {
-    if (!currentZoom) return;
+  // useEffect(() => {
+  //   if (!currentZoom) return;
 
-    currentZoomRef.current = currentZoom;
+  //   currentZoomRef.current = currentZoom;
 
-    renderOverlays();
-  }, [currentZoom]);
+  //   renderOverlays();
+  // }, [currentZoom]);
 
   const zoomingRef = React.useRef(false);
 
@@ -1106,6 +1146,18 @@ const MapView = () => {
   };
 
   const setZoomListener = useRef(false);
+  const [placesService, setPlacesService] = useState(null);
+  const placesServiceRef = useRef(null);
+
+  const [directionsService, setDirectionsService] = useState(null);
+  const [directionsRenderer, setDirectionsRenderer] = useState(null);
+
+  const [geocoderService, setGeocoderService] = useState(null);
+
+  useEffect(() => {
+    placesServiceRef.current = placesService;
+  }, [placesService]);
+
   useEffect(() => {
     if (!map || !maps) return;
 
@@ -1123,11 +1175,35 @@ const MapView = () => {
       setDirectionsRenderer(_directionsRenderer);
     }
 
+    if (!placesService) {
+      const _placesService = new maps.places.PlacesService(map);
+      setPlacesService(_placesService);
+    }
+
+    if (!geocoderService) {
+      const _geocoderService = new maps.Geocoder();
+      setGeocoderService(_geocoderService);
+    }
+
     if (!setZoomListener.current) {
       map.addListener("zoom_changed", onZoom);
       setZoomListener.current = true;
     }
   }, [map, maps]);
+
+  const [uniqueCities, setUniqueCities] = useState([]);
+
+  useEffect(() => {
+    if (markers && markers.length > 0 && geocoderService) {
+      (async () => {
+        const cities = await getUniqueCitiesFromMarkers(
+          markers,
+          geocoderService
+        );
+        setUniqueCities(cities);
+      })();
+    }
+  }, [markers, geocoderService]);
 
   const focusedMarkerRef = React.useRef(null);
 
@@ -1159,14 +1235,23 @@ const MapView = () => {
     )
       return;
 
-    const zoom = mapRef.current.getZoom();
+    // console.log("rendering overlays");
+
+    // const zoom = mapRef.current.getZoom();
 
     // Find all markers that are in clusters
     const clusteredMarkers = [];
 
     markerClusterRef.current.clusters.forEach((cluster) => {
       cluster.markers?.forEach((marker) => {
-        toggleOverlay(false, marker);
+        if (marker !== focusedMarkerRef.current && !marker.hovered) {
+          // console.log(
+          //   "disabling overlay for marker in cluster: ",
+          //   marker.info
+          // );
+          // console.log("disabling overlay for marker in cluster: ", marker.info);
+          toggleOverlay(false, marker);
+        }
         clusteredMarkers.push(getMarkerOverlayKey(marker));
       });
     });
@@ -1192,13 +1277,16 @@ const MapView = () => {
     }
 
     // Hide overlays for clustered markers, show for others
-    for (const marker of markersRef.current) {
+    for (const marker of renderedMarkersRef.current) {
       if (!focusedMarkerRef.current) {
         if (
-          !focusedClusterRef.current ||
-          focusedClusterRef.current.markers.indexOf(marker) === -1
-        )
+          (!focusedClusterRef.current ||
+            focusedClusterRef.current.markers.indexOf(marker) === -1) &&
+          !marker.hovered
+        ) {
+          // console.log("disabling overlay for marker: ", marker.info);
           toggleOverlay(false, marker);
+        }
       }
       //  if (clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1)
       // else {
@@ -1210,15 +1298,16 @@ const MapView = () => {
     }
 
     let anyHovered = false;
-    markersRef.current.forEach((m) => {
+    renderedMarkersRef.current.forEach((m) => {
       if (m.hovered) {
+        // console.log("found a hovered marker: ", m.info);
         anyHovered = true;
         toggleOverlay(true, m);
       }
     });
 
     if (!anyHovered && focusedMarkerRef.current) {
-      console.log("none hovered and focused marker");
+      // console.log("none hovered and focused marker");
       // if (markerClusterRef.current.clusters.length > 0) {
       //   console.log("current clusters: ", markerClusterRef.current.clusters);
       // }
@@ -1229,18 +1318,28 @@ const MapView = () => {
       focusedMarkerRef.current &&
       !focusedMarkerRef.current.hovered
     ) {
+      // console.log(
+      //   "disabling focused marker overlay: ",
+      //   focusedMarkerRef.current.info
+      // );
       toggleOverlay(false, focusedMarkerRef.current);
     }
 
     markerClusterRef.current.clusters.forEach((c) => {
       if (c.marker.hovered) {
+        // console.log("found a hovered cluster: ", c.marker.info);
         toggleClusterOverlay(true, c);
+      } else {
+        toggleClusterOverlay(false, c);
       }
     });
   }
 
   function toggleOverlay(active, marker) {
-    const overlayToShow = overlaysRef.current[getMarkerOverlayKey(marker)];
+    const overlayToShow =
+      marker.overlay; /*overlaysRef.current[getMarkerOverlayKey(marker)]*/
+
+    // if (active) console.log("toggle overlay: ", marker.overlay);
 
     if (overlayToShow === undefined || (active && !mapRef.current)) return;
 
@@ -1260,7 +1359,9 @@ const MapView = () => {
             };
             overlayToShow.offsetY = ICON_KEYS[marker.iconKey]
               ? ICON_KEYS[marker.iconKey].offsetY
-              : 20;
+              : marker.overlayOffsetY
+              ? marker.overlayOffsetY
+              : 0;
           }
         });
       });
@@ -1273,17 +1374,27 @@ const MapView = () => {
 
         overlayToShow.offsetY = ICON_KEYS[marker.iconKey]
           ? ICON_KEYS[marker.iconKey].offsetY
-          : 20;
+          : marker.overlayOffsetY
+          ? marker.overlayOffsetY
+          : 0;
       }
     }
 
-    overlayToShow.changePane(
-      active && (marker["hovered"] || marker === focusedMarkerRef.current)
-        ? "floatPane"
-        : "overlayLayer"
-    );
+    if (
+      (active && overlayToShow.currentPaneType !== "floatPane") ||
+      (!active && overlayToShow !== "ovarlayLayer")
+    )
+      overlayToShow.changePane(
+        active && (marker["hovered"] || marker === focusedMarkerRef.current)
+          ? "floatPane"
+          : "overlayLayer"
+      );
 
-    overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
+    if (
+      (active && overlayToShow.map === null) ||
+      (!active && overlayToShow.map !== null)
+    )
+      overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
   }
 
   const markerHoveredRef = React.useRef(false);
@@ -1295,12 +1406,15 @@ const MapView = () => {
     markerHoveredRef.current = true;
     marker["hovered"] = true;
 
+    // console.log(marker);
+
     if (zoomingRef.current) return;
 
     renderOverlays();
   };
 
   const onMarkerMouseOut = (marker, index) => {
+    // console.log("marker mouse out");
     marker["hovered"] = false;
     markerHoveredRef.current = false;
 
@@ -1313,6 +1427,9 @@ const MapView = () => {
 
   useEffect(() => {
     focusedMarkerRef.current = focusedMarker;
+
+    // annoying hack
+    if (focusedMarker) focusedMarker.hovered = false;
 
     // if (focusedMarker) {
     //   var position = focusedMarker.getPosition();
@@ -1336,13 +1453,6 @@ const MapView = () => {
     // }
     // offsetCenter(position, 0, 70);
     // console.log("focused marker:", focusedMarker?.info);
-
-    markers.forEach((m) => {
-      if (!focusedMarker) m.setOptions({ opacity: 1 });
-      else if (m !== focusedMarker) {
-        m.setOptions({ opacity: 0.5 });
-      }
-    });
 
     renderOverlays();
     renderMarkers();
@@ -1483,7 +1593,7 @@ const MapView = () => {
     marker["info"] = title;
 
     if (getPlaceDetails) {
-      placesService.current.findPlaceFromQuery(
+      placesServiceRef.current.findPlaceFromQuery(
         {
           query: altPlaceName ?? title,
           fields: ["place_id"],
@@ -1545,7 +1655,7 @@ const MapView = () => {
   }, [mapLocked]);
 
   function getPlacePhoto(placeId, marker) {
-    placesService.current.getDetails(
+    placesServiceRef.current.getDetails(
       {
         placeId: placeId,
         fields: ["photo"],
@@ -1686,10 +1796,10 @@ const MapView = () => {
                       ICON_KEYS[important.iconKey].scaledSize[1]
                     ),
                   }
-                : closestMarker
-                ? closestMarker.icon
                 : important
                 ? important.icon
+                : closestMarker
+                ? closestMarker.icon
                 : null,
           });
 
@@ -1708,6 +1818,8 @@ const MapView = () => {
           m.addListener("mouseover", () => {
             // onMarkerMouseOver(m, markers.indexOf(m));
             m["hovered"] = true;
+            for (const marker of markers) marker["clusterHovered"] = true;
+
             if (zoomingRef.current) return;
 
             if (
@@ -1720,7 +1832,6 @@ const MapView = () => {
 
             markersRef.current.forEach((m) => {
               if (markers.indexOf(m) !== -1) return;
-
               toggleOverlay(false, m);
             });
 
@@ -1752,6 +1863,7 @@ const MapView = () => {
           m.addListener("mouseout", () => {
             // onMarkerMouseOut(m, markers.indexOf(m));
             m["hovered"] = false;
+            for (const marker of markers) marker["clusterHovered"] = false;
             if (zoomingRef.current) return;
 
             markerHoveredRef.current = false;
@@ -1779,13 +1891,14 @@ const MapView = () => {
             // map.fitBounds(bounds);
           });
 
+          if (markers.find((m) => m.clusterHovered)) m["hovered"] = true;
+
           if (
             !(
               getMarkerOverlayKey({ marker: m, markers: markers }, true) in
               clusterOverlaysRef.current
             )
           ) {
-            // console.log("creating cluster overlay with title: ", m.info);
             const overlay = createOverlay({
               marker: m,
               type: "title",
@@ -1838,8 +1951,6 @@ const MapView = () => {
     setMarkerCluster(markerCluster);
   }, [maps, markers]);
 
-  const placesService = useRef(null);
-
   const onGoogleApiLoaded = ({ map, maps }) => {
     // const data = JSON.parse(JSON.stringify(testData));
 
@@ -1874,6 +1985,7 @@ const MapView = () => {
   }, [currentRenderType]);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(true);
 
   if (!fetchedAPIKey) return null;
 
@@ -1892,10 +2004,12 @@ const MapView = () => {
         focusedCluster={focusedCluster}
         currentFilters={markerPropertyFilters}
         onSearch={(search) => {
+          // console.log("onSearch", search);
           setFocusedMarker(null);
           setFocusedCluster(null);
 
           if (search === "") {
+            // console.log("setting marker info filter to null");
             setMarkerInfoFilter(null);
           } else {
             setMarkerInfoFilter(search);
@@ -1916,7 +2030,7 @@ const MapView = () => {
           key: fetchedAPIKey,
           language: "en",
           region: "US",
-          libraries: ["places", "routes", "geometry"],
+          libraries: ["places", "routes", "geometry", "geocoder"],
         }}
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
@@ -1927,8 +2041,7 @@ const MapView = () => {
       {/* Timeline */}
       {currentDayFilter !== null &&
         currentDayFilter !== "All" &&
-        currentDayFilter !== "Not Set" &&
-        timelineActivities.length > 0 && (
+        currentDayFilter !== "Not Set" && (
           <ItineraryTimeline
             timelineActivities={timelineActivities}
             directionsRenderer={directionsRenderer}
@@ -1944,8 +2057,94 @@ const MapView = () => {
             allMarkers={markers}
             onActivityMouseOver={onMarkerMouseOver}
             onActivityMouseOut={onMarkerMouseOut}
+            open={timelineOpen}
+            onSetOpen={setTimelineOpen}
+            placesService={placesService}
+            createOverlay={createOverlay}
+            geocoderService={geocoderService}
           />
         )}
+      {/* {uniqueCities.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            display: "flex",
+            flexFlow: "column",
+            left: 0,
+            bottom: 0,
+            background: 'rgba(255,255,255,.75)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <Typography>Trip to {uniqueCities.join(", ")}</Typography>
+        </div>
+      )} */}
+      <MapDrawer
+        focusedCluster={focusedCluster}
+        focusedMarker={focusedMarker}
+        setMapLocked={setMapLocked}
+        mapLocked={mapLocked}
+        allMarkers={markers}
+        onDrawerClose={() => {
+          setFocusedMarker(null);
+          setFocusedCluster(null);
+
+          if (mapRef.current) mapRef.current.setZoom(13);
+        }}
+        setFocusedMarker={setFocusedMarker}
+        googleAccount={googleAccount}
+        onUpdateDate={(date) => {
+          if (!focusedMarker) return;
+
+          renderMarkers();
+          updateActivityDate(focusedMarker, googleAccount);
+        }}
+        onUpdateTitle={(title) => {
+          if (!focusedMarker) return;
+
+          updateActivityTitle(focusedMarker, googleAccount);
+          focusedMarker.overlay.updateProps({
+            title: title,
+          });
+        }}
+        calculateDay={calculateDay}
+        setLoginPopupOpen={setLoginPopupOpen}
+        setErrorPopupOpen={setErrorPopupOpen}
+        allTags={allTags}
+        onTagsUpdated={(tags) => {
+          if (!focusedMarker) return;
+
+          updateActivityTags(focusedMarker, googleAccount);
+        }}
+        allTimes={allTimes}
+        onTimeUpdated={(time) => {
+          if (!focusedMarker) return;
+
+          renderMarkers();
+          updateActivityTime(focusedMarker, googleAccount);
+        }}
+        currentDayFilter={currentDayFilter}
+        offsetCenter={offsetCenter}
+        onNewActivity={(marker) => {
+          setMarkers([...markers, marker]);
+        }}
+        onNewEmojiIconSet={(marker, emoji) => {
+          createEmojiIcon(emoji, (img) => {
+            marker.setIcon({
+              url: img,
+              scaledSize: new mapsRef.current.Size(100, 100), // size of the icon
+              origin: new mapsRef.current.Point(0, 0), // origin
+              anchor: new mapsRef.current.Point(50, 50), // anchor
+            });
+
+            marker["overlayOffsetY"] = 20;
+
+            marker.overlay?.updateOffsetY(20);
+          });
+
+          updateActivityEmojiIcon(marker, emoji, googleAccount);
+        }}
+      />
       <AppFooter
         currentMapStyle={currentMapStyle}
         currentRenderType={currentRenderType}
@@ -1975,7 +2174,7 @@ const MapView = () => {
           if (!focusedMarker) return;
 
           updateActivityTitle(focusedMarker, googleAccount);
-          overlays[getMarkerOverlayKey(focusedMarker)]?.updateProps({
+          focusedMarker.overlay?.updateProps({
             title: title,
           });
         }}
@@ -2003,6 +2202,9 @@ const MapView = () => {
         setLoginPopupOpen={setLoginPopupOpen}
         errorPopupOpen={errorPopupOpen}
         setErrorPopupOpen={setErrorPopupOpen}
+        onLoginClicked={() => {
+          if (timelineOpen) setTimelineOpen(false);
+        }}
       />
     </React.Fragment>
   );

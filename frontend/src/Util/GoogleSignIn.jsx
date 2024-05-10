@@ -11,6 +11,7 @@ export default ({
   setLoginPopupOpen,
   errorPopupOpen,
   setErrorPopupOpen,
+  onLoginClicked
 }) => {
   const loadGoogleScript = () => {
     if (inittedGoogleSignIn.current) return;
@@ -126,8 +127,9 @@ export default ({
             </Typography>
             <IconButton
               onClick={() => {
+                onLoginClicked();
+                setLoginPopupOpen(false);
                 PromptSignIn(() => {
-                  setLoginPopupOpen(false);
                   setErrorPopupOpen(true);
                 });
               }}

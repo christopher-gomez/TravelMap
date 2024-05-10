@@ -224,6 +224,19 @@
   margin-bottom: 0;
 }
 
+.poi-address {
+  display: inline; /* Or inline-block, depending on your design */
+  text-align: center;
+  /* font-style: italic; */
+  align-self: center;
+  font-weight: 100 !important;
+  /* font-size: 0.75em; */
+  text-shadow: -1px -1px 0 #fff, /* top left shadow */ 1px -1px 0 #fff,
+    /* top right shadow */ -1px 1px 0 #fff,
+    /* bottom left shadow */ 1px 1px 0 #fff; /* bottom right shadow */
+  margin-bottom: 12px !important;
+}
+
 .poi-tags {
   display: flex;
   flex-wrap: wrap; /* Allow pills to wrap to multiple lines */

@@ -1,14 +1,24 @@
 import {
+  Add,
   ArrowBack,
   ArrowBackIos,
   ArrowForward,
   ArrowForwardIos,
   Cancel,
+  Delete,
+  ExpandMore,
   ForkLeft,
+  Star,
 } from "@mui/icons-material";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Box,
   Button,
+  Chip,
+  CircularProgress,
+  Grid,
   IconButton,
   List,
   ListItem,
@@ -17,8 +27,13 @@ import {
 import { useEffect, useState } from "react";
 import { FILTER_PROPERTIES, FILTER_TYPE } from "./Header/FilterDialog";
 import Timeline from "../Util/Timeline";
-import { findNearbyMarkers } from "../Util/Utils";
+import {
+  createMarkersFromPOIs,
+  findNearbyMarkers,
+  findPlacesOfInterest,
+} from "../Util/Utils";
 import InputSlider from "../Util/InputSlider";
+import { ChipSelectMenu } from "../Util/MultipleSelect";
 
 export const timeOrder = {
   Morning: 0,
@@ -36,6 +51,26 @@ export const timeOverrideKeys = {
   4: "Night",
 };
 
+const suggestLocationDefaultTypes = [
+  "amusement_park",
+  "aquarium",
+  "art_gallery",
+  "bakery",
+  "bar",
+  "cafe",
+  "casino",
+  "department_store",
+  "museum",
+  "night_club",
+  "park",
+  "restaurant",
+  "shopping_mall",
+  "spa",
+  "stadium",
+  "tourist_attraction",
+  "zoo",
+];
+
 export default function ItineraryTimeline({
   timelineActivities,
   directionsRenderer,
@@ -51,8 +86,22 @@ export default function ItineraryTimeline({
   onSetSuggested,
   onActivityMouseOver,
   onActivityMouseOut,
+  open,
+  onSetOpen,
+  placesService,
+  createOverlay,
+  geocoderService,
 }) {
-  const [timelineHidden, setTimelineHidden] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(true);
+
+  useEffect(() => {
+    if (open !== undefined) setTimelineOpen(open);
+  }, [open]);
+
+  useEffect(() => {
+    if (onSetOpen && timelineOpen !== open) onSetOpen(timelineOpen);
+  }, [timelineOpen]);
+
   const [routing, setRouting] = useState(false);
   const [routingData, setRoutingData] = useState([]);
 
@@ -64,6 +113,9 @@ export default function ItineraryTimeline({
   const [suggesting, setSuggesting] = useState(false);
   const [suggestRadius, setSuggestRadius] = useState(1000);
   const [suggestedActivities, setSuggestedActivities] = useState([]);
+  const [suggestedTypes, setSuggestedTypes] = useState(
+    suggestLocationDefaultTypes
+  );
 
   function suggestNearby() {
     let nearbyMarkers = findNearbyMarkers(
@@ -75,14 +127,35 @@ export default function ItineraryTimeline({
 
     nearbyMarkers = nearbyMarkers.filter((m) => !m.date);
 
-    setSuggestedActivities(nearbyMarkers);
+    findPlacesOfInterest(
+      timelineActivities,
+      allMarkers,
+      placesService,
+      async (nearby) => {
+        console.log("got all nearby POIs: ", nearby);
+        const markers = await createMarkersFromPOIs(
+          nearby,
+          mapsService,
+          geocoderService,
+          createOverlay,
+          onActivityMouseOver,
+          onActivityMouseOut,
+          onActivityClick
+        );
+        setSuggestedActivities([...nearbyMarkers, ...markers]);
+      },
+      suggestRadius,
+      suggestedTypes
+    );
+
+    // setSuggestedActivities(nearbyMarkers);
   }
 
   useEffect(() => {
     if (suggesting) {
       suggestNearby();
     }
-  }, [suggestRadius]);
+  }, [suggestRadius, suggestedTypes]);
 
   useEffect(() => {
     if (!suggesting) {
@@ -252,7 +325,7 @@ export default function ItineraryTimeline({
         style={{
           position: "fixed",
           bottom: "50%",
-          transform: !timelineHidden
+          transform: timelineOpen
             ? "translateX(0) translateY(50%)"
             : "translateX(calc(100% + 20px)) translateY(50%)",
           right: 0,
@@ -262,20 +335,21 @@ export default function ItineraryTimeline({
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           transition: "transform 0.3s ease-in-out",
-          maxHeight: "90vh",
-          overflowY: "auto",
+          maxHeight: "100vh",
+          maxWidth: "25vw",
+          // overflowY: "auto",
         }}
       >
         <div
           style={{
             position: "absolute",
             top: 0,
-            left: timelineHidden ? -55 : 0,
+            left: !timelineOpen ? -55 : 0,
             padding: "10px",
             cursor: "pointer",
             borderRadius: "1em",
-            border: timelineHidden ? "1px solid black" : "none",
-            backgroundColor: timelineHidden
+            border: !timelineOpen ? "1px solid black" : "none",
+            backgroundColor: !timelineOpen
               ? "rgba(255,255,255,1)"
               : "rgba(0,0,0,0)",
             display: "flex",
@@ -284,14 +358,18 @@ export default function ItineraryTimeline({
             justifyContent: "center",
             justifyItems: "center",
             transition: "all .7s ease",
+            // zIndex: 99999 + 1, // Ensure this is higher than the box's z-index
+          }}
+          onClick={() => {
+            setTimelineOpen(!timelineOpen);
           }}
         >
           <IconButton
-            onClick={() => {
-              setTimelineHidden(!timelineHidden);
-            }}
+          // onClick={() => {
+          //   setTimelineOpen(!timelineOpen);
+          // }}
           >
-            {timelineHidden ? <ArrowBackIos /> : <ArrowForwardIos />}
+            {!timelineOpen ? <ArrowBackIos /> : <ArrowForwardIos />}
           </IconButton>
         </div>
         {!suggesting && (
@@ -524,76 +602,180 @@ export default function ItineraryTimeline({
                 <Cancel />
               </IconButton>
             </Typography>
-            <InputSlider
-              value={suggestRadius}
-              label="Radius"
-              min={100}
-              max={5000}
-              onValueChanged={(value) => setSuggestRadius(value)}
-            />
-            <List
+            <Box
               sx={{
-                pt: 0,
-                maxHeight: "200px",
-                overflowY: "auto",
-                width: "100%",
-                "&::-webkit-scrollbar": {
-                  width: "0.75em",
-                  height: "0.85em",
-                },
-                "&::-webkit-scrollbar-track": {
-                  background: "#f0f0f0 !important",
-                  borderRadius: "10px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor: "#c1c1c1 !important",
-                  borderRadius: "10px",
-                  backgroundClip: "content-box",
-                  border: "2px solid transparent",
-                },
-                userSelect: "none",
-                msUserSelect: "none",
-                MozUserSelect: "none",
-                WebkitUserSelect: "none",
-                WebkitTouchCallout: "none",
+                display: "flex",
+                flexFlow: "column",
+                placeContent: "center",
+                placeItems: "center",
+                pl: 1,
+                pr: 1,
               }}
             >
-              {suggestedActivities.map((marker, i) => (
-                <ListItem
-                  key={"suggestion-" + i + "-" + marker.info}
-                  sx={{
-                    textAlign: "center",
-                    placeItems: "center",
-                    placeContent: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    msUserSelect: "none",
-                    MozUserSelect: "none",
-                    WebkitUserSelect: "none",
-                    WebkitTouchCallout: "none",
-                  }}
-                  onClick={() => {
-                    onActivityClick(marker);
-                  }}
-                  onPointerOver={() => {
-                    onActivityMouseOver(marker);
-                  }}
-                  onPointerOut={() => {
-                    onActivityMouseOut(marker);
-                  }}
-                >
+              <Accordion
+                sx={{
+                  background: "none",
+                  boxShadow: "none",
+                  "& .MuiAccordionSummary-content": {
+                    justifyContent: "center",
+                  },
+                  "& .MuiAccordionDetails-root": {
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    pt: 0
+                  }
+                }}
+              >
+                <AccordionSummary expandIcon={<ExpandMore />}>
                   <Typography
                     variant="body1"
+                    sx={{ fontFamily: "'Indie Flower', cursive", ml: "24px" }}
+                  >
+                    Suggestion Settings
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <InputSlider
+                    value={suggestRadius}
+                    label="Radius"
+                    min={100}
+                    max={5000}
+                    onValueChanged={(value) => setSuggestRadius(value)}
+                  />
+                  <Typography
+                    variant="body1"
+                    sx={{ fontFamily: "'Indie Flower', cursive", mb: 1 }}
+                  >
+                    Suggested Types
+                  </Typography>
+                  <Grid
+                    container
+                    spacing={1}
+                    sx={{ placeContent: "center", placeItems: "center" }}
+                  >
+                    {suggestLocationDefaultTypes.map((type, i) => (
+                      <Grid item key={"suggested-type-" + i}>
+                        <Chip
+                          variant="filled"
+                          sx={{
+                            backgroundColor: "white",
+                            opacity: suggestedTypes.includes(type) ? 1 : 0.65,
+                            border: "1px solid gray",
+                          }}
+                          key={"suggested-type-filter-chip-" + i}
+                          label={type.replace("_", " ")}
+                          onDelete={() => {
+                            if (suggestedTypes.includes(type))
+                              setSuggestedTypes(
+                                suggestedTypes.filter((t) => t !== type)
+                              );
+                            else setSuggestedTypes([...suggestedTypes, type]);
+                          }}
+                          deleteIcon={
+                            suggestedTypes.includes(type) ? (
+                              <Delete />
+                            ) : (
+                              <Add
+                                sx={{ opacity: "1 !important", color: "black" }}
+                              />
+                            )
+                          }
+                        />
+                      </Grid>
+                    ))}
+                    {/* {suggestedTypes.length !==
+                  suggestLocationDefaultTypes.length && (
+                  <Grid item>
+                    <ChipSelectMenu
+                      multiple={false}
+                      label={"Add Type"}
+                      icon={<Add />}
+                      options={suggestLocationDefaultTypes.filter(
+                        (type) => !suggestedTypes.includes(type)
+                      )}
+                      onChange={(selected) => {
+                        setSuggestedTypes([...suggestedTypes, selected]);
+                      }}
+                    />
+                  </Grid>
+                )} */}
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+            {suggestedActivities.length > 0 && (
+              <List
+                sx={{
+                  pt: 0,
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  width: "100%",
+                  "&::-webkit-scrollbar": {
+                    width: "0.75em",
+                    height: "0.85em",
+                  },
+                  "&::-webkit-scrollbar-track": {
+                    background: "#f0f0f0 !important",
+                    borderRadius: "10px",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#c1c1c1 !important",
+                    borderRadius: "10px",
+                    backgroundClip: "content-box",
+                    border: "2px solid transparent",
+                  },
+                  userSelect: "none",
+                  msUserSelect: "none",
+                  MozUserSelect: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
+              >
+                {suggestedActivities.map((marker, i) => (
+                  <ListItem
+                    key={"suggestion-" + i + "-" + marker.info}
                     sx={{
                       textAlign: "center",
-                      fontFamily: "'Indie Flower', cursive",
+                      placeItems: "center",
+                      placeContent: "center",
+                      cursor: "pointer",
+                      userSelect: "none",
+                      msUserSelect: "none",
+                      MozUserSelect: "none",
+                      WebkitUserSelect: "none",
+                      WebkitTouchCallout: "none",
+                    }}
+                    onClick={() => {
+                      onActivityClick(marker);
+                    }}
+                    onPointerOver={() => {
+                      onActivityMouseOver(marker);
+                    }}
+                    onPointerOut={() => {
+                      onActivityMouseOut(marker);
                     }}
                   >
-                    {marker.info}
-                  </Typography>
-                </ListItem>
-              ))}
-            </List>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      {!marker.isPlacesPOI && <Star />}
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          textAlign: "center",
+                          fontFamily: "'Indie Flower', cursive",
+                        }}
+                      >
+                        {marker.info}
+                      </Typography>
+                      <Add />
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+            {suggestedActivities.length === 0 && (
+              <CircularProgress sx={{ m: 2 }} />
+            )}
           </Box>
         )}
       </Box>

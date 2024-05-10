@@ -11,23 +11,23 @@ export default function AppFooter({
   setCurrentMapStyle,
   focusedMarker,
   focusedCluster,
-  onDrawerClose,
-  setFocusedMarker,
+  // onDrawerClose,
+  // setFocusedMarker,
   mapLocked,
   setMapLocked,
   googleAccount,
-  setLoginPopupOpen,
+  // setLoginPopupOpen,
   setErrorPopupOpen,
-  allMarkers,
-  offsetCenter,
-  onUpdateDate,
-  calculateDay,
-  onUpdateTitle,
-  allTags,
-  onTagsUpdated,
-  allTimes,
-  onTimeUpdated,
-  currentDayFilter,
+  // allMarkers,
+  // offsetCenter,
+  // onUpdateDate,
+  // calculateDay,
+  // onUpdateTitle,
+  // allTags,
+  // onTagsUpdated,
+  // allTimes,
+  // onTimeUpdated,
+  // currentDayFilter,
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -56,7 +56,7 @@ export default function AppFooter({
         googleAccount={googleAccount}
         setErrorPopupOpen={setErrorPopupOpen}
       />
-      <MapDrawer
+      {/* <MapDrawer
         onHeightChange={(height, open) => {
           setDrawerHeight(open ? height + 16 : height);
         }}
@@ -79,7 +79,7 @@ export default function AppFooter({
         allTimes={allTimes}
         onTimeUpdated={onTimeUpdated}
         currentDayFilter={currentDayFilter}
-      />
+      /> */}
     </>
   );
 }

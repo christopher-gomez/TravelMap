@@ -1,4 +1,4 @@
-import { updatePage } from "../Api/Notion";
+import { createPage, updatePage } from "../Api/Notion";
 
 /**
  *
@@ -224,3 +224,69 @@ export const updateActivityTime = async (activity, googleAccount) => {
 
   return response;
 };
+
+export const createNewActivity = async (activity, googleAccount) => {
+  if (!googleAccount) return;
+
+  console.log('creating new activity', activity)
+
+  const response = await createPage({
+    properties: {
+      Activity: {
+        title: [
+          {
+            type: "text",
+            text: {
+              content: activity.info,
+            },
+            plain_text: activity.info,
+          },
+        ],
+      },
+      Date: {
+        date: activity.date ? activity.date : null,
+      },
+      Time: {
+        select: activity.time ? { name: activity.time } : null,
+      },
+      Tags: {
+        multi_select: activity.tags
+          ? activity.tags.map((tag) => {
+              return {
+                name: tag,
+              };
+            })
+          : [],
+      },
+      Location: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: `[${activity.position.lat()}, ${activity.position.lng()}]`,
+            },
+          },
+        ],
+      },
+      City: {
+        multi_select: [{ name: activity.majorCity }],
+      },
+    },
+  });
+
+  return response;
+};
+
+export const updateActivityEmojiIcon = async (activity, emoji, googleAccount) => {
+  if (!googleAccount) return;
+
+  const response = await updatePage({
+    id: activity.id,
+    icon: {
+      type: 'emoji',
+      emoji: emoji
+    },
+  });
+
+  return response;
+}

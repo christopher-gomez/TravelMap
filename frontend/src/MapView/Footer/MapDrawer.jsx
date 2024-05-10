@@ -10,12 +10,12 @@ import {
 } from "../POI/POIDetails";
 
 export default function MapDrawer({
-  onHeightChange,
+  // onHeightChange,
   focusedMarker,
   focusedCluster,
-  drawerHeaderHeight,
+  // drawerHeaderHeight,
   onClose,
-  onHeaderHeightChange,
+  // onHeaderHeightChange,
   setFocusedMarker,
   allMarkers,
   offsetCenter,
@@ -29,6 +29,8 @@ export default function MapDrawer({
   allTimes,
   onTimeUpdated,
   currentDayFilter,
+  onNewActivity,
+  onNewEmojiIconSet
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -75,6 +77,8 @@ export default function MapDrawer({
 
   let time = focusedMarker ? focusedMarker.time : null;
 
+  let address = focusedMarker ? focusedMarker.address : null;
+
   let content = focusedMarker ? (
     <POIDetails
       icon={icon}
@@ -83,6 +87,7 @@ export default function MapDrawer({
       day={day}
       date={date}
       time={time}
+      address={address}
       description={description}
       hideDescription={
         focusedMarker.description === "" ||
@@ -106,6 +111,8 @@ export default function MapDrawer({
       onTimeUpdated={onTimeUpdated}
       currentDayFilter={currentDayFilter}
       allMarkers={allMarkers}
+      onNewActivity={onNewActivity}
+      onNewEmojiIconSet={onNewEmojiIconSet}
     />
   ) : focusedCluster ? (
     focusedCluster.markers.map((m, i) => (

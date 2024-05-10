@@ -35,6 +35,7 @@ export default function ActivityTimeline({
       {activities.map((activity, i) => {
         return (
           <TimelineItem
+            key={activity.marker.id + "-timeline-item-" + i}
             sx={{
               fontFamily: "'Indie Flower', cursive",
               cursor: "pointer",

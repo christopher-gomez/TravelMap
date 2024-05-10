@@ -10,18 +10,22 @@ import {
   IconButton,
   Skeleton,
   TextField,
+  Typography,
 } from "@mui/material";
 import {
   Add,
   ArrowBack,
   ArrowForward,
   Cancel,
+  Close,
   Delete,
   Done,
   Edit,
 } from "@mui/icons-material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { ChipSelectMenu } from "../../Util/MultipleSelect";
+import { createNewActivity } from "../UpdateLocationProperties";
+import EmojiPicker from "emoji-picker-react";
 
 var options = { weekday: "short", month: "short", day: "numeric" };
 
@@ -36,6 +40,7 @@ const DateComponent = ({
   canEdit,
   currentDayFilter,
   allMarkers,
+  shouldShow = true,
 }) => {
   const [settingDate, setSettingDate] = useState(false);
   const [hasEndDate, setHasEndDate] = useState(false);
@@ -43,6 +48,7 @@ const DateComponent = ({
   const [dateControl, setDateControl] = useState({ start: null, end: null });
 
   useEffect(() => {
+    // console.log("date effect: ", date);
     if (date && date.end) {
       setHasEndDate(true);
     }
@@ -55,7 +61,7 @@ const DateComponent = ({
   }, [date]);
 
   useEffect(() => {
-    onUpdateDate(dateControl);
+    if (settingDate && shouldShow) onUpdateDate(dateControl);
   }, [dateControl]);
 
   useEffect(() => {
@@ -80,6 +86,8 @@ const DateComponent = ({
       }
     }
   }, [settingDate]);
+
+  if (!shouldShow) return null;
 
   return (
     <>
@@ -264,7 +272,12 @@ const Title = ({
     content = (
       <>
         {!settingTitle ? (
-          <Box sx={{ display: "inline-flex", placeItems: "baseline" }}>
+          <Box
+            sx={{
+              display: "inline-flex",
+              placeItems: "baseline",
+            }}
+          >
             <h1 className="poi-title">
               {title}
               {canEdit && (
@@ -344,6 +357,7 @@ const Tags = ({
   googleAccount,
   setLoginPopupOpen,
   canEdit,
+  shouldShow = true,
 }) => {
   let content;
 
@@ -356,7 +370,7 @@ const Tags = ({
   }, [tags]);
 
   useEffect(() => {
-    if (onTagsUpdated) {
+    if (onTagsUpdated && shouldShow) {
       onTagsUpdated(controlledTags);
     }
   }, [controlledTags]);
@@ -430,6 +444,8 @@ const Tags = ({
     </div>
   );
 
+  if (!shouldShow) return null;
+
   return content;
 };
 
@@ -440,6 +456,7 @@ const Time = ({
   googleAccount,
   setLoginPopupOpen,
   onUpdateTime,
+  shouldShow = true,
 }) => {
   const [controlledTime, setControlledTime] = useState(time);
 
@@ -448,7 +465,7 @@ const Time = ({
   }, [time]);
 
   useEffect(() => {
-    if (onUpdateTime) {
+    if (onUpdateTime && shouldShow) {
       onUpdateTime(controlledTime);
     }
   }, [controlledTime]);
@@ -499,6 +516,90 @@ const Time = ({
   );
 };
 
+const IconComponent = ({
+  icon,
+  shouldShow = true,
+  onEmojiSelect,
+  googleAccount,
+  setLoginPopupOpen,
+  canEdit,
+}) => {
+  const [addingIcon, setAddingIcon] = useState(false);
+
+  useEffect(() => {
+    setAddingIcon(false);
+  }, [icon]);
+
+  return (
+    <>
+      <Box
+        sx={{
+          width: "100%",
+          display: "flex",
+          placeContent: "center",
+          placeItems: "center",
+        }}
+      >
+        {icon && (
+          <img
+            src={icon.url}
+            style={{
+              height: "50px",
+              width: "50px",
+              marginTop: "1em",
+              cursor: canEdit ? "pointer" : "default",
+            }}
+            onClick={() => {
+              if (canEdit) {
+                if (!googleAccount) {
+                  setLoginPopupOpen(true);
+                  return;
+                }
+
+                setAddingIcon(true);
+              }
+            }}
+          />
+        )}
+        {!icon && shouldShow && (
+          <IconButton
+            sx={{ marginTop: ".5em" }}
+            onClick={() => {
+              if (!googleAccount) {
+                setLoginPopupOpen(true);
+                return;
+              }
+
+              setAddingIcon(true);
+            }}
+          >
+            <Add />
+          </IconButton>
+        )}
+        {addingIcon && (
+          <IconButton
+            sx={{ placeSelf: "end", justifySelf: "end", alignSelf: "end" }}
+            onClick={() => {
+              setAddingIcon(false);
+            }}
+          >
+            <Close />
+          </IconButton>
+        )}
+      </Box>
+
+      {addingIcon && (
+        <EmojiPicker
+          onEmojiClick={(emoji) => {
+            setAddingIcon(false);
+            onEmojiSelect(emoji.emoji, emoji.imageUrl);
+          }}
+        />
+      )}
+    </>
+  );
+};
+
 export const POIDetails = ({
   title,
   image,
@@ -526,6 +627,9 @@ export const POIDetails = ({
   onTimeUpdated,
   currentDayFilter,
   allMarkers,
+  address,
+  onNewActivity,
+  onNewEmojiIconSet,
 }) => {
   const [curImageIndex, setCurImageIndex] = useState(0);
 
@@ -535,6 +639,8 @@ export const POIDetails = ({
   const [_tags, setTags] = useState(tags);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [_time, setTime] = useState(time);
+  const [isPlacesPOI, setIsPlacesPOI] = useState(false);
+  const [_icon, setIcon] = useState(icon);
 
   useEffect(() => {
     if (marker) {
@@ -543,6 +649,8 @@ export const POIDetails = ({
       setTitle(marker.info);
       setTags(marker.tags);
       setTime(marker.time);
+      setIsPlacesPOI(marker.isPlacesPOI !== undefined ? true : false);
+      setIcon(marker.icon);
     }
   }, [marker]);
 
@@ -642,15 +750,41 @@ export const POIDetails = ({
           </>
         )}
       </div>
-
-      {icon && (
-        <img
-          src={icon.url}
-          style={{ height: "50px", width: "50px", marginTop: "1em" }}
-        />
-      )}
-
+      <IconComponent
+        icon={_icon}
+        shouldShow={_icon || (marker && !marker.isPlacesPOI)}
+        onEmojiSelect={(emoji, img) => {
+          setIcon({
+            url:
+              "data:image/svg+xml;charset=UTF-8," +
+              encodeURIComponent(
+                `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">${emoji}</text></svg>`
+              ),
+          });
+          onNewEmojiIconSet(marker, emoji);
+        }}
+        googleAccount={googleAccount}
+        setLoginPopupOpen={setLoginPopupOpen}
+        canEdit={
+          (marker && marker.iconType && marker.iconType === "emoji") ||
+          (marker && !marker.icon)
+        }
+      />
+      {marker && marker.isPlacesPOI ? (
+        <Typography
+          variant="subtitle2"
+          sx={{
+            mt: 2,
+            mb: 0,
+            fontStyle: "italic",
+            fontSize: ".8em !important",
+          }}
+        >
+          Suggested Place of Interest
+        </Typography>
+      ) : null}
       <Title
+        setMarginTop={!icon}
         title={_title}
         googleAccount={googleAccount}
         setLoginPopupOpen={setLoginPopupOpen}
@@ -662,8 +796,18 @@ export const POIDetails = ({
           if (onUpdateTitle) onUpdateTitle(title);
         }}
         onEditingTitle={(editing) => setIsEditingTitle(editing)}
-        canEdit={marker !== undefined && marker !== null}
+        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
       />
+      {address && (
+        <Typography variant="subtitle2" className="poi-address">
+          {address}
+        </Typography>
+      )}
+      {link && (
+        <a href={link} target="_blank" rel="noreferrer" style={{marginBottom: '.5em'}}>
+          Website
+        </a>
+      )}
       <DateComponent
         date={_date}
         googleAccount={googleAccount}
@@ -672,15 +816,17 @@ export const POIDetails = ({
         onUpdateDate={(date) => {
           if (!calculateDay) return;
 
+          // console.log("on update date: ", date);
+
           if (!date.start && !date.end) {
-            console.log("date has no start or end");
+            // console.log("date has no start or end");
             if (_date && (_date.start !== null || _date.end !== null)) {
               if (marker) {
                 marker["date"] = date;
                 marker["day"] = null;
               }
 
-              setDate(null);
+              setDate({ start: null, end: null });
               setDay(null);
 
               if (onUpdateDate) onUpdateDate(date);
@@ -711,13 +857,17 @@ export const POIDetails = ({
           if (onUpdateDate) onUpdateDate(date);
         }}
         isEditingTitle={isEditingTitle}
-        canEdit={marker !== undefined && marker !== null}
+        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
         currentDayFilter={currentDayFilter}
         allMarkers={allMarkers}
+        shouldShow={
+          (_date !== null && _date !== undefined) ||
+          (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+        }
       />
       <Time
         time={_time}
-        canEdit={marker !== undefined && marker !== null}
+        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
         googleAccount={googleAccount}
         setLoginPopupOpen={setLoginPopupOpen}
         allTimes={allTimes}
@@ -728,12 +878,11 @@ export const POIDetails = ({
           setTime(time);
           if (onTimeUpdated) onTimeUpdated(time);
         }}
+        shouldShow={
+          (_time !== null && _time !== undefined) ||
+          (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+        }
       />
-      {link && (
-        <a href={link} target="_blank" rel="noreferrer">
-          Website
-        </a>
-      )}
 
       <Tags
         tags={tags}
@@ -748,7 +897,11 @@ export const POIDetails = ({
         }}
         googleAccount={googleAccount}
         setLoginPopupOpen={setLoginPopupOpen}
-        canEdit={marker !== undefined && marker !== null}
+        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
+        shouldShow={
+          (tags !== null && tags !== undefined) ||
+          (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+        }
       />
 
       {description && !hideDescription && (
@@ -795,6 +948,25 @@ export const POIDetails = ({
             ))}
           </div>
         </div>
+      )}
+
+      {marker && marker.isPlacesPOI && (
+        <Button
+          variant="contained"
+          onClick={async () => {
+            if (!googleAccount) {
+              setLoginPopupOpen(true);
+              return;
+            }
+
+            await createNewActivity(marker, googleAccount);
+            marker.isPlacesPOI = undefined;
+            setIsPlacesPOI(false);
+            onNewActivity(marker);
+          }}
+        >
+          Add to Trip Itinerary Places of Interest
+        </Button>
       )}
 
       {/* <div className="poi-extra-info">
