@@ -69,7 +69,23 @@ module.exports = function (app) {
 
       const response = await notion.pages.update({
         page_id: id,
-        ...req.body
+        ...req.body,
+      });
+
+      res.send(response);
+    } catch (error) {
+      console.error(error.body);
+      res.status(500).send(error.body);
+    }
+  });
+
+  notionRoute.route("/page/:id").delete(async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      const response = await notion.pages.update({
+        page_id: id,
+        archived: true,
       });
 
       res.send(response);

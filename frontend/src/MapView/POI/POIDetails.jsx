@@ -8,6 +8,7 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
+  Rating,
   Skeleton,
   TextField,
   Typography,
@@ -26,6 +27,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { ChipSelectMenu } from "../../Util/MultipleSelect";
 import { createNewActivity } from "../UpdateLocationProperties";
 import EmojiPicker from "emoji-picker-react";
+import Popup from "../../Util/Popup";
 
 var options = { weekday: "short", month: "short", day: "numeric" };
 
@@ -630,6 +632,9 @@ export const POIDetails = ({
   address,
   onNewActivity,
   onNewEmojiIconSet,
+  onConfirmDelete,
+  onActivityMouseOver,
+  onActivityMouseOut,
 }) => {
   const [curImageIndex, setCurImageIndex] = useState(0);
 
@@ -654,13 +659,22 @@ export const POIDetails = ({
     }
   }, [marker]);
 
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   return (
-    <div
-      className="content"
-      style={{ cursor: onClick ? "pointer" : "default" }}
-      onClick={onClick}
-    >
-      {/* {date && (
+    <>
+      <div
+        className="content"
+        style={{ cursor: onClick ? "pointer" : "default" }}
+        onClick={onClick}
+        onPointerOver={() => {
+          if (onActivityMouseOver) onActivityMouseOver();
+        }}
+        onPointerOut={() => {
+          if (onActivityMouseOut) onActivityMouseOut();
+        }}
+      >
+        {/* {date && (
         <span className="poi-date">{`${new Date(date.start).toLocaleDateString(
           "en-US",
           options
@@ -678,300 +692,406 @@ export const POIDetails = ({
         </span>
       )} */}
 
-      <div
-        style={{
-          position: "relative",
-          width: "calc(100% + 64px)",
-          backgroundImage:
-            image && Array.isArray(image)
-              ? `url(${image[curImageIndex]})`
-              : image
-              ? `url(${image})`
-              : "none",
-          height: image ? "400px" : "100px",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          boxShadow: !image ? "none" : "",
-        }}
-        className="poi-image-container"
-      >
-        {/* <img
+        <div
+          style={{
+            position: "relative",
+            width: "calc(100% + 64px)",
+            backgroundImage:
+              image && Array.isArray(image)
+                ? `url(${image[curImageIndex]})`
+                : image
+                ? `url(${image})`
+                : "none",
+            height: image ? "400px" : "100px",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            boxShadow: !image ? "none" : "",
+          }}
+          className="poi-image-container"
+        >
+          {/* <img
             src={Array.isArray(image) ? image[curImageIndex] : image}
             style={{ width: "100%", height: "400px", marginBottom: ".5em" }}
           /> */}
-        {image && Array.isArray(image) && (
-          <>
-            <div
-              style={{
-                position:
-                  "absolute" /* Positioned absolutely inside the relative parent */,
-                top: "40%" /* Center vertically */,
-                left: 0 /* Stretch from left to right */,
-                right: 0,
-                display: "flex",
-                justifyContent:
-                  "space-between" /* Space out the arrow buttons */,
-                alignItems: "center" /* Center the buttons vertically */,
-              }}
-            >
-              <IconButton
-                sx={{
-                  background: "rgba(0, 0, 0, 0.5)",
-                  ml: 1,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurImageIndex(
-                    (curImageIndex - 1 + image.length) % image.length
-                  );
+          {image && Array.isArray(image) && (
+            <>
+              <div
+                style={{
+                  position:
+                    "absolute" /* Positioned absolutely inside the relative parent */,
+                  top: "40%" /* Center vertically */,
+                  left: 0 /* Stretch from left to right */,
+                  right: 0,
+                  display: "flex",
+                  justifyContent:
+                    "space-between" /* Space out the arrow buttons */,
+                  alignItems: "center" /* Center the buttons vertically */,
                 }}
               >
-                <ArrowBack sx={{ color: "white" }} />
-              </IconButton>
-              <IconButton
-                sx={{
-                  background: "rgba(0, 0, 0, 0.5)",
-                  mr: 1,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurImageIndex((curImageIndex + 1) % image.length);
-                }}
-              >
-                <ArrowForward sx={{ color: "white" }} />
-              </IconButton>
-            </div>
-            <div style={{ position: "absolute", right: 10, top: "90%" }}>
-              <small style={{ color: "white" }}>
-                {curImageIndex + 1}/{image.length}
-              </small>
-            </div>
-          </>
-        )}
-      </div>
-      <IconComponent
-        icon={_icon}
-        shouldShow={_icon || (marker && !marker.isPlacesPOI)}
-        onEmojiSelect={(emoji, img) => {
-          setIcon({
-            url:
-              "data:image/svg+xml;charset=UTF-8," +
-              encodeURIComponent(
-                `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">${emoji}</text></svg>`
-              ),
-          });
-          onNewEmojiIconSet(marker, emoji);
-        }}
-        googleAccount={googleAccount}
-        setLoginPopupOpen={setLoginPopupOpen}
-        canEdit={
-          (marker && marker.iconType && marker.iconType === "emoji") ||
-          (marker && !marker.icon)
-        }
-      />
-      {marker && marker.isPlacesPOI ? (
-        <Typography
-          variant="subtitle2"
+                <IconButton
+                  sx={{
+                    background: "rgba(0, 0, 0, 0.5)",
+                    ml: 1,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurImageIndex(
+                      (curImageIndex - 1 + image.length) % image.length
+                    );
+                  }}
+                >
+                  <ArrowBack sx={{ color: "white" }} />
+                </IconButton>
+                <IconButton
+                  sx={{
+                    background: "rgba(0, 0, 0, 0.5)",
+                    mr: 1,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurImageIndex((curImageIndex + 1) % image.length);
+                  }}
+                >
+                  <ArrowForward sx={{ color: "white" }} />
+                </IconButton>
+              </div>
+              <div style={{ position: "absolute", right: 10, top: "90%" }}>
+                <small style={{ color: "white" }}>
+                  {curImageIndex + 1}/{image.length}
+                </small>
+              </div>
+            </>
+          )}
+        </div>
+        <Box
           sx={{
-            mt: 2,
-            mb: 0,
-            fontStyle: "italic",
-            fontSize: ".8em !important",
-          }}
-        >
-          Suggested Place of Interest
-        </Typography>
-      ) : null}
-      <Title
-        setMarginTop={!icon}
-        title={_title}
-        googleAccount={googleAccount}
-        setLoginPopupOpen={setLoginPopupOpen}
-        onUpdateTitle={(title) => {
-          if (title === _title) return;
-
-          if (marker) marker["info"] = title;
-          setTitle(title);
-          if (onUpdateTitle) onUpdateTitle(title);
-        }}
-        onEditingTitle={(editing) => setIsEditingTitle(editing)}
-        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
-      />
-      {address && (
-        <Typography variant="subtitle2" className="poi-address">
-          {address}
-        </Typography>
-      )}
-      {link && (
-        <a href={link} target="_blank" rel="noreferrer" style={{marginBottom: '.5em'}}>
-          Website
-        </a>
-      )}
-      <DateComponent
-        date={_date}
-        googleAccount={googleAccount}
-        setLoginPopupOpen={setLoginPopupOpen}
-        day={_day}
-        onUpdateDate={(date) => {
-          if (!calculateDay) return;
-
-          // console.log("on update date: ", date);
-
-          if (!date.start && !date.end) {
-            // console.log("date has no start or end");
-            if (_date && (_date.start !== null || _date.end !== null)) {
-              if (marker) {
-                marker["date"] = date;
-                marker["day"] = null;
-              }
-
-              setDate({ start: null, end: null });
-              setDay(null);
-
-              if (onUpdateDate) onUpdateDate(date);
-            }
-            return;
-          }
-
-          if (
-            date !== null &&
-            _date !== null &&
-            date !== undefined &&
-            _date !== undefined &&
-            date.start === _date.start &&
-            date.end === _date.end
-          )
-            return;
-
-          const day = calculateDay(date);
-
-          if (marker) {
-            marker["date"] = date;
-            marker["day"] = day;
-          }
-
-          setDate(date);
-          setDay(day);
-
-          if (onUpdateDate) onUpdateDate(date);
-        }}
-        isEditingTitle={isEditingTitle}
-        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
-        currentDayFilter={currentDayFilter}
-        allMarkers={allMarkers}
-        shouldShow={
-          (_date !== null && _date !== undefined) ||
-          (marker !== undefined && marker !== null && !marker.isPlacesPOI)
-        }
-      />
-      <Time
-        time={_time}
-        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
-        googleAccount={googleAccount}
-        setLoginPopupOpen={setLoginPopupOpen}
-        allTimes={allTimes}
-        onUpdateTime={(time) => {
-          if (time === _time) return;
-
-          if (marker) marker["time"] = time;
-          setTime(time);
-          if (onTimeUpdated) onTimeUpdated(time);
-        }}
-        shouldShow={
-          (_time !== null && _time !== undefined) ||
-          (marker !== undefined && marker !== null && !marker.isPlacesPOI)
-        }
-      />
-
-      <Tags
-        tags={tags}
-        allTags={allTags}
-        onTagsUpdated={(tags) => {
-          if (tags === _tags) return;
-
-          if (marker) marker["tags"] = tags;
-          setTags(tags);
-
-          if (onTagsUpdated) onTagsUpdated(tags);
-        }}
-        googleAccount={googleAccount}
-        setLoginPopupOpen={setLoginPopupOpen}
-        canEdit={marker !== undefined && marker !== null && !marker.isPlacesPOI}
-        shouldShow={
-          (tags !== null && tags !== undefined) ||
-          (marker !== undefined && marker !== null && !marker.isPlacesPOI)
-        }
-      />
-
-      {description && !hideDescription && (
-        <p
-          className="poi-description"
-          style={{ marginTop: "1em", marginBottom: 0 }}
-        >
-          {description}
-        </p>
-      )}
-      {!description && !hideDescription && (
-        <div
-          className="poi-description"
-          style={{
-            marginTop: "1em",
-            marginBottom: 0,
+            position: "flex",
             width: "100%",
-            height: "100%",
+            placeContent: "center",
+            placeItems: "center",
+            position: "relative",
           }}
         >
-          <Skeleton
-            height={"100%"}
-            width={"100%"}
-            sx={{ transform: "none !important" }}
+          {marker && !marker.isPlacesPOI && (
+            <IconButton
+              sx={{ position: "absolute", left: 0, ml: "-32px" }}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              <Delete />
+            </IconButton>
+          )}
+          <IconComponent
+            icon={_icon}
+            shouldShow={_icon || (marker && !marker.isPlacesPOI)}
+            onEmojiSelect={(emoji, img) => {
+              setIcon({
+                url:
+                  "data:image/svg+xml;charset=UTF-8," +
+                  encodeURIComponent(
+                    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">${emoji}</text></svg>`
+                  ),
+              });
+              onNewEmojiIconSet(marker, emoji);
+            }}
+            googleAccount={googleAccount}
+            setLoginPopupOpen={setLoginPopupOpen}
+            canEdit={
+              (marker && marker.iconType && marker.iconType === "emoji") ||
+              (marker && !marker.icon)
+            }
           />
-        </div>
-      )}
-      {related && related.length > 0 && (
-        <div style={{ display: "flex", flexFlow: "column", width: "100%" }}>
-          <h4 style={{ marginBottom: "8px", paddingLeft: "16px" }}>Related</h4>
-          <div className="poi-tags" style={{ alignSelf: "center" }}>
-            {related.map((related, i) => (
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFocusedMarker(related);
-                  // offsetCenter(related.position, 0, 70);
-                }}
-                className="poi-related"
-                key={"related" + related.info + "-" + i}
-              >
-                {related.info}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+        </Box>
+        {marker && marker.isPlacesPOI ? (
+          <Typography
+            variant="subtitle2"
+            sx={{
+              mt: 2,
+              mb: 0,
+              fontStyle: "italic",
+              fontSize: ".8em !important",
+            }}
+          >
+            Suggested Place of Interest
+          </Typography>
+        ) : null}
+        <Title
+          setMarginTop={!icon}
+          title={_title}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          onUpdateTitle={(title) => {
+            if (title === _title) return;
 
-      {marker && marker.isPlacesPOI && (
-        <Button
-          variant="contained"
-          onClick={async () => {
-            if (!googleAccount) {
-              setLoginPopupOpen(true);
+            if (marker) marker["info"] = title;
+            setTitle(title);
+            if (onUpdateTitle) onUpdateTitle(title);
+          }}
+          onEditingTitle={(editing) => setIsEditingTitle(editing)}
+          canEdit={
+            marker !== undefined && marker !== null && !marker.isPlacesPOI
+          }
+        />
+        {address && (
+          <Typography variant="subtitle2" className="poi-address">
+            {address}
+          </Typography>
+        )}
+        {/* {link && ( */}
+        {/* )} */}
+        <DateComponent
+          date={_date}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          day={_day}
+          onUpdateDate={(date) => {
+            if (!calculateDay) return;
+
+            // console.log("on update date: ", date);
+
+            if (!date.start && !date.end) {
+              // console.log("date has no start or end");
+              if (_date && (_date.start !== null || _date.end !== null)) {
+                if (marker) {
+                  marker["date"] = date;
+                  marker["day"] = null;
+                }
+
+                setDate({ start: null, end: null });
+                setDay(null);
+
+                if (onUpdateDate) onUpdateDate(date);
+              }
               return;
             }
 
-            await createNewActivity(marker, googleAccount);
-            marker.isPlacesPOI = undefined;
-            setIsPlacesPOI(false);
-            onNewActivity(marker);
-          }}
-        >
-          Add to Trip Itinerary Places of Interest
-        </Button>
-      )}
+            if (
+              date !== null &&
+              _date !== null &&
+              date !== undefined &&
+              _date !== undefined &&
+              date.start === _date.start &&
+              date.end === _date.end
+            )
+              return;
 
-      {/* <div className="poi-extra-info">
+            const day = calculateDay(date);
+
+            if (marker) {
+              marker["date"] = date;
+              marker["day"] = day;
+            }
+
+            setDate(date);
+            setDay(day);
+
+            if (onUpdateDate) onUpdateDate(date);
+          }}
+          isEditingTitle={isEditingTitle}
+          canEdit={
+            marker !== undefined && marker !== null && !marker.isPlacesPOI
+          }
+          currentDayFilter={currentDayFilter}
+          allMarkers={allMarkers}
+          shouldShow={
+            (_date !== null && _date !== undefined) ||
+            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+          }
+        />
+        <Time
+          time={_time}
+          canEdit={
+            marker !== undefined && marker !== null && !marker.isPlacesPOI
+          }
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          allTimes={allTimes}
+          onUpdateTime={(time) => {
+            if (time === _time) return;
+
+            if (marker) marker["time"] = time;
+            setTime(time);
+            if (onTimeUpdated) onTimeUpdated(time);
+          }}
+          shouldShow={
+            (_time !== null && _time !== undefined) ||
+            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+          }
+        />
+        {marker && (
+          <a
+            href={
+              "https://www.google.com/search?q=" +
+              encodeURIComponent(marker.placesSearchName ?? marker.info)
+            }
+            target="_blank"
+            rel="noreferrer"
+            style={{ marginBottom: ".5em" }}
+          >
+            Google
+          </a>
+        )}
+        <Tags
+          tags={tags}
+          allTags={allTags}
+          onTagsUpdated={(tags) => {
+            if (tags === _tags) return;
+
+            if (marker) marker["tags"] = tags;
+            setTags(tags);
+
+            if (onTagsUpdated) onTagsUpdated(tags);
+          }}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          canEdit={
+            marker !== undefined && marker !== null && !marker.isPlacesPOI
+          }
+          shouldShow={
+            (tags !== null && tags !== undefined) ||
+            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+          }
+        />
+
+        {description && !hideDescription && (
+          <p
+            className="poi-description"
+            style={{ marginTop: "1em", marginBottom: 0 }}
+          >
+            {description}
+          </p>
+        )}
+        {!description && !hideDescription && (
+          <div
+            className="poi-description"
+            style={{
+              marginTop: "1em",
+              marginBottom: 0,
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            <Skeleton
+              height={"100%"}
+              width={"100%"}
+              sx={{ transform: "none !important" }}
+            />
+          </div>
+        )}
+        {related && related.length > 0 && (
+          <div style={{ display: "flex", flexFlow: "column", width: "100%" }}>
+            <h4 style={{ marginBottom: "8px", paddingLeft: "16px" }}>
+              Related
+            </h4>
+            <div className="poi-tags" style={{ alignSelf: "center" }}>
+              {related.map((related, i) => (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFocusedMarker(related);
+                    // offsetCenter(related.position, 0, 70);
+                  }}
+                  className="poi-related"
+                  key={"related" + related.info + "-" + i}
+                >
+                  {related.info}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {marker && marker.isPlacesPOI && marker.rating && (
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              flexFlow: "column",
+              placeContent: "center",
+              placeItems: "center",
+              mb: marker.types ? 0 : 1,
+            }}
+          >
+            <Rating readOnly value={marker.rating} precision={0.5} />
+            {marker.userRatingsTotal && (
+              <Typography variant="caption">
+                {marker.userRatingsTotal}{" "}
+                {marker.userRatingsTotal === 1 ? "review" : "reviews"}
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        {marker && marker.isPlacesPOI && marker.types && (
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <Tags
+              tags={marker.types.map((t) => {
+                return (t[0].toUpperCase() + t.slice(1)).replaceAll("_", " ");
+              })}
+              canEdit={false}
+            />
+          </Box>
+        )}
+
+        {marker && marker.isPlacesPOI && (
+          <Button
+            variant="contained"
+            onClick={async () => {
+              if (!googleAccount) {
+                setLoginPopupOpen(true);
+                return;
+              }
+
+              await createNewActivity(marker, googleAccount);
+              marker.isPlacesPOI = undefined;
+              setIsPlacesPOI(false);
+              onNewActivity(marker);
+            }}
+          >
+            Add to Trip Itinerary Places of Interest
+          </Button>
+        )}
+
+        {/* <div className="poi-extra-info">
         </div> */}
-    </div>
+      </div>
+      {/* {confirmingDelete && ( */}
+      <Popup
+        title={"Confirm Activity Delete"}
+        // setOpen={confirmingDelete}
+        open={confirmingDelete}
+        dividers
+        actions={[
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setConfirmingDelete(false);
+            }}
+          >
+            Cancel
+          </Button>,
+          <Button
+            onClick={() => {
+              setConfirmingDelete(false);
+
+              if (!googleAccount) {
+                setLoginPopupOpen(true);
+                return;
+              }
+
+              onConfirmDelete(marker);
+            }}
+            variant="contained"
+            sx={{ backgroundColor: "#C70000", color: "white" }}
+          >
+            Confirm
+          </Button>,
+        ]}
+      >
+        <Typography>Are you sure you want to delete this activity?</Typography>
+      </Popup>
+      {/* )} */}
+    </>
   );
 };
 

@@ -41,3 +41,11 @@ export const createPage = async ({ properties }) => {
   const data = await response.json();
   return data;
 };
+
+export const deletePage = async (id) => {
+  const response = await fetch(server + "/notion/page/" + id, {
+    method: "DELETE",
+  });
+  const data = await response.json();
+  return data;
+};

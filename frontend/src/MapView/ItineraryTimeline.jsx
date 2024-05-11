@@ -116,8 +116,11 @@ export default function ItineraryTimeline({
   const [suggestedTypes, setSuggestedTypes] = useState(
     suggestLocationDefaultTypes
   );
+  const [settingsDirty, setSettingsDirty] = useState(false);
+  const [fetchingNearby, setFetchingNearby] = useState(false);
 
   function suggestNearby() {
+    setFetchingNearby(true);
     let nearbyMarkers = findNearbyMarkers(
       timelineActivities,
       allMarkers,
@@ -132,7 +135,6 @@ export default function ItineraryTimeline({
       allMarkers,
       placesService,
       async (nearby) => {
-        console.log("got all nearby POIs: ", nearby);
         const markers = await createMarkersFromPOIs(
           nearby,
           mapsService,
@@ -142,6 +144,11 @@ export default function ItineraryTimeline({
           onActivityMouseOut,
           onActivityClick
         );
+        markers.sort((a, b) => {
+          if (a.rating === undefined) return 1; // Move a to the end if it lacks ratings
+          if (b.rating === undefined) return -1; // Move b to the end if it lacks ratings
+          return b.rating - a.rating;
+        });
         setSuggestedActivities([...nearbyMarkers, ...markers]);
       },
       suggestRadius,
@@ -151,9 +158,16 @@ export default function ItineraryTimeline({
     // setSuggestedActivities(nearbyMarkers);
   }
 
+  // useEffect(() => {
+  //   if (settingsDirty) {
+  //     // suggestNearby();
+  //   } else
+  // }, [settingsDirty]);
+
   useEffect(() => {
     if (suggesting) {
-      suggestNearby();
+      if (suggestedActivities.length === 0) suggestNearby();
+      else setSettingsDirty(true);
     }
   }, [suggestRadius, suggestedTypes]);
 
@@ -161,6 +175,9 @@ export default function ItineraryTimeline({
     if (!suggesting) {
       setSuggestedActivities([]);
       setSuggestRadius(1000);
+      setFetchingNearby(false);
+      setSettingsDirty(false);
+      setSettingsOpen(false);
     }
 
     if (routing) {
@@ -174,7 +191,15 @@ export default function ItineraryTimeline({
 
   useEffect(() => {
     onSetSuggested(suggestedActivities);
+    setFetchingNearby(false);
   }, [suggestedActivities]);
+
+  useEffect(() => {
+    if (fetchingNearby) {
+      setSettingsDirty(false);
+      setSettingsOpen(false);
+    }
+  }, [fetchingNearby]);
 
   useEffect(() => {
     if (!routing) {
@@ -302,6 +327,8 @@ export default function ItineraryTimeline({
       }
     });
   }
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
@@ -613,6 +640,8 @@ export default function ItineraryTimeline({
               }}
             >
               <Accordion
+                expanded={settingsOpen}
+                onChange={(_, expanded) => setSettingsOpen(expanded)}
                 sx={{
                   background: "none",
                   boxShadow: "none",
@@ -623,8 +652,10 @@ export default function ItineraryTimeline({
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    pt: 0
-                  }
+                    pt: 0,
+                    pb: 0,
+                    mb: 1,
+                  },
                 }}
               >
                 <AccordionSummary expandIcon={<ExpandMore />}>
@@ -701,10 +732,21 @@ export default function ItineraryTimeline({
                   </Grid>
                 )} */}
                   </Grid>
+                  {settingsDirty && (
+                    <Button
+                      variant="contained"
+                      sx={{ mt: 2, pb: 0 }}
+                      onClick={() => {
+                        suggestNearby();
+                      }}
+                    >
+                      Refresh
+                    </Button>
+                  )}
                 </AccordionDetails>
               </Accordion>
             </Box>
-            {suggestedActivities.length > 0 && (
+            {suggestedActivities.length > 0 && !fetchingNearby && (
               <List
                 sx={{
                   pt: 0,
@@ -773,7 +815,7 @@ export default function ItineraryTimeline({
                 ))}
               </List>
             )}
-            {suggestedActivities.length === 0 && (
+            {(suggestedActivities.length === 0 || fetchingNearby) && (
               <CircularProgress sx={{ m: 2 }} />
             )}
           </Box>

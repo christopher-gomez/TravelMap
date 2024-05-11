@@ -1,4 +1,4 @@
-import { createPage, updatePage } from "../Api/Notion";
+import { createPage, deletePage, updatePage } from "../Api/Notion";
 
 /**
  *
@@ -336,3 +336,11 @@ export const updateActivityGooglePlaceID = async (activity, placeID) => {
 
   return response;
 };
+
+export const deleteActivity = async (activity, googleAccount) => {
+  if (!googleAccount) return;
+
+  const response = await deletePage(activity.id);
+
+  return response;
+}

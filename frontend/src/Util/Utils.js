@@ -295,6 +295,10 @@ export async function createMarkersFromPOIs(
       );
     marker["types"] = item.types;
     marker["isPlacesPOI"] = true;
+    marker['rating'] = item.rating;
+    marker['userRatingsTotal'] = item.user_ratings_total;
+    marker['isOpen'] = item.opening_hours ? item.opening_hours.open_now : null;
+    
     // if (item.icon && item.icon in ICON_KEYS) marker["iconKey"] = item.icon;
 
     // marker["info"] = item.title;

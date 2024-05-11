@@ -30,7 +30,10 @@ export default function MapDrawer({
   onTimeUpdated,
   currentDayFilter,
   onNewActivity,
-  onNewEmojiIconSet
+  onNewEmojiIconSet,
+  onConfirmDelete,
+  onActivityMouseOver,
+  onActivityMouseOut,
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -113,6 +116,7 @@ export default function MapDrawer({
       allMarkers={allMarkers}
       onNewActivity={onNewActivity}
       onNewEmojiIconSet={onNewEmojiIconSet}
+      onConfirmDelete={onConfirmDelete}
     />
   ) : focusedCluster ? (
     focusedCluster.markers.map((m, i) => (
@@ -120,6 +124,12 @@ export default function MapDrawer({
         <POIDetails
           icon={m.icon}
           image={m.photo}
+          onActivityMouseOver={() => {
+            if (onActivityMouseOver) onActivityMouseOver(m);
+          }}
+          onActivityMouseOut={() => {
+            if (onActivityMouseOut) onActivityMouseOut(m);
+          }}
           title={m.info}
           day={m.day}
           date={m.date}

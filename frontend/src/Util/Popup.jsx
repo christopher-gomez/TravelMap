@@ -26,12 +26,12 @@ export default function Popup({
   dividers,
 }) {
   const handleClose = () => {
-    setOpen(false);
+    if (setOpen) setOpen(false);
   };
 
   return (
     <BootstrapDialog
-      onClose={handleClose}
+      onClose={setOpen ? undefined : handleClose}
       aria-labelledby="customized-dialog-title"
       open={open}
       componentsProps={{
@@ -51,15 +51,17 @@ export default function Popup({
           id="customized-dialog-title"
         >
           {title}
-          <IconButton
-            aria-label="close"
-            onClick={handleClose}
-            sx={{
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
+          {setOpen !== undefined && (
+            <IconButton
+              aria-label="close"
+              onClick={handleClose}
+              sx={{
+                color: (theme) => theme.palette.grey[500],
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )}
         </DialogTitle>
       )}
       <DialogContent dividers={dividers}>{children}</DialogContent>
