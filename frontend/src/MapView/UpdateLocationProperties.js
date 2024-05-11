@@ -228,7 +228,7 @@ export const updateActivityTime = async (activity, googleAccount) => {
 export const createNewActivity = async (activity, googleAccount) => {
   if (!googleAccount) return;
 
-  console.log('creating new activity', activity)
+  console.log("creating new activity", activity);
 
   const response = await createPage({
     properties: {
@@ -277,16 +277,62 @@ export const createNewActivity = async (activity, googleAccount) => {
   return response;
 };
 
-export const updateActivityEmojiIcon = async (activity, emoji, googleAccount) => {
+export const updateActivityEmojiIcon = async (
+  activity,
+  emoji,
+  googleAccount
+) => {
   if (!googleAccount) return;
 
   const response = await updatePage({
     id: activity.id,
     icon: {
-      type: 'emoji',
-      emoji: emoji
+      type: "emoji",
+      emoji: emoji,
     },
   });
 
   return response;
-}
+};
+
+export const updateActivityGooglePlacePhotos = async (activity, photos) => {
+  // if (!googleAccount) return;
+
+  const formattedText = photos.join(", "); // Join array elements with a comma
+
+  const response = await updatePage({
+    id: activity.id,
+    properties: {
+      googlePlacePhotoURL: {
+        rich_text: [
+          {
+            type: "text",
+            text: { content: formattedText },
+          },
+        ],
+      },
+    },
+  });
+
+  return response;
+};
+
+export const updateActivityGooglePlaceID = async (activity, placeID) => {
+  // if (!googleAccount) return;
+
+  const response = await updatePage({
+    id: activity.id,
+    properties: {
+      googlePlaceID: {
+        rich_text: [
+          {
+            type: "text",
+            text: { content: placeID },
+          },
+        ],
+      },
+    },
+  });
+
+  return response;
+};

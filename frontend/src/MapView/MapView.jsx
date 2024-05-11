@@ -22,6 +22,8 @@ import {
   updateActivityTags,
   updateActivityTitle,
   updateActivityEmojiIcon,
+  updateActivityGooglePlacePhotos,
+  updateActivityGooglePlaceID,
 } from "./UpdateLocationProperties";
 import GoogleSignIn from "../Util/GoogleSignIn";
 import ItineraryTimeline, {
@@ -250,6 +252,19 @@ const MapView = () => {
                   )
                 : null,
             link: item.properties.Link.url ? item.properties.Link.url : null,
+            placeId:
+              item.properties.googlePlaceID.rich_text.length > 0
+                ? item.properties.googlePlaceID.rich_text[0].plain_text
+                : null,
+            photo:
+              // item.properties.googlePlacePhotoURL.rich_text.length > 0
+              //   ? JSON.parse(
+              //       // JSON.stringify(
+              //       item.properties.googlePlacePhotoURL.rich_text[0].plain_text
+              //       // )
+              //     )
+              //   :
+                 null,
           });
         });
       } catch (error) {
@@ -309,6 +324,19 @@ const MapView = () => {
                 )
               : null,
           link: item.properties.Link.url ? item.properties.Link.url : null,
+          placeId:
+            item.properties.googlePlaceID.rich_text.length > 0
+              ? item.properties.googlePlaceID.rich_text[0].plain_text
+              : null,
+          photo:
+            // item.properties.googlePlacePhotoURL.rich_text.length > 0
+            //   ? JSON.parse(
+            //       // JSON.stringify(
+            //       item.properties.googlePlacePhotoURL.rich_text[0].plain_text
+            //       // )
+            //     )
+            //   :
+               null,
         });
       }
     });
@@ -345,6 +373,9 @@ const MapView = () => {
       const marker = createMarker({
         maps,
         map,
+        id: item.id,
+        placeId: item.placeId,
+        photo: item.photo,
         title: item.title,
         position: item.position,
         icon:
@@ -1576,7 +1607,10 @@ const MapView = () => {
     map,
     position,
     title,
+    placeId,
     icon,
+    photo,
+    id,
     priority,
     getPlaceDetails = true,
     altPlaceName = null,
@@ -1591,8 +1625,12 @@ const MapView = () => {
     });
     marker["priority"] = priority;
     marker["info"] = title;
+    marker["id"] = id;
+    marker["photo"] = photo;
+    marker["placeId"] = placeId;
 
-    if (getPlaceDetails) {
+    if (getPlaceDetails && marker["placeId"] === null) {
+      console.log("place id is undefined for " + title + ' fetching...');
       placesServiceRef.current.findPlaceFromQuery(
         {
           query: altPlaceName ?? title,
@@ -1603,7 +1641,11 @@ const MapView = () => {
             // Assuming the first result is the one we want
             // console.log("got id for " + title + ": " + results[0].place_id);
             marker["placeId"] = results[0].place_id;
-            getPlacePhoto(results[0].place_id, marker);
+            updateActivityGooglePlaceID(marker, results[0].place_id);
+            if (marker["photo"] === null) { 
+              console.log("photo is undefined for " + title + " getting...");
+              getPlacePhoto(results[0].place_id, marker);
+            }
           } else {
             console.error("could not get id for " + title);
             setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
@@ -1624,6 +1666,8 @@ const MapView = () => {
       //     }
       //   }
       // );
+    } else if (getPlaceDetails && marker["photo"] === null) {
+        getPlacePhoto(marker["placeId"], marker);
     }
 
     return marker;
@@ -1669,12 +1713,14 @@ const MapView = () => {
           // console.log(
           //   `got ${place.photos.length} photo(s) for ${marker["info"]}`
           // );
-          marker["photo"] = place.photos.map((photo) =>
+          const photos = place.photos.map((photo) =>
             photo.getUrl({
               maxWidth: 400,
               maxHeight: 400,
             })
           );
+          marker["photo"] = photos;
+          // updateActivityGooglePlacePhotos(marker, photos);
         } else {
           console.error("could not get photo for " + marker["info"]);
           setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
