@@ -206,15 +206,23 @@ export function findPlacesOfInterest(
     "stadium",
     "tourist_attraction",
     "zoo",
-  ]
+  ],
+  skipAirports = true,
+  filterOutNonLatinNames = true
 ) {
   const uniquePlaces = new Set();
   const promises = [];
   const placesOfInterest = [];
+  // Regular expression to check for non-Latin characters
+  const latinCharRegex = /^[\x00-\x7F]+$/;
 
   markers.forEach((marker) => {
     // Check if the marker is associated with an airport and skip if true
-    if (marker.marker.tags && marker.marker.tags.includes("Airport")) {
+    if (
+      skipAirports &&
+      marker.marker.tags &&
+      marker.marker.tags.includes("Airport")
+    ) {
       // Still resolve the promise for this marker to keep the count accurate
       promises.push(Promise.resolve());
       return;
@@ -241,6 +249,14 @@ export function findPlacesOfInterest(
                 if (
                   place.business_status &&
                   place.business_status !== "OPERATIONAL"
+                ) {
+                  resolve();
+                  return;
+                }
+
+                if (
+                  filterOutNonLatinNames &&
+                  !latinCharRegex.test(place.name)
                 ) {
                   resolve();
                   return;
@@ -295,10 +311,10 @@ export async function createMarkersFromPOIs(
       );
     marker["types"] = item.types;
     marker["isPlacesPOI"] = true;
-    marker['rating'] = item.rating;
-    marker['userRatingsTotal'] = item.user_ratings_total;
-    marker['isOpen'] = item.opening_hours ? item.opening_hours.open_now : null;
-    
+    marker["rating"] = item.rating;
+    marker["userRatingsTotal"] = item.user_ratings_total;
+    marker["isOpen"] = item.opening_hours ? item.opening_hours.open_now : null;
+
     // if (item.icon && item.icon in ICON_KEYS) marker["iconKey"] = item.icon;
 
     // marker["info"] = item.title;

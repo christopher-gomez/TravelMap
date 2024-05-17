@@ -138,29 +138,6 @@ const MapView = () => {
     if (!itineraryData) fetchItineraryData(null);
   }, []);
 
-  // useEffect(() => {
-  //   if (itineraryData) {
-  //     console.log("Itinerary data set");
-  //     console.log(itineraryData);
-
-  //     // console.log("Updating Tokyo Sea Location");
-  //     // updateLocationProperties([
-  //     //   {
-  //     //     id: "7cd51447-b7d9-4cc8-bda2-c72abfe3178f",
-  //     //     location: "35.62689390735521, 139.8850886246371",
-  //     //   },
-  //     // ]);
-
-  //     var places = [];
-  //     itineraryData.forEach((item) => {
-  //       places.push(item.properties.Activity.title[0].plain_text);
-  //       // console.log(item.properties.Activity.title[0].plain_text);
-  //       // console.log(item.properties.Name.title[0].plain_text);
-  //     });
-  //     console.log(places);
-  //   }
-  // }, [itineraryData]);
-
   const createOptions = (maps) => {
     const hour = new Date().getHours();
     let target = hour >= 6 && hour < 18 ? DefaultStyle : DarkStyle;
@@ -709,14 +686,14 @@ const MapView = () => {
     }
   }, [currentDayFilter]);
 
-  useEffect(() => {
-    // setCurrentDayFilter("All");
-    setMarkerPropertyFilters([]);
-  }, [markerDays]);
+  // useEffect(() => {
+  //   // setCurrentDayFilter("All");
+  //   // setMarkerPropertyFilters([]);
+  // }, [markerDays]);
 
-  useEffect(() => {
-    setSuggestedMarkers([]);
-  }, [markerPropertyFilters, currentDayFilter]);
+  // useEffect(() => {
+  //   setSuggestedMarkers([]);
+  // }, [markerPropertyFilters, currentDayFilter]);
 
   useEffect(() => {
     if (!markers || !maps || !map) return;
@@ -727,7 +704,7 @@ const MapView = () => {
     setRenderedMarkers([]);
     renderMarkers();
     renderOverlays();
-  }, [markerPropertyFilters, markers, suggestedMarkers]);
+  }, [markerPropertyFilters, markers, suggestedMarkers, currentDayFilter]);
 
   const firstRender = useRef(true);
 
@@ -756,6 +733,8 @@ const MapView = () => {
       return true;
     }
 
+    // console.log('rendering markers');
+    // console.trace();
     renderedMarkers.forEach((m) => {
       if (m.isPlacesPOI) {
         m.overlay?.setMap(null);
@@ -1002,8 +981,10 @@ const MapView = () => {
     setRenderedMarkers(_markers);
 
     if (_markers.length > 0) {
-      const boundMarkers = focusedMarker
-        ? [focusedMarker]
+      const boundMarkers = focusedCluster
+        ? [...focusedCluster.markers, ...suggestedMarkers]
+        : focusedMarker
+        ? [focusedMarker, ...suggestedMarkers]
         : markerInfoFilter
         ? _markers.filter((m) => {
             return m.info
@@ -1041,7 +1022,8 @@ const MapView = () => {
               f.property === FILTER_PROPERTIES.day &&
               f.value.length === 1 &&
               f.value[0] !== "All"
-          ).length > 0
+          ).length > 0 ||
+          (focusedMarker && suggestedMarkers.length > 0)
         ) {
           map.fitBounds(bounds); // Adjust the viewport if any marker is outside the current view
         }
@@ -1071,9 +1053,21 @@ const MapView = () => {
   useEffect(() => {
     renderedMarkersRef.current = renderedMarkers;
     renderedMarkers.forEach((m) => {
-      if (!focusedMarker) m.setOptions({ opacity: 1 });
-      else if (m !== focusedMarker) {
+      if (!focusedMarker && !focusedCluster) m.setOptions({ opacity: 1 });
+      else if (
+        focusedMarker &&
+        m !== focusedMarker &&
+        !suggestedMarkers.includes(m)
+      ) {
         m.setOptions({ opacity: 0.5 });
+      } else if (
+        focusedCluster &&
+        focusedCluster.markers.indexOf(m) === -1 &&
+        !suggestedMarkers.includes(m)
+      ) {
+        m.setOptions({ opacity: 0.5 });
+      } else {
+        m.setOptions({ opacity: 1 });
       }
     });
 
@@ -1472,29 +1466,6 @@ const MapView = () => {
     // annoying hack
     if (focusedMarker) focusedMarker.hovered = false;
 
-    // if (focusedMarker) {
-    //   var position = focusedMarker.getPosition();
-
-    //   var bounds = new mapsRef.current.LatLngBounds();
-
-    //   //extend the bounds to include each marker's position
-    //   bounds.extend(position);
-
-    //   // markers.forEach((m) => {
-    //   //   toggleOverlay(true, m);
-    //   // });
-
-    //   mapRef.current.fitBounds(bounds);
-    // }
-
-    // Set the map's center to the marker's position
-    // mapRef.current.setZoom(15);
-    // if (focusedMarker) {
-    //   mapRef.current.panTo(focusedMarker.position);
-    // }
-    // offsetCenter(position, 0, 70);
-    // console.log("focused marker:", focusedMarker?.info);
-
     if (map && maps && focusedMarker) {
       map.panTo(focusedMarker.position);
 
@@ -1505,6 +1476,8 @@ const MapView = () => {
         const cluster = markerCluster.clusters.find((c) =>
           c.markers.includes(focusedMarker)
         );
+
+        console.log("focused marker is in cluster, fitting bounds");
 
         if (cluster.markers.length > 1) {
           const bounds = new maps.LatLngBounds();
@@ -1518,11 +1491,31 @@ const MapView = () => {
       }
     }
 
-    // renderMarkers();
     renderOverlays();
 
     if (focusedMarker) {
       focusedMarker.setOptions({ opacity: 1.0 });
+    }
+
+    if (!focusedMarker && !focusedCluster && suggestedMarkers.length > 0) {
+      suggestedMarkers.forEach((m) => {
+        m.setMap(null);
+      });
+      setSuggestedMarkers([]);
+    }
+
+    if (!focusedMarker && !focusedCluster) {
+      renderedMarkers.forEach((m) => {
+        m.setOptions({ opacity: 1 });
+      });
+
+      if (markerCluster)
+        markerCluster.clusters.forEach((c) => {
+          c.marker.setOptions({ opacity: 1 });
+          c.markers.forEach((m) => {
+            m.setOptions({ opacity: 1 });
+          });
+        });
     }
   }, [focusedMarker]);
 
@@ -1532,23 +1525,6 @@ const MapView = () => {
 
     setFocusedCluster(null);
     setFocusedMarker(marker);
-
-    // var position = marker.getPosition();
-
-    // var bounds = new mapsRef.current.LatLngBounds();
-
-    // //extend the bounds to include each marker's position
-    // bounds.extend(position);
-
-    // // markers.forEach((m) => {
-    // //   toggleOverlay(true, m);
-    // // });
-
-    // mapRef.current.fitBounds(bounds);
-
-    // // Set the map's center to the marker's position
-    // // mapRef.current.setZoom(15);
-    // // offsetCenter(position, 0, 70);
   };
 
   function offsetCenter(latlng, offsetx, offsety) {
@@ -1773,20 +1749,6 @@ const MapView = () => {
 
   useEffect(() => {
     focusedClusterRef.current = focusedCluster;
-
-    // if (focusedCluster) {
-    //   var bounds = new maps.LatLngBounds();
-
-    //   //extend the bounds to include each marker's position
-    //   for (const marker of focusedCluster.markers)
-    //     bounds.extend(marker.position);
-
-    //   // markers.forEach((m) => {
-    //   //   toggleOverlay(true, m);
-    //   // });
-
-    //   map.fitBounds(bounds);
-    // }
     if (focusedCluster) {
       focusedCluster.marker.hovered = false;
       focusedCluster.markers?.forEach((m) => {
@@ -1795,6 +1757,41 @@ const MapView = () => {
       });
     }
 
+    if (focusedCluster && map && maps) {
+      setFocusedMarker(null);
+      function checkAndAdjustBounds() {
+        map.fitBounds(bounds); // Adjust the viewport if any marker is outside the current view
+      }
+
+      let bounds = new maps.LatLngBounds();
+      focusedCluster.markers.forEach((m) => {
+        bounds.extend(m.position);
+      });
+      const boundsCenter = focusedCluster.marker.position;
+      const mapCenter = map.getCenter();
+
+      if (!mapCenter.equals(boundsCenter)) {
+        map.panTo(boundsCenter);
+
+        const listener = maps.event.addListener(map, "idle", () => {
+          checkAndAdjustBounds();
+          maps.event.removeListener(listener);
+        });
+      } else {
+        checkAndAdjustBounds();
+      }
+
+      renderedMarkers.forEach((m) => {
+        if (focusedCluster.markers.indexOf(m) === -1) {
+          m.setOptions({ opacity: 0.5 });
+        }
+      });
+    } else {
+      renderedMarkers.forEach((m) => {
+        m.setOptions({ opacity: 1 });
+      });
+    }
+    // renderMarkers();
     renderOverlays();
   }, [focusedCluster]);
 
@@ -1897,9 +1894,30 @@ const MapView = () => {
             focusedMarkerRef.current &&
             markers.indexOf(focusedMarkerRef.current) === -1
           ) {
-            m.setOptions({ opacity: 0.5 });
-          } else if (!focusedMarkerRef.current) {
+            if (
+              !suggestedMarkersRef.current.find(
+                (m) => markers.indexOf(m) !== -1
+              )
+            )
+              m.setOptions({ opacity: 0.5 });
+          } else if (!focusedMarkerRef.current && !focusedClusterRef.current) {
             m.setOptions({ opacity: 1 });
+          } else if (focusedClusterRef.current) {
+            if (
+              focusedClusterRef.current.markers.find(
+                (m) => markers.indexOf(m) !== -1
+              )
+            ) {
+              m.setOptions({ opacity: 1 });
+              markers.forEach((m) => {
+                m.setOptions({ opacity: 1 });
+              });
+            } else {
+              m.setOptions({ opacity: 0.5 });
+              markers.forEach((m) => {
+                m.setOptions({ opacity: 0.5 });
+              });
+            }
           }
 
           m["info"] = important
@@ -1966,19 +1984,7 @@ const MapView = () => {
           });
 
           m.addListener("click", () => {
-            // onMarkerClick(m);
-            setFocusedMarker(null);
             setFocusedCluster({ marker: m, markers: markers });
-            // var bounds = new maps.LatLngBounds();
-
-            // //extend the bounds to include each marker's position
-            // for (const marker of markers) bounds.extend(marker.position);
-
-            // // markers.forEach((m) => {
-            // //   toggleOverlay(true, m);
-            // // });
-
-            // map.fitBounds(bounds);
           });
 
           // if (markers.find((m) => m.clusterHovered)) m["hovered"] = true;
@@ -2025,6 +2031,7 @@ const MapView = () => {
           return m;
         },
       },
+      zoomOnClick: false,
     });
 
     // maps.event.removeListener(markerCluster, "clusteringbegin");
@@ -2035,6 +2042,15 @@ const MapView = () => {
     // maps.event.removeListener(markerCluster, "clusteringend");
     maps.event.addListener(markerCluster, "clusteringend", () => {
       // console.log("cluster end");
+      if (focusedClusterRef.current) {
+        renderedMarkersRef.current.forEach((m) => {
+          if (!focusedClusterRef.current.markers.includes(m)) {
+            m.setOptions({ opacity: 0.5 });
+          } else {
+            m.setOptions({ opacity: 1 });
+          }
+        });
+      }
       renderOverlays();
     });
 
@@ -2132,31 +2148,39 @@ const MapView = () => {
         // layerTypes={["TransitLayer"]}
       />
       {/* Timeline */}
-      {currentDayFilter !== null &&
+      {((!focusedMarker &&
+        currentDayFilter !== null &&
         currentDayFilter !== "All" &&
-        currentDayFilter !== "Not Set" && (
-          <ItineraryTimeline
-            timelineActivities={timelineActivities}
-            directionsRenderer={directionsRenderer}
-            directionsService={directionsService}
-            mapsService={maps}
-            map={map}
-            currentDayFilter={currentDayFilter}
-            allDays={markerDays}
-            markerPropertyFilters={markerPropertyFilters}
-            setMarkerPropertyFilters={setMarkerPropertyFilters}
-            onActivityClick={onMarkerClick}
-            onSetSuggested={setSuggestedMarkers}
-            allMarkers={markers}
-            onActivityMouseOver={onMarkerMouseOver}
-            onActivityMouseOut={onMarkerMouseOut}
-            open={timelineOpen}
-            onSetOpen={setTimelineOpen}
-            placesService={placesService}
-            createOverlay={createOverlay}
-            geocoderService={geocoderService}
-          />
-        )}
+        currentDayFilter !== "Not Set") ||
+        focusedMarker ||
+        (suggestedMarkers && suggestedMarkers.length > 0)) && (
+        <ItineraryTimeline
+          focusedActivity={focusedMarker}
+          timelineActivities={
+            currentDayFilter === "All" || currentDayFilter === "Not Set"
+              ? null
+              : timelineActivities
+          }
+          directionsRenderer={directionsRenderer}
+          directionsService={directionsService}
+          mapsService={maps}
+          map={map}
+          currentDayFilter={currentDayFilter}
+          allDays={markerDays}
+          markerPropertyFilters={markerPropertyFilters}
+          setMarkerPropertyFilters={setMarkerPropertyFilters}
+          onActivityClick={onMarkerClick}
+          onSetSuggested={setSuggestedMarkers}
+          allMarkers={markers}
+          onActivityMouseOver={onMarkerMouseOver}
+          onActivityMouseOut={onMarkerMouseOut}
+          open={timelineOpen}
+          onSetOpen={setTimelineOpen}
+          placesService={placesService}
+          createOverlay={createOverlay}
+          geocoderService={geocoderService}
+        />
+      )}
       {/* {uniqueCities.length > 0 && (
         <div
           style={{

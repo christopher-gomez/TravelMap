@@ -16,8 +16,10 @@ import {
   AccordionSummary,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
+  FormControlLabel,
   Grid,
   IconButton,
   List,
@@ -73,6 +75,7 @@ const suggestLocationDefaultTypes = [
 
 export default function ItineraryTimeline({
   timelineActivities,
+  focusedActivity,
   directionsRenderer,
   directionsService,
   mapsService,
@@ -116,22 +119,32 @@ export default function ItineraryTimeline({
   const [suggestedTypes, setSuggestedTypes] = useState(
     suggestLocationDefaultTypes
   );
+  const [filterNonLatin, setFilterNonLatin] = useState(true);
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [fetchingNearby, setFetchingNearby] = useState(false);
 
   function suggestNearby() {
     setFetchingNearby(true);
-    let nearbyMarkers = findNearbyMarkers(
-      timelineActivities,
-      allMarkers,
-      mapsService,
-      suggestRadius
-    );
+    let nearbyMarkers = [];
+    if (timelineActivities && timelineActivities.length > 0)
+      nearbyMarkers = findNearbyMarkers(
+        timelineActivities,
+        allMarkers,
+        mapsService,
+        suggestRadius
+      );
 
     nearbyMarkers = nearbyMarkers.filter((m) => !m.date);
 
+    let target =
+      timelineActivities && timelineActivities.length > 0
+        ? timelineActivities
+        : focusedActivity
+        ? [focusedActivity]
+        : [];
+
     findPlacesOfInterest(
-      timelineActivities,
+      target,
       allMarkers,
       placesService,
       async (nearby) => {
@@ -152,7 +165,9 @@ export default function ItineraryTimeline({
         setSuggestedActivities([...nearbyMarkers, ...markers]);
       },
       suggestRadius,
-      suggestedTypes
+      suggestedTypes,
+      timelineActivities && timelineActivities.length > 0,
+      filterNonLatin
     );
 
     // setSuggestedActivities(nearbyMarkers);
@@ -169,12 +184,12 @@ export default function ItineraryTimeline({
       if (suggestedActivities.length === 0) suggestNearby();
       else setSettingsDirty(true);
     }
-  }, [suggestRadius, suggestedTypes]);
+  }, [suggestRadius, suggestedTypes, filterNonLatin]);
 
   useEffect(() => {
     if (!suggesting) {
       setSuggestedActivities([]);
-      setSuggestRadius(1000);
+      // setSuggestRadius(1000);
       setFetchingNearby(false);
       setSettingsDirty(false);
       setSettingsOpen(false);
@@ -372,7 +387,7 @@ export default function ItineraryTimeline({
             position: "absolute",
             top: 0,
             left: !timelineOpen ? -55 : 0,
-            padding: "10px",
+            // padding: "10px",
             cursor: "pointer",
             borderRadius: "1em",
             border: !timelineOpen ? "1px solid black" : "none",
@@ -399,7 +414,7 @@ export default function ItineraryTimeline({
             {!timelineOpen ? <ArrowBackIos /> : <ArrowForwardIos />}
           </IconButton>
         </div>
-        {!suggesting && (
+        {!suggesting && timelineActivities && timelineActivities.length > 0 && (
           <div
             style={{
               position: "absolute",
@@ -423,172 +438,196 @@ export default function ItineraryTimeline({
             </IconButton>
           </div>
         )}
-        <div style={{ display: "flex" }}>
-          <h2
-            style={{
-              fontFamily: "'Indie Flower', cursive",
-              paddingTop: "16px",
-              paddingLeft: "16px",
-              marginTop: "32px",
-              marginBottom: "0px",
-              textDecoration: "underline",
-              userSelect: "none",
-              msUserSelect: "none",
-              MozUserSelect: "none",
-              WebkitUserSelect: "none",
-              WebkitTouchCallout: "none",
-            }}
-          >
-            Day {currentDayFilter}
-          </h2>
-
-          <div style={{ display: "flex", placeItems: "end" }}>
-            <IconButton
-              onClick={() => {
-                let prevDay = currentDayFilter - 1;
-                if (
-                  prevDay <
-                  Math.min(...allDays.filter((x) => Number.isInteger(x)))
-                )
-                  prevDay = Math.min(
-                    ...allDays.filter((x) => Number.isInteger(x))
-                  );
-                let newFilters = markerPropertyFilters.filter((filter) => {
-                  return filter.property !== FILTER_PROPERTIES.day;
-                });
-                newFilters.push({
-                  type: FILTER_TYPE.INCLUDE,
-                  property: FILTER_PROPERTIES.day,
-                  value: [prevDay],
-                });
-
-                setMarkerPropertyFilters(newFilters);
-              }}
-            >
-              <ArrowBack />
-            </IconButton>
-            <IconButton
-              onClick={() => {
-                let nextDay = currentDayFilter + 1;
-                if (
-                  nextDay >
-                  Math.max(...allDays.filter((x) => Number.isInteger(x)))
-                )
-                  nextDay = Math.max(
-                    ...allDays.filter((x) => Number.isInteger(x))
-                  );
-                let newFilters = markerPropertyFilters.filter((filter) => {
-                  return filter.property !== FILTER_PROPERTIES.day;
-                });
-                newFilters.push({
-                  type: FILTER_TYPE.INCLUDE,
-                  property: FILTER_PROPERTIES.day,
-                  value: [nextDay],
-                });
-
-                setMarkerPropertyFilters(newFilters);
-              }}
-            >
-              <ArrowForward />
-            </IconButton>
-          </div>
-        </div>
-        {routing && (
+        {!suggesting && timelineActivities && timelineActivities.length > 0 && (
           <>
-            <h3
-              style={{
-                fontFamily: "'Indie Flower', cursive",
-                paddingLeft: "32px",
-                margin: "0px",
-              }}
-            >
-              Routing
-            </h3>
-            {routeDriveTime && routeDriveDistance && (
-              <div
+            <div style={{ display: "flex" }}>
+              <h2
                 style={{
-                  paddingLeft: "46px",
-                  marginTop: "0px",
+                  fontFamily: "'Indie Flower', cursive",
+                  paddingTop: "16px",
+                  paddingLeft: "16px",
+                  marginTop: "32px",
+                  marginBottom: "0px",
+                  textDecoration: "underline",
+                  userSelect: "none",
+                  msUserSelect: "none",
+                  MozUserSelect: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none",
                 }}
               >
-                <p
-                  style={{
-                    fontFamily: "'Indie Flower', cursive",
-                    margin: "0px",
-                  }}
-                >
-                  Driving: {routeDriveTime}
-                </p>
-                <p
-                  style={{
-                    fontFamily: "'Indie Flower', cursive",
-                    paddingLeft: "16px",
-                    margin: "0px",
-                  }}
-                >
-                  {routeDriveDistance}
-                </p>
-              </div>
-            )}
+                Day {currentDayFilter}
+              </h2>
 
-            {routeWalkTime && routeWalkDistance && (
-              <div
-                style={{
-                  paddingLeft: "46px",
-                }}
-              >
-                <p
+              <div style={{ display: "flex", placeItems: "end" }}>
+                <IconButton
+                  onClick={() => {
+                    let prevDay = currentDayFilter - 1;
+                    if (
+                      prevDay <
+                      Math.min(...allDays.filter((x) => Number.isInteger(x)))
+                    )
+                      prevDay = Math.min(
+                        ...allDays.filter((x) => Number.isInteger(x))
+                      );
+                    let newFilters = markerPropertyFilters.filter((filter) => {
+                      return filter.property !== FILTER_PROPERTIES.day;
+                    });
+                    newFilters.push({
+                      type: FILTER_TYPE.INCLUDE,
+                      property: FILTER_PROPERTIES.day,
+                      value: [prevDay],
+                    });
+
+                    setMarkerPropertyFilters(newFilters);
+                  }}
+                >
+                  <ArrowBack />
+                </IconButton>
+                <IconButton
+                  onClick={() => {
+                    let nextDay = currentDayFilter + 1;
+                    if (
+                      nextDay >
+                      Math.max(...allDays.filter((x) => Number.isInteger(x)))
+                    )
+                      nextDay = Math.max(
+                        ...allDays.filter((x) => Number.isInteger(x))
+                      );
+                    let newFilters = markerPropertyFilters.filter((filter) => {
+                      return filter.property !== FILTER_PROPERTIES.day;
+                    });
+                    newFilters.push({
+                      type: FILTER_TYPE.INCLUDE,
+                      property: FILTER_PROPERTIES.day,
+                      value: [nextDay],
+                    });
+
+                    setMarkerPropertyFilters(newFilters);
+                  }}
+                >
+                  <ArrowForward />
+                </IconButton>
+              </div>
+            </div>
+            {routing && (
+              <>
+                <h3
                   style={{
                     fontFamily: "'Indie Flower', cursive",
+                    paddingLeft: "32px",
                     margin: "0px",
                   }}
                 >
-                  Walking: {routeWalkTime}
-                </p>
-                <p
-                  style={{
-                    fontFamily: "'Indie Flower', cursive",
-                    paddingLeft: "16px",
-                    marginTop: "0px",
-                  }}
-                >
-                  {routeWalkDistance}
-                </p>
-              </div>
+                  Routing
+                </h3>
+                {routeDriveTime && routeDriveDistance && (
+                  <div
+                    style={{
+                      paddingLeft: "46px",
+                      marginTop: "0px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily: "'Indie Flower', cursive",
+                        margin: "0px",
+                      }}
+                    >
+                      Driving: {routeDriveTime}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "'Indie Flower', cursive",
+                        paddingLeft: "16px",
+                        margin: "0px",
+                      }}
+                    >
+                      {routeDriveDistance}
+                    </p>
+                  </div>
+                )}
+
+                {routeWalkTime && routeWalkDistance && (
+                  <div
+                    style={{
+                      paddingLeft: "46px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily: "'Indie Flower', cursive",
+                        margin: "0px",
+                      }}
+                    >
+                      Walking: {routeWalkTime}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "'Indie Flower', cursive",
+                        paddingLeft: "16px",
+                        marginTop: "0px",
+                      }}
+                    >
+                      {routeWalkDistance}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
+            <Timeline
+              driveDuration={routeDriveTime}
+              walkDuration={routeWalkTime}
+              driveDistance={routeDriveDistance}
+              walkDistance={routeWalkDistance}
+              selectedActivities={routingData
+                .slice(0, 2)
+                .map((data) => data.index)}
+              activities={timelineActivities}
+              onActivityClick={(activity) => {
+                if (routing) {
+                  let routeData = [...routingData];
+                  if (routeData.length >= 2) {
+                    routeData = [];
+                    setRoutingData([]);
+                  }
+                  routeData.push({
+                    index: activity.index,
+                    position: activity.position,
+                  });
+                  setRoutingData(routeData);
+                } else {
+                  onActivityClick(activity.marker);
+                }
+              }}
+              onActivityMouseOver={(activity) =>
+                onActivityMouseOver(activity.marker)
+              }
+              onActivityMouseOut={(activity) =>
+                onActivityMouseOut(activity.marker)
+              }
+            />
           </>
         )}
-        <Timeline
-          driveDuration={routeDriveTime}
-          walkDuration={routeWalkTime}
-          driveDistance={routeDriveDistance}
-          walkDistance={routeWalkDistance}
-          selectedActivities={routingData.slice(0, 2).map((data) => data.index)}
-          activities={timelineActivities}
-          onActivityClick={(activity) => {
-            if (routing) {
-              let routeData = [...routingData];
-              if (routeData.length >= 2) {
-                routeData = [];
-                setRoutingData([]);
-              }
-              routeData.push({
-                index: activity.index,
-                position: activity.position,
-              });
-              setRoutingData(routeData);
-            } else {
-              onActivityClick(activity.marker);
-            }
-          }}
-          onActivityMouseOver={(activity) =>
-            onActivityMouseOver(activity.marker)
-          }
-          onActivityMouseOut={(activity) => onActivityMouseOut(activity.marker)}
-        />
         {!suggesting && !routing && (
-          <Box sx={{ width: "100%", display: "flex", placeContent: "end" }}>
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              placeContent: "end",
+              pl:
+                !timelineActivities || timelineActivities.length === 0 ? 4 : 0,
+              pb: timelineActivities && timelineActivities.length > 0 ? 1 : 0,
+              pr: timelineActivities && timelineActivities.length > 0 ? 1 : 0,
+            }}
+          >
             <Button
+              sx={{
+                p:
+                  !timelineActivities || timelineActivities.length === 0
+                    ? 2
+                    : 0,
+              }}
               onClick={() => {
                 setSuggesting(true);
               }}
@@ -599,7 +638,12 @@ export default function ItineraryTimeline({
         )}
         {suggesting && (
           <Box
-            sx={{ display: "flex", flexFlow: "column", placeItems: "center" }}
+            sx={{
+              display: "flex",
+              flexFlow: "column",
+              placeItems: "center",
+              pt: 2,
+            }}
           >
             <Typography
               variant="h5"
@@ -673,6 +717,23 @@ export default function ItineraryTimeline({
                     min={100}
                     max={5000}
                     onValueChanged={(value) => setSuggestRadius(value)}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={filterNonLatin}
+                        onChange={(_, checked) => setFilterNonLatin(checked)}
+                      />
+                    }
+                    labelPlacement="start"
+                    label={
+                      <Typography
+                        variant="body1"
+                        sx={{ fontFamily: "'Indie Flower', cursive", mb: 0 }}
+                      >
+                        Filter Non-English Locations
+                      </Typography>
+                    }
                   />
                   <Typography
                     variant="body1"
