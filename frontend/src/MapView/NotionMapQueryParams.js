@@ -20,6 +20,12 @@ export const NOTION_QUERY = {
           contains: "Osaka",
         },
       },
+      {
+        property: "City",
+        multi_select: {
+          contains: "Kinosaki",
+        },
+      },
     ],
   },
   sorts: [
