@@ -185,7 +185,7 @@ function SwipeableEdgeDrawer({
             mb: 1,
           }}
         >
-          <IconButton
+          {/* <IconButton
             onClick={() => {
               setHeaderHidden(true);
             }}
@@ -196,7 +196,7 @@ function SwipeableEdgeDrawer({
             }}
           >
             <Close />
-          </IconButton>
+          </IconButton> */}
           <IconButton
             sx={{
               color: grey[500],
@@ -279,7 +279,7 @@ function SwipeableEdgeDrawer({
                 zIndex: 9999999,
               }}
             >
-              <IconButton
+              {/* <IconButton
                 onClick={() => {
                   setHeaderHidden(true);
                 }}
@@ -290,7 +290,7 @@ function SwipeableEdgeDrawer({
                 }}
               >
                 <Close />
-              </IconButton>
+              </IconButton> */}
               <IconButton
                 sx={{
                   color: grey[500],

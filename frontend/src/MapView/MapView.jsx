@@ -325,6 +325,8 @@ const MapView = () => {
     return places;
   }
 
+  function getMarkerIcon(marker) {}
+
   function getMarkerOverlayKey(marker, isCluster = false) {
     let cluster = marker;
     if (isCluster) {
@@ -476,6 +478,8 @@ const MapView = () => {
     // renderMarkers();
   }
 
+  const ignoreBoundsChanged = useRef(false);
+
   useEffect(() => {
     mapRef.current = map;
 
@@ -486,7 +490,49 @@ const MapView = () => {
         // if (map.getZoom() > 20) {
         //   map.setZoom(20);
         // }
-        renderOverlays();
+
+        // console.log("rendering overlays from bounds changed");
+        // renderOverlays();
+
+        if (focusedMarkerRef.current && !ignoreBoundsChanged.current) {
+          ignoreBoundsChanged.current = true;
+          mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
+            if (
+              focusedMarkerRef.current &&
+              !mapRef.current
+                .getCenter()
+                .equals(focusedMarkerRef.current.position)
+            )
+              mapRef.current.panTo(focusedMarkerRef.current.position);
+            ignoreBoundsChanged.current = false;
+          });
+        }
+
+        if (focusedClusterRef.current && !ignoreBoundsChanged.current) {
+          ignoreBoundsChanged.current = true;
+          mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
+            const bounds = new mapsRef.current.LatLngBounds();
+
+            if (focusedClusterRef.current) {
+              focusedClusterRef.current.markers.forEach((m) =>
+                bounds.extend(m.position)
+              );
+
+              if (!mapRef.current.getCenter().equals(bounds.getCenter()))
+                mapRef.current.panTo(bounds.getCenter());
+
+              if (
+                !focusedClusterRef.current.markers.every((marker) =>
+                  mapRef.current.getBounds().contains(marker.position)
+                )
+              ) {
+                mapRef.current.fitBounds(bounds);
+              }
+            }
+
+            ignoreBoundsChanged.current = false;
+          });
+        }
       });
     }
   }, [map]);
@@ -536,25 +582,34 @@ const MapView = () => {
     return startDay - 1;
   };
 
+  const calculateDateFromDay = (day) => {
+    if (day == null || !tripDateRange.current.start) return null;
+
+    const tripStart = dayjs(tripDateRange.current.start);
+    const date = tripStart.add(day, "day");
+
+    return date.format("dddd, MMM D"); // Adjust the date format as needed
+  };
+
   const tripDateRange = useRef(null);
 
   const [markerDays, setMarkerDays] = useState([]);
 
   useEffect(() => {
-    if (markersRef.current.length > 0) {
-      markersRef.current.forEach((m) => {
-        m.setVisible(false);
-        m.setMap(null);
+    if (!markers) return;
 
-        if (overlaysRef.current[getMarkerOverlayKey(m)]) {
-          overlaysRef.current[getMarkerOverlayKey(m)].setMap(null);
-          overlaysRef.current[getMarkerOverlayKey(m)] = null;
-          delete overlaysRef.current[getMarkerOverlayKey(m)];
-        }
+    markersRef.current.forEach((m) => {
+      m.setVisible(false);
+      m.setMap(null);
 
-        m = null;
-      });
-    }
+      if (overlaysRef.current[getMarkerOverlayKey(m)]) {
+        overlaysRef.current[getMarkerOverlayKey(m)].setMap(null);
+        overlaysRef.current[getMarkerOverlayKey(m)] = null;
+        delete overlaysRef.current[getMarkerOverlayKey(m)];
+      }
+
+      m = null;
+    });
 
     const days = [];
     const tags = [];
@@ -611,9 +666,13 @@ const MapView = () => {
 
     setMarkerDays(days);
     markersRef.current = markers;
+
+    processRenderedMarkers();
+    renderOverlays();
   }, [markers]);
 
-  const [currentDayFilter, setCurrentDayFilter] = useState(null);
+  const [currentDayFilter, setCurrentDayFilter] = useState("All");
+  const currentDayFilterRef = React.useRef(currentDayFilter);
   const [allTags, setAllTags] = useState([]);
   const [allTimes, setAllTimes] = useState([]);
   const [allCities, setAllCities] = useState([]);
@@ -624,7 +683,14 @@ const MapView = () => {
   const suggestedMarkersRef = React.useRef(suggestedMarkers);
 
   useEffect(() => {
+    if (suggestedMarkers === suggestedMarkersRef.current) return;
+
     suggestedMarkersRef.current = suggestedMarkers;
+
+    if (suggestedMarkers.length > 0) {
+      processRenderedMarkers();
+      renderOverlays();
+    }
   }, [suggestedMarkers]);
 
   const [markerPropertyFilters, setMarkerPropertyFilters] = useState([]);
@@ -634,6 +700,14 @@ const MapView = () => {
 
   useEffect(() => {
     if (
+      markerPropertyFilters === markerPropertyFiltersRef.current ||
+      (markerPropertyFilters.length === 0 &&
+        markerPropertyFiltersRef.current.length === 0)
+    )
+      return;
+
+    let newDayFilter;
+    if (
       markerPropertyFilters.length === 0 ||
       markerPropertyFilters.filter((f) => f.property === FILTER_PROPERTIES.day)
         .length === 0 ||
@@ -641,7 +715,7 @@ const MapView = () => {
         .filter((f) => f.property === FILTER_PROPERTIES.day)
         .find((f) => f.value.includes("All"))
     ) {
-      setCurrentDayFilter("All");
+      newDayFilter = "All";
     } else if (
       markerPropertyFilters.filter(
         (f) =>
@@ -654,37 +728,54 @@ const MapView = () => {
           f.type === FILTER_TYPE.INCLUDE
       )[0].value.length === 1
     ) {
-      setCurrentDayFilter(
-        markerPropertyFilters.filter(
-          (f) =>
-            f.property === FILTER_PROPERTIES.day && //f.type === FILTER_TYPE.MATCH ||
-            f.type === FILTER_TYPE.INCLUDE
-        )[0].value[0]
-      );
+      newDayFilter = markerPropertyFilters.filter(
+        (f) =>
+          f.property === FILTER_PROPERTIES.day && //f.type === FILTER_TYPE.MATCH ||
+          f.type === FILTER_TYPE.INCLUDE
+      )[0].value[0];
     } else {
-      setCurrentDayFilter(null);
+      newDayFilter = null;
     }
-    setFocusedCluster(null);
-    setFocusedMarker(null);
+
+    if (newDayFilter === currentDayFilter) {
+      setFocusedCluster(null);
+      setFocusedMarker(null);
+      processRenderedMarkers();
+      renderOverlays();
+    } else {
+      setCurrentDayFilter(newDayFilter);
+    }
 
     markerPropertyFiltersRef.current = markerPropertyFilters;
   }, [markerPropertyFilters]);
 
   useEffect(() => {
-    // console.log("Current Day Filter");
-    // console.log(currentDayFilter);
+    if (currentDayFilterRef.current === currentDayFilter) return;
+
+    currentDayFilterRef.current = currentDayFilter;
+
     setFocusedCluster(null);
     setFocusedMarker(null);
 
     if (
       currentDayFilter !== null &&
       currentDayFilter !== "All" &&
-      currentDayFilter !== "Not Set" &&
-      !timelineOpen
+      currentDayFilter !== "Not Set"
     ) {
-      setTimelineOpen(true);
+      if (!timelineOpen) setTimelineOpen(true);
+
+      setCurrentEnglishDate(calculateDateFromDay(currentDayFilter));
     }
+
+    processRenderedMarkers();
+    renderOverlays();
   }, [currentDayFilter]);
+
+  const [currentEnglishDate, setCurrentEnglishDate] = useState(null);
+
+  useEffect(() => {
+    if (!timelineOpen) setTimelineOpen(true);
+  }, [markerPropertyFilters, markers, suggestedMarkers, currentDayFilter]);
 
   // useEffect(() => {
   //   // setCurrentDayFilter("All");
@@ -695,22 +786,38 @@ const MapView = () => {
   //   setSuggestedMarkers([]);
   // }, [markerPropertyFilters, currentDayFilter]);
 
-  useEffect(() => {
-    if (!markers || !maps || !map) return;
+  // useEffect(() => {
+  //   if (!markers || !maps || !map) return;
 
-    // setRouting(false);
-    // console.log("focusedMarker: ", focusedMarker);
-    // console.log("markerInfoFilter: ", markerInfoFilter);
-    setRenderedMarkers([]);
-    renderMarkers();
-    renderOverlays();
-  }, [markerPropertyFilters, markers, suggestedMarkers, currentDayFilter]);
+  //   if (markers.length === 0) return;
+
+  //   if (markerPropertyFilters === null) {
+  //     setMarkerPropertyFilters([]);
+  //     return;
+  //   }
+
+  //   // if (
+  //   //   markerPropertyFiltersRef.current === markerPropertyFilters &&
+  //   //   markersRef.current === markers &&
+  //   //   suggestedMarkersRef.current === suggestedMarkers &&
+  //   //   currentDayFilterRef.current === currentDayFilter &&
+  //   //   firstRender.current === false
+  //   // )
+  //   //   return;
+
+  //   // setRouting(false);
+  //   // console.log("focusedMarker: ", focusedMarker);
+  //   // console.log("markerInfoFilter: ", markerInfoFilter);
+  //   // setRenderedMarkers([]);
+  //   renderMarkers();
+  //   renderOverlays();
+  // }, [markerPropertyFilters, markers, suggestedMarkers, currentDayFilter]);
 
   const firstRender = useRef(true);
 
   const shouldStackClusterIcons = useRef(false);
 
-  const renderMarkers = () => {
+  const processRenderedMarkers = () => {
     if (!map || !maps || !markers) return;
 
     function arraysContainSameValues(arr1, arr2) {
@@ -741,12 +848,6 @@ const MapView = () => {
         // console.log("found a places poi removing from map");
         m.setMap(null);
       }
-    });
-
-    markers.forEach((marker, index) => {
-      // marker.setVisible(false);
-      // marker.setMap(null);
-      marker.setOptions({ opacity: 1.0 });
     });
 
     let dayFilters = markerPropertyFilters.filter(
@@ -938,12 +1039,6 @@ const MapView = () => {
     //   // });
     // }
 
-    // suggestedMarkers.forEach((marker) => {
-    //   // const icon = marker.getIcon();
-    //   // icon.opacity = 0.5;
-    //   // marker.setIcon(icon);
-    // });
-
     if (suggestedMarkers.length > 0) shouldStackClusterIcons.current = true;
     else shouldStackClusterIcons.current = false;
 
@@ -981,70 +1076,96 @@ const MapView = () => {
     setRenderedMarkers(_markers);
 
     if (_markers.length > 0) {
-      const boundMarkers = focusedCluster
-        ? [...focusedCluster.markers, ...suggestedMarkers]
-        : focusedMarker
-        ? [focusedMarker, ...suggestedMarkers]
-        : markerInfoFilter
-        ? _markers.filter((m) => {
-            return m.info
-              .toLowerCase()
-              .includes(markerInfoFilter.toLowerCase());
-          })
-        : suggestedMarkers.length > 0
-        ? suggestedMarkers
-        : _markers;
-
-      var bounds = new maps.LatLngBounds();
-
-      // Extend the bounds to include each marker's position
-      for (const marker of boundMarkers) {
-        bounds.extend(marker.position);
-      }
-
-      if (firstRender.current) {
-        map.fitBounds(bounds);
-        firstRender.current = false;
-      }
-
-      if (boundMarkers.length === 1) {
-        setFocusedMarker(boundMarkers[0]);
-      }
-      // else {
-      function checkAndAdjustBounds() {
-        let allVisible = boundMarkers.every((marker) =>
-          map.getBounds().contains(marker.position)
-        );
-        if (
-          !allVisible ||
-          markerPropertyFilters.filter(
-            (f) =>
-              f.property === FILTER_PROPERTIES.day &&
-              f.value.length === 1 &&
-              f.value[0] !== "All"
-          ).length > 0 ||
-          (focusedMarker && suggestedMarkers.length > 0)
-        ) {
-          map.fitBounds(bounds); // Adjust the viewport if any marker is outside the current view
-        }
-      }
-
-      const boundsCenter = bounds.getCenter();
-      const mapCenter = map.getCenter();
-
-      if (!mapCenter.equals(boundsCenter)) {
-        map.panTo(boundsCenter);
-
-        const listener = maps.event.addListener(map, "idle", () => {
-          checkAndAdjustBounds();
-          maps.event.removeListener(listener);
-        });
-      } else {
-        checkAndAdjustBounds();
-      }
+      centerMap(firstRender.current, _markers);
+      firstRender.current = false;
     }
     // }
   };
+
+  function smoothFitBounds(targetBounds, finalCenter, duration = 1000) {
+    map.fitBounds(targetBounds);
+    maps.event.addListenerOnce(map, "bounds_changed", () => {
+      if (finalCenter) {
+        map.panTo(finalCenter);
+      }
+    });
+  }
+
+  function centerMap(
+    fitToBounds = false,
+    markersToCenterOn = null,
+    finalCenter
+  ) {
+    const boundMarkers = markersToCenterOn
+      ? [...markersToCenterOn]
+      : focusedCluster
+      ? [...focusedCluster.markers, ...suggestedMarkers]
+      : focusedMarker
+      ? [focusedMarker, ...suggestedMarkers]
+      : markerInfoFilter
+      ? [
+          ...renderedMarkers.filter((m) => {
+            return m.info
+              .toLowerCase()
+              .includes(markerInfoFilter.toLowerCase());
+          }),
+          ...suggestedMarkers,
+        ]
+      : suggestedMarkers.length > 0
+      ? suggestedMarkers
+      : renderedMarkers;
+
+    var bounds = new maps.LatLngBounds();
+
+    // Extend the bounds to include each marker's position
+    for (const marker of boundMarkers) {
+      bounds.extend(marker.position);
+    }
+
+    // if (fitToBounds) {
+    //   map.fitBounds(bounds);
+    //   // firstRender.current = false;
+    // }
+
+    // if (boundMarkers.length === 1) {
+    //   setFocusedMarker(boundMarkers[0]);
+    // }
+    // else {
+    function checkAndAdjustBounds() {
+      if (
+        fitToBounds ||
+        (focusedMarker && suggestedMarkers.length > 0) ||
+        !boundMarkers.every((marker) =>
+          map.getBounds().contains(marker.position)
+        ) ||
+        (markerPropertyFilters.filter(
+          (f) =>
+            f.property === FILTER_PROPERTIES.day &&
+            f.value.length === 1 &&
+            f.value[0] !== "All"
+        ).length > 0 &&
+          boundMarkers.length > 1)
+      ) {
+        setTimeout(() => {
+          smoothFitBounds(bounds, finalCenter); // Adjust the viewport if any marker is outside the current view
+        }, 250);
+      }
+    }
+
+    const boundsCenter = bounds.getCenter();
+    const mapCenter = map.getCenter();
+
+    if (!mapCenter.equals(boundsCenter) && !fitToBounds) {
+      map.panTo(boundsCenter);
+
+      const listener = maps.event.addListener(map, "idle", () => {
+        checkAndAdjustBounds();
+        maps.event.removeListener(listener);
+      });
+    } else {
+      checkAndAdjustBounds();
+    }
+  }
 
   const [renderedMarkers, setRenderedMarkers] = useState([]);
   const renderedMarkersRef = React.useRef(renderedMarkers);
@@ -1052,24 +1173,6 @@ const MapView = () => {
 
   useEffect(() => {
     renderedMarkersRef.current = renderedMarkers;
-    renderedMarkers.forEach((m) => {
-      if (!focusedMarker && !focusedCluster) m.setOptions({ opacity: 1 });
-      else if (
-        focusedMarker &&
-        m !== focusedMarker &&
-        !suggestedMarkers.includes(m)
-      ) {
-        m.setOptions({ opacity: 0.5 });
-      } else if (
-        focusedCluster &&
-        focusedCluster.markers.indexOf(m) === -1 &&
-        !suggestedMarkers.includes(m)
-      ) {
-        m.setOptions({ opacity: 0.5 });
-      } else {
-        m.setOptions({ opacity: 1 });
-      }
-    });
 
     if (currentDayFilter === null) return;
 
@@ -1251,13 +1354,21 @@ const MapView = () => {
 
     if (overlayToShow === undefined || (active && !mapRef.current)) return;
 
-    overlayToShow.changePane(
-      active && "marker" in cluster && cluster["marker"]["hovered"]
-        ? "floatPane"
-        : "overlayLayer"
-    );
+    if (
+      (active && overlayToShow.currentPaneType !== "floatPane") ||
+      (!active && overlayToShow !== "ovarlayLayer")
+    )
+      overlayToShow.changePane(
+        active && "marker" in cluster && cluster["marker"]["hovered"]
+          ? "floatPane"
+          : "overlayLayer"
+      );
 
-    overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
+    if (
+      (active && overlayToShow.map === null) ||
+      (!active && overlayToShow.map !== null)
+    )
+      overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
   }
 
   function renderOverlays() {
@@ -1285,7 +1396,7 @@ const MapView = () => {
           //   marker.info
           // );
           // console.log("disabling overlay for marker in cluster: ", marker.info);
-          toggleOverlay(false, marker);
+          // toggleOverlay(false, marker);
         }
         clusteredMarkers.push(getMarkerOverlayKey(marker));
       });
@@ -1320,7 +1431,7 @@ const MapView = () => {
           !marker.hovered
         ) {
           // console.log("disabling overlay for marker: ", marker.info);
-          toggleOverlay(false, marker);
+          // toggleOverlay(false, marker);
         }
       }
       //  if (clusteredMarkers.indexOf(getMarkerOverlayKey(marker)) === -1)
@@ -1337,7 +1448,110 @@ const MapView = () => {
       if (m.hovered) {
         // console.log("found a hovered marker: ", m.info);
         anyHovered = true;
+        m.setZIndex(9999);
+        m.setOptions({ opacity: 1.0 });
         toggleOverlay(true, m);
+      } else if (
+        (!focusedMarkerRef.current || m !== focusedMarkerRef.current) &&
+        (!focusedClusterRef.current ||
+          focusedClusterRef.current.markers.indexOf(m) === -1)
+      ) {
+        if (renderedMarkersRef.current.some((m) => m.hovered)) {
+          m.setOptions({ opacity: 0.2 });
+        } else {
+          if (
+            (!focusedMarkerRef.current || m === focusedMarkerRef.current) &&
+            (!focusedClusterRef.current ||
+              focusedClusterRef.current.markers.indexOf(m) !== -1)
+          )
+            m.setOptions({ opacity: 1.0 });
+        }
+
+        m.setZIndex(
+          (focusedMarkerRef.current && m === focusedMarkerRef.current) ||
+            (focusedClusterRef.current &&
+              focusedClusterRef.current.markers.indexOf(m)) !== -1
+            ? 9999
+            : undefined
+        );
+        toggleOverlay(false, m);
+      } else if (
+        (focusedMarkerRef.current && m !== focusedMarkerRef.current) ||
+        (focusedClusterRef.current &&
+          focusedClusterRef.current.markers.indexOf(m) === -1)
+      ) {
+        m.setOptions({ opacity: 0.2 });
+        m.setZIndex(undefined);
+        toggleOverlay(false, m);
+      }
+    });
+
+    markerClusterRef.current.clusters.forEach((c) => {
+      if (c.marker.hovered) {
+        // console.log("found a hovered cluster: ", c.marker.info);
+        anyHovered = true;
+        c.marker.setZIndex(9999);
+        c.marker.setOptions({ opacity: 1.0 });
+        toggleClusterOverlay(true, c);
+
+        renderedMarkersRef.current.forEach((m) => {
+          if (m.hovered) return;
+
+          m.setOptions({ opacity: 0.2 });
+          m.setZIndex(undefined);
+          toggleOverlay(false, m);
+        });
+      } else {
+        if (
+          renderedMarkersRef.current.some((m) => m.hovered) ||
+          markerClusterRef.current.clusters.some((c) => c.marker.hovered) ||
+          (focusedMarkerRef.current &&
+            c.markers.indexOf(focusedMarkerRef.current) === -1)
+        ) {
+          c.marker.setOptions({ opacity: 0.2 });
+          c.marker.setZIndex(undefined);
+          toggleClusterOverlay(false, c);
+          c.markers.forEach((m) => toggleOverlay(false, m));
+        } else {
+          if (
+            (!focusedMarkerRef.current ||
+              c.markers.some((m) => m === focusedMarkerRef.current)) &&
+            (!focusedClusterRef.current ||
+              focusedClusterRef.current.markers.some(
+                (m) => c.markers.indexOf(m) !== -1
+              ))
+          ) {
+            c.marker.setOptions({ opacity: 1.0 });
+            c.marker.setZIndex(
+              focusedClusterRef.current &&
+                focusedClusterRef.current.markers.some(
+                  (m) => c.markers.indexOf(m) !== -1
+                )
+                ? 9999
+                : undefined
+            );
+
+            if (!c.marker.hovered) {
+              if (
+                focusedMarkerRef.current &&
+                c.markers.indexOf(focusedMarkerRef.current) === -1
+              ) {
+                toggleClusterOverlay(false, c);
+                c.markers.forEach((m) => toggleOverlay(false, m));
+              }
+            }
+          }
+        }
+
+        // if (
+        //   !focusedMarkerRef.current ||
+        //   !c.markers.some((m) => m === focusedMarkerRef.current)
+        // ) {
+        //   c.marker.setZIndex(undefined);
+        //   c.marker.setOptions({ opacity: 0.2 });
+        // }
+
+        toggleClusterOverlay(false, c);
       }
     });
 
@@ -1347,6 +1561,8 @@ const MapView = () => {
       //   console.log("current clusters: ", markerClusterRef.current.clusters);
       // }
 
+      focusedMarkerRef.current.setZIndex(9999);
+      focusedMarkerRef.current.setOptions({ opacity: 1.0 });
       toggleOverlay(true, focusedMarkerRef.current);
     } else if (
       anyHovered &&
@@ -1357,17 +1573,10 @@ const MapView = () => {
       //   "disabling focused marker overlay: ",
       //   focusedMarkerRef.current.info
       // );
+      focusedMarkerRef.current.setZIndex(undefined);
+      focusedMarkerRef.current.setOptions({ opacity: 0.2 });
       toggleOverlay(false, focusedMarkerRef.current);
     }
-
-    markerClusterRef.current.clusters.forEach((c) => {
-      if (c.marker.hovered) {
-        // console.log("found a hovered cluster: ", c.marker.info);
-        toggleClusterOverlay(true, c);
-      } else {
-        toggleClusterOverlay(false, c);
-      }
-    });
   }
 
   function toggleOverlay(active, marker) {
@@ -1428,8 +1637,9 @@ const MapView = () => {
     if (
       (active && overlayToShow.map === null) ||
       (!active && overlayToShow.map !== null)
-    )
+    ) {
       overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
+    }
   }
 
   const markerHoveredRef = React.useRef(false);
@@ -1441,20 +1651,15 @@ const MapView = () => {
     markerHoveredRef.current = true;
     marker["hovered"] = true;
 
-    // console.log(marker);
-
-    if (zoomingRef.current) return;
+    // if (zoomingRef.current) return;
 
     renderOverlays();
   };
 
   const onMarkerMouseOut = (marker, index) => {
-    // console.log("marker mouse out");
+    console.log("marker mouse out");
     marker["hovered"] = false;
     markerHoveredRef.current = false;
-
-    if (zoomingRef.current) return;
-
     renderOverlays();
   };
 
@@ -1467,8 +1672,6 @@ const MapView = () => {
     if (focusedMarker) focusedMarker.hovered = false;
 
     if (map && maps && focusedMarker) {
-      map.panTo(focusedMarker.position);
-
       if (
         markerCluster &&
         markerCluster.clusters.find((c) => c.markers.includes(focusedMarker))
@@ -1477,46 +1680,26 @@ const MapView = () => {
           c.markers.includes(focusedMarker)
         );
 
-        console.log("focused marker is in cluster, fitting bounds");
-
         if (cluster.markers.length > 1) {
-          const bounds = new maps.LatLngBounds();
-          bounds.extend(focusedMarker.position);
-          // cluster.markers.forEach((m) => bounds.extend(m.position));
-          const listener = maps.event.addListener(map, "idle", () => {
-            map.fitBounds(bounds);
-            maps.event.removeListener(listener);
-          });
+          centerMap(true, cluster.markers, focusedMarker.position);
+        } else {
+          centerMap(false, [focusedMarker]);
         }
+      } else {
+        centerMap(false, [focusedMarker]);
+      }
+    }
+
+    if (!focusedMarker && !focusedCluster) {
+      if (suggestedMarkers.length > 0) {
+        suggestedMarkers.forEach((m) => {
+          m.setMap(null);
+        });
+        setSuggestedMarkers([]);
       }
     }
 
     renderOverlays();
-
-    if (focusedMarker) {
-      focusedMarker.setOptions({ opacity: 1.0 });
-    }
-
-    if (!focusedMarker && !focusedCluster && suggestedMarkers.length > 0) {
-      suggestedMarkers.forEach((m) => {
-        m.setMap(null);
-      });
-      setSuggestedMarkers([]);
-    }
-
-    if (!focusedMarker && !focusedCluster) {
-      renderedMarkers.forEach((m) => {
-        m.setOptions({ opacity: 1 });
-      });
-
-      if (markerCluster)
-        markerCluster.clusters.forEach((c) => {
-          c.marker.setOptions({ opacity: 1 });
-          c.markers.forEach((m) => {
-            m.setOptions({ opacity: 1 });
-          });
-        });
-    }
   }, [focusedMarker]);
 
   const onMarkerClick = (marker) => {
@@ -1628,6 +1811,8 @@ const MapView = () => {
     getPlaceDetails = true,
     altPlaceName = null,
   }) {
+    // if (isNaN(position.lat) || isNaN(position.lng))
+    //   console.log("position is NaN", title, position.lat, position.lng);
     const _position = new maps.LatLng(position.lat, position.lng);
     const marker = new maps.Marker({
       label,
@@ -1759,39 +1944,9 @@ const MapView = () => {
 
     if (focusedCluster && map && maps) {
       setFocusedMarker(null);
-      function checkAndAdjustBounds() {
-        map.fitBounds(bounds); // Adjust the viewport if any marker is outside the current view
-      }
-
-      let bounds = new maps.LatLngBounds();
-      focusedCluster.markers.forEach((m) => {
-        bounds.extend(m.position);
-      });
-      const boundsCenter = focusedCluster.marker.position;
-      const mapCenter = map.getCenter();
-
-      if (!mapCenter.equals(boundsCenter)) {
-        map.panTo(boundsCenter);
-
-        const listener = maps.event.addListener(map, "idle", () => {
-          checkAndAdjustBounds();
-          maps.event.removeListener(listener);
-        });
-      } else {
-        checkAndAdjustBounds();
-      }
-
-      renderedMarkers.forEach((m) => {
-        if (focusedCluster.markers.indexOf(m) === -1) {
-          m.setOptions({ opacity: 0.5 });
-        }
-      });
-    } else {
-      renderedMarkers.forEach((m) => {
-        m.setOptions({ opacity: 1 });
-      });
+      centerMap(true, focusedCluster.markers);
     }
-    // renderMarkers();
+
     renderOverlays();
   }, [focusedCluster]);
 
@@ -1874,113 +2029,27 @@ const MapView = () => {
             map,
             title: count + "Marker Cluster",
             position: { lat: _position.lat(), lng: _position.lng() },
-            icon:
-              important && ICON_KEYS[important.iconKey]
-                ? {
-                    url: ICON_KEYS[important.iconKey].url,
-                    scaledSize: new maps.Size(
-                      ICON_KEYS[important.iconKey].scaledSize[0],
-                      ICON_KEYS[important.iconKey].scaledSize[1]
-                    ),
-                  }
-                : important
-                ? important.icon
-                : closestMarker
-                ? closestMarker.icon
-                : null,
+            icon: important
+              ? important.icon
+              : closestMarker
+              ? closestMarker.icon
+              : null,
           });
-
-          if (
-            focusedMarkerRef.current &&
-            markers.indexOf(focusedMarkerRef.current) === -1
-          ) {
-            if (
-              !suggestedMarkersRef.current.find(
-                (m) => markers.indexOf(m) !== -1
-              )
-            )
-              m.setOptions({ opacity: 0.5 });
-          } else if (!focusedMarkerRef.current && !focusedClusterRef.current) {
-            m.setOptions({ opacity: 1 });
-          } else if (focusedClusterRef.current) {
-            if (
-              focusedClusterRef.current.markers.find(
-                (m) => markers.indexOf(m) !== -1
-              )
-            ) {
-              m.setOptions({ opacity: 1 });
-              markers.forEach((m) => {
-                m.setOptions({ opacity: 1 });
-              });
-            } else {
-              m.setOptions({ opacity: 0.5 });
-              markers.forEach((m) => {
-                m.setOptions({ opacity: 0.5 });
-              });
-            }
-          }
 
           m["info"] = important
             ? important.info + " and " + (count - 1) + " more"
             : count + " markers";
           m.addListener("mouseover", () => {
             // onMarkerMouseOver(m, markers.indexOf(m));
-            m["hovered"] = true;
-            // for (const marker of markers) marker["clusterHovered"] = true;
-
-            if (zoomingRef.current) return;
-
-            if (
-              focusedMarkerRef.current &&
-              markers.indexOf(focusedMarkerRef.current) !== -1
-            )
-              return;
-
-            markerHoveredRef.current = true;
-
-            markersRef.current.forEach((m) => {
-              if (markers.indexOf(m) !== -1) return;
-              toggleOverlay(false, m);
-            });
-
-            if (markerClusterRef.current) {
-              markerClusterRef.current.clusters.forEach((c) => {
-                if (c.markers.length > 1) {
-                  toggleClusterOverlay(false, c);
-                }
-              });
-            }
-
-            if (
-              clusterOverlaysRef.current[
-                getMarkerOverlayKey({ marker: m, markers: markers }, true)
-              ]
-            ) {
-              toggleClusterOverlay(true, {
-                marker: m,
-                markers: markers,
-              });
-
-              markerHoveredOverlayRef.current =
-                clusterOverlaysRef.current[
-                  getMarkerOverlayKey({ marker: m, markers: markers }, true)
-                ];
-            }
+            m["clusterHovered"] = true;
+            for (const marker of markers) marker["clusterHovered"] = true;
+            onMarkerMouseOver(m);
           });
 
           m.addListener("mouseout", () => {
-            // onMarkerMouseOut(m, markers.indexOf(m));
-            m["hovered"] = false;
-            // for (const marker of markers) marker["clusterHovered"] = false;
-            if (zoomingRef.current) return;
-
-            markerHoveredRef.current = false;
-            markerHoveredOverlayRef.current = null;
-            toggleClusterOverlay(false, {
-              marker: m,
-              markers: markers,
-            });
-            renderOverlays();
+            m["clusterHovered"] = false;
+            for (const marker of markers) marker["clusterHovered"] = false;
+            onMarkerMouseOut(m);
           });
 
           m.addListener("click", () => {
@@ -2011,22 +2080,10 @@ const MapView = () => {
             ] = overlay;
           }
 
-          markers.forEach((m) => (m["hovered"] = false));
-
-          // const callback = (iconURL) => {
-          //   m.setOptions({ icon: { url: iconURL } });
-          // };
-          // if (
-          //   shouldStackClusterIcons.current &&
-          //   markers.some((m) =>
-          //     suggestedMarkersRef.current.find((s) => s.id === m.id)
-          //   )
-          // ) {
-          //   createCompositeIcon(
-          //     markers.map((m) => m.icon.url),
-          //     callback
-          //   );
-          // }
+          markers.forEach((marker) => {
+            marker["hovered"] = false;
+            toggleOverlay(false, marker);
+          });
 
           return m;
         },
@@ -2042,15 +2099,6 @@ const MapView = () => {
     // maps.event.removeListener(markerCluster, "clusteringend");
     maps.event.addListener(markerCluster, "clusteringend", () => {
       // console.log("cluster end");
-      if (focusedClusterRef.current) {
-        renderedMarkersRef.current.forEach((m) => {
-          if (!focusedClusterRef.current.markers.includes(m)) {
-            m.setOptions({ opacity: 0.5 });
-          } else {
-            m.setOptions({ opacity: 1 });
-          }
-        });
-      }
       renderOverlays();
     });
 
@@ -2166,6 +2214,7 @@ const MapView = () => {
           mapsService={maps}
           map={map}
           currentDayFilter={currentDayFilter}
+          englishDate={currentEnglishDate}
           allDays={markerDays}
           markerPropertyFilters={markerPropertyFilters}
           setMarkerPropertyFilters={setMarkerPropertyFilters}
@@ -2213,7 +2262,7 @@ const MapView = () => {
         onUpdateDate={(date) => {
           if (!focusedMarker) return;
 
-          renderMarkers();
+          processRenderedMarkers();
           updateActivityDate(focusedMarker, googleAccount);
         }}
         onUpdateTitle={(title) => {
@@ -2237,7 +2286,7 @@ const MapView = () => {
         onTimeUpdated={(time) => {
           if (!focusedMarker) return;
 
-          renderMarkers();
+          processRenderedMarkers();
           updateActivityTime(focusedMarker, googleAccount);
         }}
         currentDayFilter={currentDayFilter}
@@ -2297,7 +2346,7 @@ const MapView = () => {
         onUpdateDate={(date) => {
           if (!focusedMarker) return;
 
-          renderMarkers();
+          processRenderedMarkers();
           updateActivityDate(focusedMarker, googleAccount);
         }}
         onUpdateTitle={(title) => {
@@ -2321,10 +2370,11 @@ const MapView = () => {
         onTimeUpdated={(time) => {
           if (!focusedMarker) return;
 
-          renderMarkers();
+          processRenderedMarkers();
           updateActivityTime(focusedMarker, googleAccount);
         }}
         currentDayFilter={currentDayFilter}
+        onRecenterMap={centerMap}
       />
       <GoogleSignIn
         onGoogleAccount={(googleAccount) => setGoogleAccount(googleAccount)}

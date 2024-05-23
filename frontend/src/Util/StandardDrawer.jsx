@@ -5,9 +5,19 @@ import ArrowBackIos from "@mui/icons-material/ArrowBackIos";
 
 export default function StandardDrawer({ open, onClose, DrawerContent }) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-
+  const timeoutRef = React.useRef(null);
   React.useEffect(() => {
-    setDrawerOpen(open);
+    window.clearTimeout(timeoutRef.current);
+    timeoutRef.current = window.setTimeout(
+      () => {
+        setDrawerOpen(open);
+      },
+      open ? 0 : 0
+    );
+
+    return () => {
+      window.clearTimeout(timeoutRef.current);
+    };
   }, [open]);
 
   const toggleDrawer = (open) => (event) => {
@@ -38,7 +48,7 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
             overflowY: "auto", // Set overflow to hidden to establish a block formatting context
             display: "flex", // Make this a flex container
             flexDirection: "column", // Stack children vertically
-            borderRadius: "0em 1em 0em 0em",
+            // borderRadius: "0em 1em 0em 0em",
             padding: "0",
             minWidth: "420px",
             maxWidth: "420px",
@@ -63,21 +73,23 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
           },
         }}
       />
-      <Drawer
-        disableAutoFocus
-        disableEnforceFocus
-        disablePortal
-        anchor={"left"}
-        PaperProps={{ style: { zIndex: 1 } }}
-        open={drawerOpen}
-        onClose={toggleDrawer(false)}
-        onOpen={() => {
-          console.log("onOpen");
-          toggleDrawer(true);
-        }}
-        hideBackdrop
-      >
-        {/* <div
+      {open && (
+        <Drawer
+          disableAutoFocus
+          disableEnforceFocus
+          disablePortal
+          variant={"persistent"}
+          anchor={"left"}
+          PaperProps={{ style: { zIndex: 9999 } }}
+          open={drawerOpen}
+          onClose={toggleDrawer(false)}
+          onOpen={() => {
+            console.log("onOpen");
+            toggleDrawer(true);
+          }}
+          hideBackdrop
+        >
+          {/* <div
           style={{
             position: "absolute",
             bottom: "0",
@@ -94,8 +106,9 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
             <ArrowBackIos />
           </IconButton>
         </div> */}
-        {DrawerContent}
-      </Drawer>
+          {DrawerContent}
+        </Drawer>
+      )}
     </React.Fragment>
   );
 }

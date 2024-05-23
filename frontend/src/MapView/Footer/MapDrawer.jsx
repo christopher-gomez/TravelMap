@@ -1,13 +1,14 @@
 import * as React from "react";
 import SwipeableEdgeDrawer from "../../Util/SwipeableEdgeDrawer";
 import { Typography } from "@mui/material";
-import { isTouchDevice } from "../../Util/Utils";
+// import { isTouchDevice } from "../../Util/Utils";
 import StandardDrawer from "../../Util/StandardDrawer";
 import {
   POIDetails,
   POIDetailsDescription,
   POIDetailsTitle,
 } from "../POI/POIDetails";
+import { isMobile } from "mobile-device-detect";
 
 export default function MapDrawer({
   // onHeightChange,
@@ -146,7 +147,19 @@ export default function MapDrawer({
     ))
   ) : null;
 
-  return (
+  return isMobile ? (
+    <SwipeableEdgeDrawer
+      onHeightChange={() => {}}
+      hidden={!focusedMarker && !focusedCluster}
+      // headerHeight={drawerHeaderHeight}
+      HeaderContent={
+        <POIDetailsTitle title={title} tags={tags} day={day} date={date} />
+      }
+      DrawerContent={content}
+      onClose={() => {}}
+      onHeaderHeightChange={() => {}}
+    />
+  ) : (
     <StandardDrawer
       open={
         (focusedCluster !== null && focusedCluster !== undefined) ||
@@ -156,23 +169,4 @@ export default function MapDrawer({
       DrawerContent={content}
     />
   );
-  //  isTouchDevice() ? (
-  //   <SwipeableEdgeDrawer
-  //     onHeightChange={onHeightChange}
-  //     hidden={!focusedMarker && !focusedCluster}
-  //     headerHeight={drawerHeaderHeight}
-  //     HeaderContent={
-  //       <POIDetailsTitle title={title} tags={tags} day={day} date={date} />
-  //     }
-  //     DrawerContent={
-  //       description !== "" ? (
-  //         <POIDetailsDescription description={description} />
-  //       ) : null
-  //     }
-  //     onClose={onClose}
-  //     onHeaderHeightChange={onHeaderHeightChange}
-  //   />
-  // ) : (
-
-  // );
 }

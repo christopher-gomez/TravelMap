@@ -94,6 +94,7 @@ export default function ItineraryTimeline({
   placesService,
   createOverlay,
   geocoderService,
+  englishDate,
 }) {
   const [timelineOpen, setTimelineOpen] = useState(true);
 
@@ -386,6 +387,7 @@ export default function ItineraryTimeline({
           style={{
             position: "absolute",
             top: 0,
+            bottom: 0,
             left: !timelineOpen ? -55 : 0,
             // padding: "10px",
             cursor: "pointer",
@@ -440,74 +442,98 @@ export default function ItineraryTimeline({
         )}
         {!suggesting && timelineActivities && timelineActivities.length > 0 && (
           <>
-            <div style={{ display: "flex" }}>
-              <h2
+            <div
+              style={{
+                display: "flex",
+                paddingTop: "16px",
+                paddingLeft: "16px",
+              }}
+            >
+              <div
                 style={{
-                  fontFamily: "'Indie Flower', cursive",
-                  paddingTop: "16px",
-                  paddingLeft: "16px",
-                  marginTop: "32px",
+                  display: "flex",
+                  flexFlow: "column",
+                  marginTop: "0px",
                   marginBottom: "0px",
-                  textDecoration: "underline",
-                  userSelect: "none",
-                  msUserSelect: "none",
-                  MozUserSelect: "none",
-                  WebkitUserSelect: "none",
-                  WebkitTouchCallout: "none",
                 }}
               >
-                Day {currentDayFilter}
-              </h2>
-
-              <div style={{ display: "flex", placeItems: "end" }}>
-                <IconButton
-                  onClick={() => {
-                    let prevDay = currentDayFilter - 1;
-                    if (
-                      prevDay <
-                      Math.min(...allDays.filter((x) => Number.isInteger(x)))
-                    )
-                      prevDay = Math.min(
-                        ...allDays.filter((x) => Number.isInteger(x))
-                      );
-                    let newFilters = markerPropertyFilters.filter((filter) => {
-                      return filter.property !== FILTER_PROPERTIES.day;
-                    });
-                    newFilters.push({
-                      type: FILTER_TYPE.INCLUDE,
-                      property: FILTER_PROPERTIES.day,
-                      value: [prevDay],
-                    });
-
-                    setMarkerPropertyFilters(newFilters);
+                <small>{englishDate}</small>
+                <h2
+                  style={{
+                    fontFamily: "'Indie Flower', cursive",
+                    textDecoration: "underline",
+                    marginTop: 0,
+                    marginBottom: 0,
+                    userSelect: "none",
+                    msUserSelect: "none",
+                    MozUserSelect: "none",
+                    WebkitUserSelect: "none",
+                    WebkitTouchCallout: "none",
+                    display: 'inline-flex'
                   }}
                 >
-                  <ArrowBack />
-                </IconButton>
-                <IconButton
-                  onClick={() => {
-                    let nextDay = currentDayFilter + 1;
-                    if (
-                      nextDay >
-                      Math.max(...allDays.filter((x) => Number.isInteger(x)))
-                    )
-                      nextDay = Math.max(
-                        ...allDays.filter((x) => Number.isInteger(x))
-                      );
-                    let newFilters = markerPropertyFilters.filter((filter) => {
-                      return filter.property !== FILTER_PROPERTIES.day;
-                    });
-                    newFilters.push({
-                      type: FILTER_TYPE.INCLUDE,
-                      property: FILTER_PROPERTIES.day,
-                      value: [nextDay],
-                    });
+                  Day {currentDayFilter}
+                  <div style={{ display: "flex", placeItems: "center" }}>
+                    <IconButton
+                      sx={{ pt: 0, pb: 0 }}
+                      onClick={() => {
+                        let prevDay = currentDayFilter - 1;
+                        if (
+                          prevDay <
+                          Math.min(
+                            ...allDays.filter((x) => Number.isInteger(x))
+                          )
+                        )
+                          prevDay = Math.min(
+                            ...allDays.filter((x) => Number.isInteger(x))
+                          );
+                        let newFilters = markerPropertyFilters.filter(
+                          (filter) => {
+                            return filter.property !== FILTER_PROPERTIES.day;
+                          }
+                        );
+                        newFilters.push({
+                          type: FILTER_TYPE.INCLUDE,
+                          property: FILTER_PROPERTIES.day,
+                          value: [prevDay],
+                        });
 
-                    setMarkerPropertyFilters(newFilters);
-                  }}
-                >
-                  <ArrowForward />
-                </IconButton>
+                        setMarkerPropertyFilters(newFilters);
+                      }}
+                    >
+                      <ArrowBack />
+                    </IconButton>
+                    <IconButton
+                      sx={{ pt: 0, pb: 0 }}
+                      onClick={() => {
+                        let nextDay = currentDayFilter + 1;
+                        if (
+                          nextDay >
+                          Math.max(
+                            ...allDays.filter((x) => Number.isInteger(x))
+                          )
+                        )
+                          nextDay = Math.max(
+                            ...allDays.filter((x) => Number.isInteger(x))
+                          );
+                        let newFilters = markerPropertyFilters.filter(
+                          (filter) => {
+                            return filter.property !== FILTER_PROPERTIES.day;
+                          }
+                        );
+                        newFilters.push({
+                          type: FILTER_TYPE.INCLUDE,
+                          property: FILTER_PROPERTIES.day,
+                          value: [nextDay],
+                        });
+
+                        setMarkerPropertyFilters(newFilters);
+                      }}
+                    >
+                      <ArrowForward />
+                    </IconButton>
+                  </div>
+                </h2>
               </div>
             </div>
             {routing && (

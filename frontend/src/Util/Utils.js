@@ -364,7 +364,14 @@ export async function createMarkersFromPOIs(
   return markers;
 }
 
+const EMOJI_CACHE = {};
+
 export function createEmojiIcon(emoji, callback) {
+  if (emoji in EMOJI_CACHE) {
+    callback(EMOJI_CACHE[emoji]);
+    return;
+  }
+
   const canvas = document.createElement("canvas");
   canvas.width = 100;
   canvas.height = 100;
@@ -378,6 +385,7 @@ export function createEmojiIcon(emoji, callback) {
 
   // Convert canvas to PNG URL
   const dataUrl = canvas.toDataURL("image/png");
+  EMOJI_CACHE[emoji] = dataUrl;
 
   if (canvas.parentNode) {
     canvas.parentNode.removeChild(canvas);

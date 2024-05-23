@@ -24,6 +24,7 @@
     "fs-extra": "^11.2.0",
     "imagemin": "^8.0.1",
     "imagemin-pngquant": "^9.0.2",
+    "mobile-device-detect": "^0.4.3",
     "morgan": "^1.10.0",
     "request": "^2.88.2",
     "request-promise-native": "^1.0.9",

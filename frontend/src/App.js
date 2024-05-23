@@ -8,8 +8,17 @@ function App() {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Div100vh>
-        <CssBaseline />
-        <MapView />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row-reverse",
+            height: "100%",
+            width: "100%",
+          }}
+        >
+          <CssBaseline />
+          <MapView />
+        </div>
       </Div100vh>
     </LocalizationProvider>
   );
