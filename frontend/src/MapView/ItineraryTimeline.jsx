@@ -95,6 +95,8 @@ export default function ItineraryTimeline({
   createOverlay,
   geocoderService,
   englishDate,
+  googleAccount,
+  setLoginPopupOpen,
 }) {
   const [timelineOpen, setTimelineOpen] = useState(true);
 
@@ -123,26 +125,28 @@ export default function ItineraryTimeline({
   const [filterNonLatin, setFilterNonLatin] = useState(true);
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [fetchingNearby, setFetchingNearby] = useState(false);
+  const [usingGooglePOIs, setUsingGooglePOIs] = useState(false);
+  const [noLocationsNearby, setNoLocationsNearby] = useState(false);
 
   function suggestNearby() {
     setFetchingNearby(true);
     let nearbyMarkers = [];
-    if (timelineActivities && timelineActivities.length > 0)
-      nearbyMarkers = findNearbyMarkers(
-        timelineActivities,
-        allMarkers,
-        mapsService,
-        suggestRadius
-      );
-
-    nearbyMarkers = nearbyMarkers.filter((m) => !m.date);
-
-    let target =
+    const target =
       timelineActivities && timelineActivities.length > 0
         ? timelineActivities
         : focusedActivity
         ? [focusedActivity]
         : [];
+
+    nearbyMarkers = findNearbyMarkers(
+      target,
+      allMarkers,
+      mapsService,
+      suggestRadius
+    );
+
+    if (timelineActivities && timelineActivities.length > 0)
+      nearbyMarkers = nearbyMarkers.filter((m) => !m.date);
 
     findPlacesOfInterest(
       target,
@@ -163,12 +167,19 @@ export default function ItineraryTimeline({
           if (b.rating === undefined) return -1; // Move b to the end if it lacks ratings
           return b.rating - a.rating;
         });
-        setSuggestedActivities([...nearbyMarkers, ...markers]);
+
+        const final = [...nearbyMarkers, ...markers];
+        if (final.length === 0) {
+          setNoLocationsNearby(true);
+        }
+
+        setSuggestedActivities(final);
       },
       suggestRadius,
       suggestedTypes,
       timelineActivities && timelineActivities.length > 0,
-      filterNonLatin
+      filterNonLatin,
+      googleAccount
     );
 
     // setSuggestedActivities(nearbyMarkers);
@@ -182,10 +193,11 @@ export default function ItineraryTimeline({
 
   useEffect(() => {
     if (suggesting) {
-      if (suggestedActivities.length === 0) suggestNearby();
+      if (suggestedActivities.length === 0 && !noLocationsNearby)
+        suggestNearby();
       else setSettingsDirty(true);
     }
-  }, [suggestRadius, suggestedTypes, filterNonLatin]);
+  }, [suggestRadius, suggestedTypes, filterNonLatin, usingGooglePOIs]);
 
   useEffect(() => {
     if (!suggesting) {
@@ -194,6 +206,7 @@ export default function ItineraryTimeline({
       setFetchingNearby(false);
       setSettingsDirty(false);
       setSettingsOpen(false);
+      setNoLocationsNearby(false);
     }
 
     if (routing) {
@@ -209,6 +222,12 @@ export default function ItineraryTimeline({
     onSetSuggested(suggestedActivities);
     setFetchingNearby(false);
   }, [suggestedActivities]);
+
+  useEffect(() => {
+    if (noLocationsNearby) {
+      setFetchingNearby(false);
+    }
+  }, [noLocationsNearby]);
 
   useEffect(() => {
     if (fetchingNearby) {
@@ -346,25 +365,12 @@ export default function ItineraryTimeline({
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const [contentHovered, setContentHovered] = useState(false);
+
   return (
     <>
       <Box
-        sx={{
-          "&::-webkit-scrollbar": {
-            width: "0.75em",
-            height: "0.85em",
-          },
-          "&::-webkit-scrollbar-track": {
-            background: "#f0f0f0 !important",
-            borderRadius: "10px",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#c1c1c1 !important",
-            borderRadius: "10px",
-            backgroundClip: "content-box",
-            border: "2px solid transparent",
-          },
-        }}
+        id="itinerary-menu"
         style={{
           position: "fixed",
           bottom: "50%",
@@ -378,431 +384,537 @@ export default function ItineraryTimeline({
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           transition: "transform 0.3s ease-in-out",
-          maxHeight: "100vh",
           maxWidth: "25vw",
+          display: "flex",
+          flexDirection: "column",
           // overflowY: "auto",
         }}
       >
         <div
           style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: !timelineOpen ? -55 : 0,
-            // padding: "10px",
-            cursor: "pointer",
-            borderRadius: "1em",
-            border: !timelineOpen ? "1px solid black" : "none",
-            backgroundColor: !timelineOpen
-              ? "rgba(255,255,255,1)"
-              : "rgba(0,0,0,0)",
+            maxHeight: "100vh",
             display: "flex",
-            alignContent: "center",
-            alignItems: "center",
-            justifyContent: "center",
-            justifyItems: "center",
-            transition: "all .7s ease",
-            // zIndex: 99999 + 1, // Ensure this is higher than the box's z-index
-          }}
-          onClick={() => {
-            setTimelineOpen(!timelineOpen);
+            flexDirection: "column",
           }}
         >
-          <IconButton
-          // onClick={() => {
-          //   setTimelineOpen(!timelineOpen);
-          // }}
-          >
-            {!timelineOpen ? <ArrowBackIos /> : <ArrowForwardIos />}
-          </IconButton>
-        </div>
-        {!suggesting && timelineActivities && timelineActivities.length > 0 && (
           <div
             style={{
               position: "absolute",
               top: 0,
-              right: 0,
+              bottom: 0,
+              left: !timelineOpen ? -55 : 0,
+              // padding: "10px",
+              // cursor: "pointer",
+              borderRadius: "1em",
+              border: !timelineOpen ? "1px solid black" : "none",
+              backgroundColor: !timelineOpen
+                ? "rgba(255,255,255,1)"
+                : "rgba(0,0,0,0)",
               display: "flex",
-              justifyContent: "center",
-              justifyItems: "center",
               alignContent: "center",
               alignItems: "center",
-              padding: "10px",
-              cursor: "pointer",
+              justifyContent: "center",
+              justifyItems: "center",
+              transition: "all .7s ease",
+              padding: "16px",
+              paddingLeft: 0,
+              marginRight: "16px",
+              cursor: timelineOpen ? "auto" : "pointer",
+              zIndex: 99999 + 1, // Ensure this is higher than the box's z-index
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setTimelineOpen(!timelineOpen);
+            }}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+            }}
+            onPointerEnter={(e) => {
+              e.stopPropagation();
             }}
           >
             <IconButton
-              onClick={() => {
-                setRouting(!routing);
-              }}
+              size="large"
+              // onClick={() => {
+              //   setTimelineOpen(!timelineOpen);
+              // }}
             >
-              {routing ? <Cancel /> : <ForkLeft />}
+              {!timelineOpen ? <ArrowBackIos /> : <ArrowForwardIos />}
             </IconButton>
           </div>
-        )}
-        {!suggesting && timelineActivities && timelineActivities.length > 0 && (
-          <>
-            <div
-              style={{
-                display: "flex",
-                paddingTop: "16px",
-                paddingLeft: "16px",
-              }}
-            >
+          {!suggesting &&
+            timelineActivities &&
+            timelineActivities.length > 0 && (
               <div
                 style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
                   display: "flex",
-                  flexFlow: "column",
-                  marginTop: "0px",
-                  marginBottom: "0px",
+                  justifyContent: "center",
+                  justifyItems: "center",
+                  alignContent: "center",
+                  alignItems: "center",
+                  padding: "10px",
+                  cursor: "pointer",
                 }}
               >
-                <small>{englishDate}</small>
-                <h2
-                  style={{
-                    fontFamily: "'Indie Flower', cursive",
-                    textDecoration: "underline",
-                    marginTop: 0,
-                    marginBottom: 0,
+                <IconButton
+                  onClick={() => {
+                    setRouting(!routing);
+                  }}
+                >
+                  {routing ? <Cancel /> : <ForkLeft />}
+                </IconButton>
+              </div>
+            )}
+          {!suggesting &&
+            timelineActivities &&
+            timelineActivities.length > 0 && (
+              <>
+                <div style={{ flex: "0 1 auto" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      paddingTop: "16px",
+                      paddingLeft: "16px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexFlow: "column",
+                        marginTop: "0px",
+                        marginBottom: "0px",
+                      }}
+                    >
+                      <small>{englishDate}</small>
+                      <h2
+                        style={{
+                          fontFamily: "'Fredoka', sans-serif",
+                          textDecoration: "underline",
+                          marginTop: "4px",
+                          marginBottom: 0,
+                          userSelect: "none",
+                          msUserSelect: "none",
+                          MozUserSelect: "none",
+                          WebkitUserSelect: "none",
+                          WebkitTouchCallout: "none",
+                          display: "inline-flex",
+                          paddingLeft: "16px",
+                        }}
+                      >
+                        Day {currentDayFilter}
+                        <div style={{ display: "flex", placeItems: "center" }}>
+                          <IconButton
+                            sx={{ pt: 0, pb: 0 }}
+                            onClick={() => {
+                              let prevDay = currentDayFilter - 1;
+                              if (
+                                prevDay <
+                                Math.min(
+                                  ...allDays.filter((x) => Number.isInteger(x))
+                                )
+                              )
+                                prevDay = Math.min(
+                                  ...allDays.filter((x) => Number.isInteger(x))
+                                );
+                              let newFilters = markerPropertyFilters.filter(
+                                (filter) => {
+                                  return (
+                                    filter.property !== FILTER_PROPERTIES.day
+                                  );
+                                }
+                              );
+                              newFilters.push({
+                                type: FILTER_TYPE.INCLUDE,
+                                property: FILTER_PROPERTIES.day,
+                                value: [prevDay],
+                              });
+
+                              setMarkerPropertyFilters(newFilters);
+                            }}
+                          >
+                            <ArrowBack />
+                          </IconButton>
+                          <IconButton
+                            sx={{ pt: 0, pb: 0 }}
+                            onClick={() => {
+                              let nextDay = currentDayFilter + 1;
+                              if (
+                                nextDay >
+                                Math.max(
+                                  ...allDays.filter((x) => Number.isInteger(x))
+                                )
+                              )
+                                nextDay = Math.max(
+                                  ...allDays.filter((x) => Number.isInteger(x))
+                                );
+                              let newFilters = markerPropertyFilters.filter(
+                                (filter) => {
+                                  return (
+                                    filter.property !== FILTER_PROPERTIES.day
+                                  );
+                                }
+                              );
+                              newFilters.push({
+                                type: FILTER_TYPE.INCLUDE,
+                                property: FILTER_PROPERTIES.day,
+                                value: [nextDay],
+                              });
+
+                              setMarkerPropertyFilters(newFilters);
+                            }}
+                          >
+                            <ArrowForward />
+                          </IconButton>
+                        </div>
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+                {routing && (
+                  <>
+                    <h3
+                      style={{
+                        fontFamily: "'Fredoka', sans-serif",
+                        paddingLeft: "32px",
+                        margin: "0px",
+                      }}
+                    >
+                      Routing
+                    </h3>
+                    {routeDriveTime && routeDriveDistance && (
+                      <div
+                        style={{
+                          paddingLeft: "46px",
+                          marginTop: "0px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontFamily: "'Fredoka', sans-serif",
+                            margin: "0px",
+                          }}
+                        >
+                          Driving: {routeDriveTime}
+                        </p>
+                        <p
+                          style={{
+                            fontFamily: "'Fredoka', sans-serif",
+                            paddingLeft: "16px",
+                            margin: "0px",
+                          }}
+                        >
+                          {routeDriveDistance}
+                        </p>
+                      </div>
+                    )}
+
+                    {routeWalkTime && routeWalkDistance && (
+                      <div
+                        style={{
+                          paddingLeft: "46px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontFamily: "'Fredoka', sans-serif",
+                            margin: "0px",
+                          }}
+                        >
+                          Walking: {routeWalkTime}
+                        </p>
+                        <p
+                          style={{
+                            fontFamily: "'Fredoka', sans-serif",
+                            paddingLeft: "16px",
+                            marginTop: "0px",
+                          }}
+                        >
+                          {routeWalkDistance}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+                <Box
+                  onPointerOver={() => setContentHovered(true)}
+                  onPointerOut={() => setContentHovered(false)}
+                  sx={{
+                    pr: contentHovered ? "-.85em" : ".85em", // Reserve space for scrollbar
+                    flex: "1 1 auto",
+                    overflowY: contentHovered ? "auto" : "hidden",
+                    boxSizing: "border-box",
+                    "&::-webkit-scrollbar": {
+                      width: "0.75em",
+                      height: "0.85em",
+                      position: "absolute",
+                    },
+                    "&::-webkit-scrollbar-track": {
+                      background: "#f0f0f0 !important",
+                      borderRadius: "10px",
+                      position: "absolute",
+                    },
+                    "&::-webkit-scrollbar-thumb": {
+                      backgroundColor: "#c1c1c1 !important",
+                      borderRadius: "10px",
+                      backgroundClip: "content-box",
+                      border: "2px solid transparent",
+                      position: "absolute",
+                    },
+                  }}
+                >
+                  <Timeline
+                    driveDuration={routeDriveTime}
+                    walkDuration={routeWalkTime}
+                    driveDistance={routeDriveDistance}
+                    walkDistance={routeWalkDistance}
+                    selectedActivities={routingData
+                      .slice(0, 2)
+                      .map((data) => data.index)}
+                    activities={timelineActivities}
+                    onActivityClick={(activity) => {
+                      if (routing) {
+                        let routeData = [...routingData];
+                        if (routeData.length >= 2) {
+                          routeData = [];
+                          setRoutingData([]);
+                        }
+                        routeData.push({
+                          index: activity.index,
+                          position: activity.position,
+                        });
+                        setRoutingData(routeData);
+                      } else {
+                        onActivityClick(activity.marker);
+                      }
+                    }}
+                    onActivityMouseOver={(activity) =>
+                      onActivityMouseOver(activity.marker)
+                    }
+                    onActivityMouseOut={(activity) =>
+                      onActivityMouseOut(activity.marker)
+                    }
+                  />
+                </Box>
+              </>
+            )}
+          <div
+            style={{
+              flex: "0 1 auto",
+              paddingTop:
+                timelineActivities && timelineActivities.length > 0
+                  ? "10px"
+                  : 0,
+            }}
+          >
+            {!suggesting && !routing && (
+              <Box
+                sx={{
+                  width: "100%",
+                  display: "flex",
+                  placeContent: "end",
+                  pl:
+                    !timelineActivities || timelineActivities.length === 0
+                      ? 4
+                      : 0,
+                  pb:
+                    timelineActivities && timelineActivities.length > 0 ? 1 : 0,
+                  pr:
+                    timelineActivities && timelineActivities.length > 0 ? 1 : 0,
+                }}
+              >
+                <Button
+                  sx={{
+                    p:
+                      !timelineActivities || timelineActivities.length === 0
+                        ? 2
+                        : 0,
+                  }}
+                  onClick={() => {
+                    setSuggesting(true);
+                  }}
+                >
+                  Find Suggestions
+                </Button>
+              </Box>
+            )}
+          </div>
+
+          {suggesting && (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexFlow: "column",
+                  placeItems: "center",
+                  pt: 2,
+                  flex: "0 1 auto",
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontFamily: "'Fredoka', sans-serif",
+                    display: "inline",
                     userSelect: "none",
                     msUserSelect: "none",
                     MozUserSelect: "none",
                     WebkitUserSelect: "none",
                     WebkitTouchCallout: "none",
-                    display: 'inline-flex'
                   }}
                 >
-                  Day {currentDayFilter}
-                  <div style={{ display: "flex", placeItems: "center" }}>
-                    <IconButton
-                      sx={{ pt: 0, pb: 0 }}
-                      onClick={() => {
-                        let prevDay = currentDayFilter - 1;
-                        if (
-                          prevDay <
-                          Math.min(
-                            ...allDays.filter((x) => Number.isInteger(x))
-                          )
-                        )
-                          prevDay = Math.min(
-                            ...allDays.filter((x) => Number.isInteger(x))
-                          );
-                        let newFilters = markerPropertyFilters.filter(
-                          (filter) => {
-                            return filter.property !== FILTER_PROPERTIES.day;
-                          }
-                        );
-                        newFilters.push({
-                          type: FILTER_TYPE.INCLUDE,
-                          property: FILTER_PROPERTIES.day,
-                          value: [prevDay],
-                        });
-
-                        setMarkerPropertyFilters(newFilters);
-                      }}
-                    >
-                      <ArrowBack />
-                    </IconButton>
-                    <IconButton
-                      sx={{ pt: 0, pb: 0 }}
-                      onClick={() => {
-                        let nextDay = currentDayFilter + 1;
-                        if (
-                          nextDay >
-                          Math.max(
-                            ...allDays.filter((x) => Number.isInteger(x))
-                          )
-                        )
-                          nextDay = Math.max(
-                            ...allDays.filter((x) => Number.isInteger(x))
-                          );
-                        let newFilters = markerPropertyFilters.filter(
-                          (filter) => {
-                            return filter.property !== FILTER_PROPERTIES.day;
-                          }
-                        );
-                        newFilters.push({
-                          type: FILTER_TYPE.INCLUDE,
-                          property: FILTER_PROPERTIES.day,
-                          value: [nextDay],
-                        });
-
-                        setMarkerPropertyFilters(newFilters);
-                      }}
-                    >
-                      <ArrowForward />
-                    </IconButton>
-                  </div>
-                </h2>
-              </div>
-            </div>
-            {routing && (
-              <>
-                <h3
-                  style={{
-                    fontFamily: "'Indie Flower', cursive",
-                    paddingLeft: "32px",
-                    margin: "0px",
+                  Activity Suggestions
+                  <IconButton
+                    size="small"
+                    onClick={() => setSuggesting(false)}
+                    sx={{
+                      position: "absolute",
+                      p: 0,
+                      ml: 1,
+                      ">.MuiSvgIcon-root": {
+                        fontSize: "1em",
+                      },
+                    }}
+                  >
+                    <Cancel />
+                  </IconButton>
+                </Typography>
+                <Accordion
+                  expanded={settingsOpen}
+                  onChange={(_, expanded) => setSettingsOpen(expanded)}
+                  sx={{
+                    background: "none",
+                    boxShadow: "none",
+                    "& .MuiAccordionSummary-content": {
+                      justifyContent: "center",
+                    },
+                    "& .MuiAccordionDetails-root": {
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      pt: 0,
+                      pb: 0,
+                      mb: 1,
+                    },
                   }}
                 >
-                  Routing
-                </h3>
-                {routeDriveTime && routeDriveDistance && (
-                  <div
-                    style={{
-                      paddingLeft: "46px",
-                      marginTop: "0px",
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontFamily: "'Indie Flower', cursive",
-                        margin: "0px",
-                      }}
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography
+                      variant="body1"
+                      sx={{ fontFamily: "'Fredoka', sans-serif", ml: "24px" }}
                     >
-                      Driving: {routeDriveTime}
-                    </p>
-                    <p
-                      style={{
-                        fontFamily: "'Indie Flower', cursive",
-                        paddingLeft: "16px",
-                        margin: "0px",
-                      }}
-                    >
-                      {routeDriveDistance}
-                    </p>
-                  </div>
-                )}
+                      Settings
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <InputSlider
+                      value={suggestRadius}
+                      label="Search Radius (meters)"
+                      min={100}
+                      max={10000}
+                      onValueChanged={(value) => setSuggestRadius(value)}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={!googleAccount ? false : usingGooglePOIs}
+                          onChange={(_, checked) => {
+                            if (!googleAccount) {
+                              setLoginPopupOpen(true);
 
-                {routeWalkTime && routeWalkDistance && (
-                  <div
-                    style={{
-                      paddingLeft: "46px",
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontFamily: "'Indie Flower', cursive",
-                        margin: "0px",
-                      }}
-                    >
-                      Walking: {routeWalkTime}
-                    </p>
-                    <p
-                      style={{
-                        fontFamily: "'Indie Flower', cursive",
-                        paddingLeft: "16px",
-                        marginTop: "0px",
-                      }}
-                    >
-                      {routeWalkDistance}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-            <Timeline
-              driveDuration={routeDriveTime}
-              walkDuration={routeWalkTime}
-              driveDistance={routeDriveDistance}
-              walkDistance={routeWalkDistance}
-              selectedActivities={routingData
-                .slice(0, 2)
-                .map((data) => data.index)}
-              activities={timelineActivities}
-              onActivityClick={(activity) => {
-                if (routing) {
-                  let routeData = [...routingData];
-                  if (routeData.length >= 2) {
-                    routeData = [];
-                    setRoutingData([]);
-                  }
-                  routeData.push({
-                    index: activity.index,
-                    position: activity.position,
-                  });
-                  setRoutingData(routeData);
-                } else {
-                  onActivityClick(activity.marker);
-                }
-              }}
-              onActivityMouseOver={(activity) =>
-                onActivityMouseOver(activity.marker)
-              }
-              onActivityMouseOut={(activity) =>
-                onActivityMouseOut(activity.marker)
-              }
-            />
-          </>
-        )}
-        {!suggesting && !routing && (
-          <Box
-            sx={{
-              width: "100%",
-              display: "flex",
-              placeContent: "end",
-              pl:
-                !timelineActivities || timelineActivities.length === 0 ? 4 : 0,
-              pb: timelineActivities && timelineActivities.length > 0 ? 1 : 0,
-              pr: timelineActivities && timelineActivities.length > 0 ? 1 : 0,
-            }}
-          >
-            <Button
-              sx={{
-                p:
-                  !timelineActivities || timelineActivities.length === 0
-                    ? 2
-                    : 0,
-              }}
-              onClick={() => {
-                setSuggesting(true);
-              }}
-            >
-              Find Suggestions
-            </Button>
-          </Box>
-        )}
-        {suggesting && (
-          <Box
-            sx={{
-              display: "flex",
-              flexFlow: "column",
-              placeItems: "center",
-              pt: 2,
-            }}
-          >
-            <Typography
-              variant="h5"
-              sx={{
-                fontFamily: "'Indie Flower', cursive",
-                display: "inline",
-                userSelect: "none",
-                msUserSelect: "none",
-                MozUserSelect: "none",
-                WebkitUserSelect: "none",
-                WebkitTouchCallout: "none",
-              }}
-            >
-              Activity Suggestions
-              <IconButton
-                size="small"
-                onClick={() => setSuggesting(false)}
-                sx={{
-                  position: "absolute",
-                  p: 0,
-                  ml: 1,
-                  ">.MuiSvgIcon-root": {
-                    fontSize: "1em",
-                  },
-                }}
-              >
-                <Cancel />
-              </IconButton>
-            </Typography>
-            <Box
-              sx={{
-                display: "flex",
-                flexFlow: "column",
-                placeContent: "center",
-                placeItems: "center",
-                pl: 1,
-                pr: 1,
-              }}
-            >
-              <Accordion
-                expanded={settingsOpen}
-                onChange={(_, expanded) => setSettingsOpen(expanded)}
-                sx={{
-                  background: "none",
-                  boxShadow: "none",
-                  "& .MuiAccordionSummary-content": {
-                    justifyContent: "center",
-                  },
-                  "& .MuiAccordionDetails-root": {
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    pt: 0,
-                    pb: 0,
-                    mb: 1,
-                  },
-                }}
-              >
-                <AccordionSummary expandIcon={<ExpandMore />}>
-                  <Typography
-                    variant="body1"
-                    sx={{ fontFamily: "'Indie Flower', cursive", ml: "24px" }}
-                  >
-                    Suggestion Settings
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <InputSlider
-                    value={suggestRadius}
-                    label="Radius"
-                    min={100}
-                    max={5000}
-                    onValueChanged={(value) => setSuggestRadius(value)}
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={filterNonLatin}
-                        onChange={(_, checked) => setFilterNonLatin(checked)}
-                      />
-                    }
-                    labelPlacement="start"
-                    label={
-                      <Typography
-                        variant="body1"
-                        sx={{ fontFamily: "'Indie Flower', cursive", mb: 0 }}
-                      >
-                        Filter Non-English Locations
-                      </Typography>
-                    }
-                  />
-                  <Typography
-                    variant="body1"
-                    sx={{ fontFamily: "'Indie Flower', cursive", mb: 1 }}
-                  >
-                    Suggested Types
-                  </Typography>
-                  <Grid
-                    container
-                    spacing={1}
-                    sx={{ placeContent: "center", placeItems: "center" }}
-                  >
-                    {suggestLocationDefaultTypes.map((type, i) => (
-                      <Grid item key={"suggested-type-" + i}>
-                        <Chip
-                          variant="filled"
-                          sx={{
-                            backgroundColor: "white",
-                            opacity: suggestedTypes.includes(type) ? 1 : 0.65,
-                            border: "1px solid gray",
+                              return;
+                            }
+                            setUsingGooglePOIs(checked);
                           }}
-                          key={"suggested-type-filter-chip-" + i}
-                          label={type.replace("_", " ")}
-                          onDelete={() => {
-                            if (suggestedTypes.includes(type))
-                              setSuggestedTypes(
-                                suggestedTypes.filter((t) => t !== type)
-                              );
-                            else setSuggestedTypes([...suggestedTypes, type]);
-                          }}
-                          deleteIcon={
-                            suggestedTypes.includes(type) ? (
-                              <Delete />
-                            ) : (
-                              <Add
-                                sx={{ opacity: "1 !important", color: "black" }}
-                              />
-                            )
+                        />
+                      }
+                      labelPlacement="start"
+                      label={
+                        <Typography
+                          variant="body1"
+                          sx={{ fontFamily: "'Fredoka', sans-serif", mb: 0 }}
+                        >
+                          Search Google Places
+                        </Typography>
+                      }
+                    />
+                    {usingGooglePOIs && (
+                      <>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={filterNonLatin}
+                              onChange={(_, checked) =>
+                                setFilterNonLatin(checked)
+                              }
+                            />
+                          }
+                          labelPlacement="start"
+                          label={
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                fontFamily: "'Fredoka', sans-serif",
+                                mb: 0,
+                              }}
+                            >
+                              Filter Non-English Locations
+                            </Typography>
                           }
                         />
-                      </Grid>
-                    ))}
-                    {/* {suggestedTypes.length !==
+                        <Typography
+                          variant="body1"
+                          sx={{ fontFamily: "'Fredoka', sans-serif", mb: 1 }}
+                        >
+                          Suggested Types
+                        </Typography>
+                        <Grid
+                          container
+                          spacing={1}
+                          sx={{ placeContent: "center", placeItems: "center" }}
+                        >
+                          {suggestLocationDefaultTypes.map((type, i) => (
+                            <Grid item key={"suggested-type-" + i}>
+                              <Chip
+                                variant="filled"
+                                sx={{
+                                  backgroundColor: "white",
+                                  opacity: suggestedTypes.includes(type)
+                                    ? 1
+                                    : 0.65,
+                                  border: "1px solid gray",
+                                }}
+                                key={"suggested-type-filter-chip-" + i}
+                                label={type.replace("_", " ")}
+                                onDelete={() => {
+                                  if (suggestedTypes.includes(type))
+                                    setSuggestedTypes(
+                                      suggestedTypes.filter((t) => t !== type)
+                                    );
+                                  else
+                                    setSuggestedTypes([
+                                      ...suggestedTypes,
+                                      type,
+                                    ]);
+                                }}
+                                deleteIcon={
+                                  suggestedTypes.includes(type) ? (
+                                    <Delete />
+                                  ) : (
+                                    <Add
+                                      sx={{
+                                        opacity: "1 !important",
+                                        color: "black",
+                                      }}
+                                    />
+                                  )
+                                }
+                              />
+                            </Grid>
+                          ))}
+                          {/* {suggestedTypes.length !==
                   suggestLocationDefaultTypes.length && (
                   <Grid item>
                     <ChipSelectMenu
@@ -818,28 +930,37 @@ export default function ItineraryTimeline({
                     />
                   </Grid>
                 )} */}
-                  </Grid>
-                  {settingsDirty && (
-                    <Button
-                      variant="contained"
-                      sx={{ mt: 2, pb: 0 }}
-                      onClick={() => {
-                        suggestNearby();
-                      }}
-                    >
-                      Refresh
-                    </Button>
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            </Box>
-            {suggestedActivities.length > 0 && !fetchingNearby && (
-              <List
+                        </Grid>
+                      </>
+                    )}
+                    {settingsDirty && (
+                      <Button
+                        variant="contained"
+                        sx={{ mt: 2, pb: 0 }}
+                        onClick={() => {
+                          suggestNearby();
+                        }}
+                      >
+                        Refresh
+                      </Button>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
+              </Box>
+
+              <Box
+                onPointerOver={() => setContentHovered(true)}
+                onPointerOut={() => setContentHovered(false)}
                 sx={{
-                  pt: 0,
-                  maxHeight: "200px",
-                  overflowY: "auto",
-                  width: "100%",
+                  display: "flex",
+                  flexFlow: "column",
+                  // placeContent: "center",
+                  placeItems: "center",
+                  pl: 1,
+                  pr: contentHovered ? "-.85em" : ".85em", // Reserve space for scrollbar
+                  flex: "1 1 auto",
+                  boxSizing: "border-box",
+                  overflowY: contentHovered ? "auto" : "hidden",
                   "&::-webkit-scrollbar": {
                     width: "0.75em",
                     height: "0.85em",
@@ -854,59 +975,92 @@ export default function ItineraryTimeline({
                     backgroundClip: "content-box",
                     border: "2px solid transparent",
                   },
-                  userSelect: "none",
-                  msUserSelect: "none",
-                  MozUserSelect: "none",
-                  WebkitUserSelect: "none",
-                  WebkitTouchCallout: "none",
                 }}
               >
-                {suggestedActivities.map((marker, i) => (
-                  <ListItem
-                    key={"suggestion-" + i + "-" + marker.info}
+                {suggestedActivities.length > 0 && !fetchingNearby && (
+                  <List
                     sx={{
-                      textAlign: "center",
-                      placeItems: "center",
-                      placeContent: "center",
-                      cursor: "pointer",
+                      pt: 0,
+                      // maxHeight: "200px",
+                      // overflowY: "auto",
+                      width: "100%",
                       userSelect: "none",
                       msUserSelect: "none",
                       MozUserSelect: "none",
                       WebkitUserSelect: "none",
                       WebkitTouchCallout: "none",
                     }}
-                    onClick={() => {
-                      onActivityClick(marker);
-                    }}
-                    onPointerOver={() => {
-                      onActivityMouseOver(marker);
-                    }}
-                    onPointerOut={() => {
-                      onActivityMouseOut(marker);
-                    }}
                   >
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      {!marker.isPlacesPOI && <Star />}
-                      <Typography
-                        variant="body1"
+                    {suggestedActivities.map((marker, i) => (
+                      <ListItem
+                        key={"suggestion-" + i + "-" + marker.info}
                         sx={{
                           textAlign: "center",
-                          fontFamily: "'Indie Flower', cursive",
+                          placeItems: "center",
+                          placeContent: "center",
+                          cursor: "pointer",
+                          userSelect: "none",
+                          msUserSelect: "none",
+                          MozUserSelect: "none",
+                          WebkitUserSelect: "none",
+                          WebkitTouchCallout: "none",
+                        }}
+                        onClick={() => {
+                          onActivityClick(marker);
+                        }}
+                        onPointerOver={() => {
+                          onActivityMouseOver(marker);
+                        }}
+                        onPointerOut={() => {
+                          onActivityMouseOut(marker);
                         }}
                       >
-                        {marker.info}
-                      </Typography>
-                      <Add />
-                    </Box>
-                  </ListItem>
-                ))}
-              </List>
-            )}
-            {(suggestedActivities.length === 0 || fetchingNearby) && (
-              <CircularProgress sx={{ m: 2 }} />
-            )}
-          </Box>
-        )}
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          {!marker.isPlacesPOI && <Star />}
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              textAlign: "center",
+                              fontFamily: "'Fredoka', sans-serif",
+                            }}
+                          >
+                            {marker.info}
+                          </Typography>
+                          <Add />
+                        </Box>
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+                {(suggestedActivities.length === 0 || fetchingNearby) &&
+                  !noLocationsNearby && <CircularProgress sx={{ m: 2 }} />}
+                {noLocationsNearby && (
+                  <Box sx={{ p: 1 }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontFamily: "'Fredoka', sans-serif",
+                        textAlign: "center",
+                      }}
+                    >
+                      No nearby activities found.
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        textAlign: "center",
+                        fontFamily: "'Fredoka', sans-serif",
+                      }}
+                    >
+                      Adjust your settings and try again or try another
+                      location.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </>
+          )}
+        </div>
       </Box>
     </>
   );

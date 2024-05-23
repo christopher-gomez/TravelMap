@@ -113,74 +113,76 @@ function drawImages(ctx, images, canvasWidth, canvasHeight) {
   });
 }
 
-export function findMarkerAddresses(markers, geocoder) {
-  markers.forEach((marker) => {
-    const latlng = marker.position;
-    geocoder.geocode({ location: latlng }, function (results, status) {
-      if (status === "OK") {
-        if (results[0]) {
-          const addressComponents = results[0].address_components;
-          const cityComponent = addressComponents.find((component) =>
-            component.types.includes("locality")
-          );
-          const city = cityComponent
-            ? cityComponent.long_name
-            : "City not found";
-          console.log(
-            `Coordinates: (${marker.lat()}, ${marker.lng()}) - City: ${city}`
-          );
+// export function findMarkerAddresses(markers, geocoder) {
+//   markers.forEach((marker) => {
+//     const latlng = marker.position;
+//     geocoder.geocode({ location: latlng }, function (results, status) {
+//       if (status === "OK") {
+//         if (results[0]) {
+//           const addressComponents = results[0].address_components;
+//           const cityComponent = addressComponents.find((component) =>
+//             component.types.includes("locality")
+//           );
+//           const city = cityComponent
+//             ? cityComponent.long_name
+//             : "City not found";
+//           console.log(
+//             `Coordinates: (${marker.lat()}, ${marker.lng()}) - City: ${city}`
+//           );
 
-          marker["address"] = addressComponents;
-        } else {
-          console.log("No results found");
-        }
-      } else {
-        console.log("Geocoder failed due to: " + status);
-      }
-    });
-  });
-}
+//           marker["address"] = addressComponents;
+//         } else {
+//           console.log("No results found");
+//         }
+//       } else {
+//         console.log("Geocoder failed due to: " + status);
+//       }
+//     });
+//   });
+// }
 
-export function getUniqueCitiesFromMarkers(markers, geocoder) {
-  const promises = markers.map((marker) => {
-    return new Promise((resolve, reject) => {
-      const latlng = marker.position;
-      geocoder.geocode({ location: latlng }, (results, status) => {
-        if (status === "OK") {
-          if (results[0]) {
-            const majorCityComponent = results[0].address_components.find(
-              (component) =>
-                component.types.includes("administrative_area_level_1")
-            );
+// export function getUniqueCitiesFromMarkers(markers, geocoder) {
+//   const promises = markers.map((marker) => {
+//     return new Promise((resolve, reject) => {
+//       const latlng = marker.position;
+//       geocoder.geocode({ location: latlng }, (results, status) => {
+//         if (status === "OK") {
+//           if (results[0]) {
+//             const majorCityComponent = results[0].address_components.find(
+//               (component) =>
+//                 component.types.includes("administrative_area_level_1")
+//             );
 
-            marker["address"] = results[0].formatted_address;
-            marker["majorCity"] = majorCityComponent.long_name;
-            if (majorCityComponent) {
-              resolve(majorCityComponent.long_name);
-            } else {
-              resolve(null); // No city found in the geocode result
-            }
-          } else {
-            resolve(null); // No results for geocode
-          }
-        } else {
-          reject(
-            "Geocode was not successful for the following reason: " + status
-          );
-        }
-      });
-    });
-  });
+//             marker["address"] = results[0].formatted_address;
+//             marker["majorCity"] = majorCityComponent.long_name;
+//             if (majorCityComponent) {
+//               resolve(majorCityComponent.long_name);
+//             } else {
+//               resolve(null); // No city found in the geocode result
+//             }
+//           } else {
+//             resolve(null); // No results for geocode
+//           }
+//         } else {
+//           reject(
+//             "Geocode was not successful for the following reason: " + status
+//           );
+//         }
+//       });
+//     });
+//   });
 
-  return Promise.all(promises)
-    .then((results) => {
-      const cities = new Set(results.filter((city) => city !== null));
-      return Array.from(cities);
-    })
-    .catch((error) => {
-      console.error("Error in geocoding: ", error);
-    });
-}
+//   return Promise.all(promises)
+//     .then((results) => {
+//       const cities = new Set(results.filter((city) => city !== null));
+//       return Array.from(cities);
+//     })
+//     .catch((error) => {
+//       console.error("Error in geocoding: ", error);
+//     });
+// }
+
+const searchCache = {};
 
 export function findPlacesOfInterest(
   markers,
@@ -208,8 +210,15 @@ export function findPlacesOfInterest(
     "zoo",
   ],
   skipAirports = true,
-  filterOutNonLatinNames = true
+  filterOutNonLatinNames = true,
+  googleAccount = null
 ) {
+
+  if (!googleAccount) {
+    callback([]);
+    return;
+  }
+
   const uniquePlaces = new Set();
   const promises = [];
   const placesOfInterest = [];
@@ -228,17 +237,53 @@ export function findPlacesOfInterest(
       return;
     }
 
+    const positionKey = `${marker.position.lat},${marker.position.lng}`;
+
     types.forEach((type) => {
+      const cacheKey = `${positionKey},${type}`;
+      let cachedRadius = 0;
+
+      if (searchCache[cacheKey]) {
+        for (const r in searchCache[cacheKey]) {
+          if (parseInt(r, 10) <= radius) {
+            cachedRadius = Math.max(cachedRadius, parseInt(r, 10));
+          }
+        }
+      } else {
+        searchCache[cacheKey] = {};
+      }
+
+      if (cachedRadius > 0) {
+        placesOfInterest.push(...searchCache[cacheKey][cachedRadius]);
+      }
+
+      if (cachedRadius >= radius) {
+        return;
+      }
+
+      const newRadius = radius - cachedRadius;
       const request = {
         location: marker.position,
-        radius,
+        radius: newRadius,
         type,
         language: "en",
+        fields: [
+          "place_id",
+          "name",
+          "geometry",
+          "types",
+          "rating",
+          "user_ratings_total",
+          // "opening_hours",
+          "photos",
+          // "business_status"
+        ],
       };
 
       const promise = new Promise((resolve, reject) => {
         placesService.nearbySearch(request, (results, status) => {
           if (status === "OK") {
+            const newPlaces = [];
             results.forEach((place) => {
               if (
                 !uniquePlaces.has(place.place_id) &&
@@ -246,13 +291,13 @@ export function findPlacesOfInterest(
                 !place.types.includes("lodging") &&
                 !place.types.includes("political")
               ) {
-                if (
-                  place.business_status &&
-                  place.business_status !== "OPERATIONAL"
-                ) {
-                  resolve();
-                  return;
-                }
+                // if (
+                //   place.business_status &&
+                //   place.business_status !== "OPERATIONAL"
+                // ) {
+                //   resolve();
+                //   return;
+                // }
 
                 if (
                   filterOutNonLatinNames &&
@@ -264,8 +309,15 @@ export function findPlacesOfInterest(
 
                 uniquePlaces.add(place.place_id);
                 placesOfInterest.push(place);
+                newPlaces.push(place);
               }
             });
+
+            if (!searchCache[cacheKey][radius]) {
+              searchCache[cacheKey][radius] = [];
+            }
+
+            searchCache[cacheKey][radius].push(...newPlaces);
           }
 
           resolve(); // Always resolve to ensure all promises complete
@@ -313,7 +365,7 @@ export async function createMarkersFromPOIs(
     marker["isPlacesPOI"] = true;
     marker["rating"] = item.rating;
     marker["userRatingsTotal"] = item.user_ratings_total;
-    marker["isOpen"] = item.opening_hours ? item.opening_hours.open_now : null;
+    // marker["isOpen"] = item.opening_hours ? item.opening_hours.open_now : null;
 
     // if (item.icon && item.icon in ICON_KEYS) marker["iconKey"] = item.icon;
 
@@ -359,7 +411,7 @@ export async function createMarkersFromPOIs(
     // });
   }
 
-  await getUniqueCitiesFromMarkers(markers, geocoder);
+  // await getUniqueCitiesFromMarkers(markers, geocoder);
 
   return markers;
 }

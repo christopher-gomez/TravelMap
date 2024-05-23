@@ -34,7 +34,7 @@ import ItineraryTimeline, {
 import {
   createCompositeIcon,
   createEmojiIcon,
-  getUniqueCitiesFromMarkers,
+  // getUniqueCitiesFromMarkers,
 } from "../Util/Utils";
 import { Typography } from "@mui/material";
 import MapDrawer from "./Footer/MapDrawer";
@@ -480,6 +480,41 @@ const MapView = () => {
 
   const ignoreBoundsChanged = useRef(false);
 
+  function adjustMapCenter() {
+    const rightMenu = document.getElementById("itinerary-menu");
+    if (!mapRef.current) return;
+
+    const bounds = mapRef.current.getBounds();
+    if (!bounds) return;
+
+    // Get the center of the map
+    const center = mapRef.current.getCenter();
+
+    // Get the width of the right menu
+    const rightMenuWidth = rightMenu ? rightMenu.offsetWidth : 0;
+
+    // Calculate the pixel offset
+    const mapDiv = mapRef.current.getDiv();
+    const mapWidth = mapDiv.offsetWidth;
+    const mapHeight = mapDiv.offsetHeight;
+    const scale = Math.pow(2, mapRef.current.getZoom());
+    const worldCoordinateCenter = mapRef.current
+      .getProjection()
+      .fromLatLngToPoint(center);
+    const pixelOffset = rightMenuWidth / (256 * scale);
+
+    // Calculate the new center
+    const newCenterX = worldCoordinateCenter.x - pixelOffset;
+    const newCenter = mapRef.current
+      .getProjection()
+      .fromPointToLatLng(
+        new mapsRef.current.Point(newCenterX, worldCoordinateCenter.y)
+      );
+
+    // Set the new center of the map
+    mapRef.current.setCenter(newCenter);
+  }
+
   useEffect(() => {
     mapRef.current = map;
 
@@ -504,6 +539,13 @@ const MapView = () => {
                 .equals(focusedMarkerRef.current.position)
             )
               mapRef.current.panTo(focusedMarkerRef.current.position);
+            mapsRef.current.event.addListenerOnce(
+              mapRef.current,
+              "idle",
+              () => {
+                adjustMapCenter();
+              }
+            );
             ignoreBoundsChanged.current = false;
           });
         }
@@ -529,6 +571,14 @@ const MapView = () => {
                 mapRef.current.fitBounds(bounds);
               }
             }
+
+            mapsRef.current.event.addListenerOnce(
+              mapRef.current,
+              "idle",
+              () => {
+                adjustMapCenter();
+              }
+            );
 
             ignoreBoundsChanged.current = false;
           });
@@ -845,7 +895,6 @@ const MapView = () => {
     renderedMarkers.forEach((m) => {
       if (m.isPlacesPOI) {
         m.overlay?.setMap(null);
-        // console.log("found a places poi removing from map");
         m.setMap(null);
       }
     });
@@ -1066,25 +1115,50 @@ const MapView = () => {
     setRenderedMarkers(_markers);
 
     if (_markers.length > 0) {
-      centerMap(firstRender.current, _markers);
+      centerMap(
+        firstRender.current,
+        dayFilters.length === 1 &&
+          dayFilters[0].value[0] === "All" &&
+          suggestedMarkers.length > 0 &&
+          focusedMarker !== null
+          ? [focusedMarker, ...suggestedMarkers]
+          : _markers
+      );
       firstRender.current = false;
     }
     // }
   };
 
-  function smoothFitBounds(targetBounds, finalCenter, duration = 1000) {
+  function smoothFitBounds(targetBounds, finalCenter, finalBounds) {
     map.fitBounds(targetBounds);
     maps.event.addListenerOnce(map, "bounds_changed", () => {
       if (finalCenter) {
+        console.log("pan to final center");
         map.panTo(finalCenter);
       }
+
+      maps.event.addListenerOnce(map, "idle", () => {
+        if (finalBounds) {
+          map.fitBounds(finalBounds);
+          mapsRef.current.event.addListenerOnce(
+            mapRef.current,
+            "bounds_changed",
+            () => {
+              adjustMapCenter();
+            }
+          );
+        } else {
+          adjustMapCenter();
+        }
+      });
     });
   }
 
   function centerMap(
     fitToBounds = false,
     markersToCenterOn = null,
-    finalCenter
+    finalCenter,
+    finalBounds
   ) {
     const boundMarkers = markersToCenterOn
       ? [...markersToCenterOn]
@@ -1137,7 +1211,7 @@ const MapView = () => {
           boundMarkers.length > 1)
       ) {
         setTimeout(() => {
-          smoothFitBounds(bounds, finalCenter); // Adjust the viewport if any marker is outside the current view
+          smoothFitBounds(bounds, finalCenter, finalBounds); // Adjust the viewport if any marker is outside the current view
         }, 250);
       }
     }
@@ -1146,6 +1220,7 @@ const MapView = () => {
     const mapCenter = map.getCenter();
 
     if (!mapCenter.equals(boundsCenter) && !fitToBounds) {
+      console.log("first pan to bounds center");
       map.panTo(boundsCenter);
 
       const listener = maps.event.addListener(map, "idle", () => {
@@ -1324,11 +1399,11 @@ const MapView = () => {
   useEffect(() => {
     if (markers && markers.length > 0 && geocoderService) {
       (async () => {
-        const cities = await getUniqueCitiesFromMarkers(
-          markers,
-          geocoderService
-        );
-        setUniqueCities(cities);
+        // const cities = await getUniqueCitiesFromMarkers(
+        //   markers,
+        //   geocoderService
+        // );
+        setUniqueCities(["Tokyo, Kyoto, Osaka, Kinosaki"]);
       })();
     }
   }, [markers, geocoderService]);
@@ -1450,9 +1525,10 @@ const MapView = () => {
           m.setOptions({ opacity: 0.2 });
         } else {
           if (
-            (!focusedMarkerRef.current || m === focusedMarkerRef.current) &&
-            (!focusedClusterRef.current ||
-              focusedClusterRef.current.markers.indexOf(m) !== -1)
+            ((!focusedMarkerRef.current || m === focusedMarkerRef.current) &&
+              (!focusedClusterRef.current ||
+                focusedClusterRef.current.markers.indexOf(m) !== -1)) ||
+            suggestedMarkersRef.current.indexOf(m) !== -1
           )
             m.setOptions({ opacity: 1.0 });
         }
@@ -1493,10 +1569,11 @@ const MapView = () => {
         });
       } else {
         if (
-          renderedMarkersRef.current.some((m) => m.hovered) ||
-          markerClusterRef.current.clusters.some((c) => c.marker.hovered) ||
-          (focusedMarkerRef.current &&
-            c.markers.indexOf(focusedMarkerRef.current) === -1)
+          (renderedMarkersRef.current.some((m) => m.hovered) ||
+            markerClusterRef.current.clusters.some((c) => c.marker.hovered) ||
+            (focusedMarkerRef.current &&
+              c.markers.indexOf(focusedMarkerRef.current) === -1)) &&
+          suggestedMarkersRef.current.every((m) => c.markers.indexOf(m) === -1)
         ) {
           c.marker.setOptions({ opacity: 0.2 });
           c.marker.setZIndex(undefined);
@@ -1504,12 +1581,13 @@ const MapView = () => {
           c.markers.forEach((m) => toggleOverlay(false, m));
         } else {
           if (
-            (!focusedMarkerRef.current ||
+            ((!focusedMarkerRef.current ||
               c.markers.some((m) => m === focusedMarkerRef.current)) &&
-            (!focusedClusterRef.current ||
-              focusedClusterRef.current.markers.some(
-                (m) => c.markers.indexOf(m) !== -1
-              ))
+              (!focusedClusterRef.current ||
+                focusedClusterRef.current.markers.some(
+                  (m) => c.markers.indexOf(m) !== -1
+                ))) ||
+            suggestedMarkersRef.current.some((m) => c.markers.indexOf(m) !== -1)
           ) {
             c.marker.setOptions({ opacity: 1.0 });
             c.marker.setZIndex(
@@ -1523,8 +1601,9 @@ const MapView = () => {
 
             if (!c.marker.hovered) {
               if (
-                focusedMarkerRef.current &&
-                c.markers.indexOf(focusedMarkerRef.current) === -1
+                !focusedMarkerRef.current ||
+                (focusedMarkerRef.current &&
+                  c.markers.indexOf(focusedMarkerRef.current) === -1)
               ) {
                 toggleClusterOverlay(false, c);
                 c.markers.forEach((m) => toggleOverlay(false, m));
@@ -1794,7 +1873,7 @@ const MapView = () => {
     marker["placeId"] = placeId;
 
     if (getPlaceDetails && marker["placeId"] === null) {
-      console.log("place id is undefined for " + title + " fetching...");
+      console.error("place id is undefined for " + title + " fetching...");
       placesServiceRef.current.findPlaceFromQuery(
         {
           query: altPlaceName ?? title,
@@ -1808,10 +1887,11 @@ const MapView = () => {
             updateActivityGooglePlaceID(marker, results[0].place_id);
             if (marker["photo"] === null) {
               console.log("photo is undefined for " + title + " getting...");
-              getPlacePhoto(results[0].place_id, marker);
+              // getPlacePhoto(marker);
             }
           } else {
             console.error("could not get id for " + title);
+            marker["placeId"] = "INVALID";
             setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
           }
         }
@@ -1830,9 +1910,10 @@ const MapView = () => {
       //     }
       //   }
       // );
-    } else if (getPlaceDetails && marker["photo"] === null) {
-      getPlacePhoto(marker["placeId"], marker);
     }
+    // else if (getPlaceDetails && marker["photo"] === null) {
+    //   getPlacePhoto(marker["placeId"], marker);
+    // }
 
     return marker;
   }
@@ -1862,7 +1943,22 @@ const MapView = () => {
     }
   }, [mapLocked]);
 
-  function getPlacePhoto(placeId, marker) {
+  const placesPhotosDictRef = React.useRef({});
+
+  function getPlacePhoto(marker, callback = null) {
+    if (!marker || !marker.placeId || marker.placeId === "INVALID") {
+      if (callback) callback([]);
+      return;
+    }
+
+    const placeId = marker.placeId;
+
+    if (placesPhotosDictRef.current[placeId]) {
+      marker["photo"] = placesPhotosDictRef.current[placeId];
+      if (callback) callback(placesPhotosDictRef.current[placeId]);
+      return;
+    }
+
     placesServiceRef.current.getDetails(
       {
         placeId: placeId,
@@ -1884,9 +1980,14 @@ const MapView = () => {
             })
           );
           marker["photo"] = photos;
+          placesPhotosDictRef.current[placeId] = photos;
+          if (callback) callback(photos);
           // updateActivityGooglePlacePhotos(marker, photos);
         } else {
           console.error("could not get photo for " + marker["info"]);
+          placesPhotosDictRef.current[placeId] = [];
+          marker["photo"] = [];
+          if (callback) callback([]);
           setMarkersWithoutPhotos([...markersWithoutPhotos, marker]);
         }
       }
@@ -2109,6 +2210,12 @@ const MapView = () => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(true);
 
+  useEffect(() => {
+    if (!map || !maps) return;
+
+    adjustMapCenter();
+  }, [timelineOpen]);
+
   if (!fetchedAPIKey) return null;
 
   return (
@@ -2149,20 +2256,6 @@ const MapView = () => {
           // setFiltersOpen(open);
         }}
       />
-      <GoogleMapReact
-        options={createOptions}
-        bootstrapURLKeys={{
-          key: fetchedAPIKey,
-          language: "en",
-          region: "US",
-          libraries: ["places", "routes", "geometry", "geocoder"],
-        }}
-        defaultCenter={defaultProps.center}
-        defaultZoom={defaultProps.zoom}
-        yesIWantToUseGoogleMapApiInternals
-        onGoogleApiLoaded={onGoogleApiLoaded}
-        // layerTypes={["TransitLayer"]}
-      />
       {/* Timeline */}
       {((!focusedMarker &&
         currentDayFilter !== null &&
@@ -2196,27 +2289,29 @@ const MapView = () => {
           placesService={placesService}
           createOverlay={createOverlay}
           geocoderService={geocoderService}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
         />
       )}
-      {/* {uniqueCities.length > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            display: "flex",
-            flexFlow: "column",
-            left: 0,
-            bottom: 0,
-            background: 'rgba(255,255,255,.75)',
-            backdropFilter: 'blur(10px)'
-          }}
-        >
-          <Typography>Trip to {uniqueCities.join(", ")}</Typography>
-        </div>
-      )} */}
+      <GoogleMapReact
+        options={createOptions}
+        bootstrapURLKeys={{
+          key: fetchedAPIKey,
+          language: "en",
+          region: "US",
+          libraries: ["places", "routes", "geometry", "geocoder"],
+        }}
+        defaultCenter={defaultProps.center}
+        defaultZoom={defaultProps.zoom}
+        yesIWantToUseGoogleMapApiInternals
+        onGoogleApiLoaded={onGoogleApiLoaded}
+        // layerTypes={["TransitLayer"]}
+      />
       <MapDrawer
         focusedCluster={focusedCluster}
         focusedMarker={focusedMarker}
         setMapLocked={setMapLocked}
+        getPlacePhotos={getPlacePhoto}
         mapLocked={mapLocked}
         allMarkers={markers}
         onDrawerClose={() => {
@@ -2243,7 +2338,6 @@ const MapView = () => {
         }}
         calculateDay={calculateDay}
         setLoginPopupOpen={setLoginPopupOpen}
-        setErrorPopupOpen={setErrorPopupOpen}
         allTags={allTags}
         onTagsUpdated={(tags) => {
           if (!focusedMarker) return;

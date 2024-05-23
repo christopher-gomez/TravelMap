@@ -48,24 +48,25 @@ export default function InputSlider({
     <Box sx={{ width: "75%", mt: 1, mb: 1 }}>
       <Typography
         id="input-slider"
-        sx={{ textAlign: "center", fontFamily: "'Indie Flower', cursive" }}
-        variant="subtitle2"
+        sx={{ textAlign: "center", fontFamily: "'Fredoka', sans-serif" }}
+        variant="caption"
+        gutterBottom
       >
         {label}
       </Typography>
-      <Grid container spacing={2} alignItems="center">
+      <Grid container spacing={2} alignItems="center" sx={{mt: .5}}>
         {icon && <Grid item>{icon}</Grid>}
-        <Grid item xs sx={{pt: '0 !important'}}>
+        <Grid item xs sx={{ pt: "0 !important" }}>
           <Slider
             value={typeof _value === "number" ? _value : 0}
             onChangeCommitted={handleSliderChange}
             aria-labelledby="input-slider"
             min={min}
             max={max}
-            sx={{p: 0}}
+            sx={{ p: 0 }}
           />
         </Grid>
-        <Grid item sx={{pt: '0 !important'}}>
+        <Grid item sx={{ pt: "0 !important" }}>
           <Input
             value={_value}
             size="large"

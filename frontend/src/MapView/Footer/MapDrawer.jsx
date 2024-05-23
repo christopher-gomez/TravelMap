@@ -35,6 +35,7 @@ export default function MapDrawer({
   onConfirmDelete,
   onActivityMouseOver,
   onActivityMouseOut,
+  getPlacePhotos
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -86,6 +87,7 @@ export default function MapDrawer({
   let content = focusedMarker ? (
     <POIDetails
       icon={icon}
+      getPlacePhotos={getPlacePhotos}
       image={focusedMarker.photo}
       title={title}
       day={day}
@@ -125,6 +127,7 @@ export default function MapDrawer({
         <POIDetails
           icon={m.icon}
           image={m.photo}
+          getPlacePhotos={getPlacePhotos}
           onActivityMouseOver={() => {
             if (onActivityMouseOver) onActivityMouseOver(m);
           }}

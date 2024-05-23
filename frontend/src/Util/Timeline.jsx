@@ -19,11 +19,13 @@ export default function ActivityTimeline({
   onActivityMouseOver,
   onActivityMouseOut,
 }) {
+  const [hovered, setHovered] = React.useState(null);
   return (
     <Timeline
       position="right"
       sx={{
-        fontFamily: "'Indie Flower', cursive",
+        fontFamily: "'Fredoka', sans-serif",
+        mt: 0,
         mb: 0,
         userSelect: "none",
         msUserSelect: "none",
@@ -37,7 +39,9 @@ export default function ActivityTimeline({
           <TimelineItem
             key={activity.marker.id + "-timeline-item-" + i}
             sx={{
-              fontFamily: "'Indie Flower', cursive",
+              fontFamily: "'Fredoka', sans-serif",
+
+              fontSize: "1.5em",
               cursor: "pointer",
               userSelect: "none",
               msUserSelect: "none",
@@ -48,18 +52,24 @@ export default function ActivityTimeline({
             onClick={() => onActivityClick(activity)}
             onPointerOver={() => {
               onActivityMouseOver(activity);
+              setHovered(activity);
             }}
-            onPointerOut={() => onActivityMouseOut(activity)}
+            onPointerOut={() => {
+              onActivityMouseOut(activity);
+              setHovered(null);
+            }}
           >
             {activity.time && (
               <TimelineOppositeContent
                 sx={{
-                  fontFamily: "'Indie Flower', cursive",
+                  fontFamily: "'Fredoka', sans-serif",
+                  fontSize: ".8em",
                   userSelect: "none",
                   msUserSelect: "none",
                   MozUserSelect: "none",
                   WebkitUserSelect: "none",
                   WebkitTouchCallout: "none",
+                  fontWeight: hovered === activity ? "bolder" : "normal",
                 }}
               >
                 {activity.time}
@@ -97,12 +107,15 @@ export default function ActivityTimeline({
             )}
             <TimelineContent
               sx={{
-                fontFamily: "'Indie Flower', cursive",
+                fontFamily: "'Fredoka', sans-serif",
+
+                fontSize: ".85em",
                 userSelect: "none",
                 msUserSelect: "none",
                 MozUserSelect: "none",
                 WebkitUserSelect: "none",
                 WebkitTouchCallout: "none",
+                fontWeight: hovered === activity ? "bolder" : "normal",
               }}
             >
               {activity.label}

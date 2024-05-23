@@ -3,7 +3,15 @@ import { Global } from "@emotion/react";
 import { Drawer, IconButton } from "@mui/material";
 import ArrowBackIos from "@mui/icons-material/ArrowBackIos";
 
-export default function StandardDrawer({ open, onClose, DrawerContent }) {
+export default function StandardDrawer({
+  open,
+  onClose,
+  DrawerContent,
+  variant = "persistent",
+  anchor = "left",
+  sx = {},
+  paperSx = {},
+}) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const timeoutRef = React.useRef(null);
   React.useEffect(() => {
@@ -38,53 +46,47 @@ export default function StandardDrawer({ open, onClose, DrawerContent }) {
 
   return (
     <React.Fragment>
-      <Global
-        styles={{
-          ".MuiDrawer-root": {
-            pointerEvents: "none",
-          },
-          ".MuiDrawer-root > .MuiPaper-root": {
-            pointerEvents: "all",
-            overflowY: "auto", // Set overflow to hidden to establish a block formatting context
-            display: "flex", // Make this a flex container
-            flexDirection: "column", // Stack children vertically
-            // borderRadius: "0em 1em 0em 0em",
-            padding: "0",
-            minWidth: "420px",
-            maxWidth: "420px",
-            height: "100%", // Set the height to 100% of the viewport
-            position: "relative",
-            // scrollbarWidth: "thin",
-            // scrollbarColor: "#c1c1c1 #f0f0f0",
-            "&::-webkit-scrollbar": {
-              width: "0.5em",
-              height: "0.5em",
-            },
-            "&::-webkit-scrollbar-track": {
-              background: "#f0f0f0 !important",
-              borderRadius: "10px",
-            },
-            "&::-webkit-scrollbar-thumb": {
-              backgroundColor: "#c1c1c1 !important",
-              borderRadius: "10px",
-              backgroundClip: "content-box",
-              border: "2px solid transparent",
-            },
-          },
-        }}
-      />
       {open && (
         <Drawer
-          disableAutoFocus
-          disableEnforceFocus
-          disablePortal
-          variant={"persistent"}
-          anchor={"left"}
+          sx={{
+            pointerEvents: "none",
+            "> .MuiPaper-root": {
+              pointerEvents: "all",
+              overflowY: "auto", // Set overflow to hidden to establish a block formatting context
+              display: "flex", // Make this a flex container
+              flexDirection: "column", // Stack children vertically
+              // borderRadius: "0em 1em 0em 0em",
+              padding: "0",
+              minWidth: "420px",
+              maxWidth: "420px",
+              height: "100%", // Set the height to 100% of the viewport
+              position: "relative",
+              // scrollbarWidth: "thin",
+              // scrollbarColor: "#c1c1c1 #f0f0f0",
+              "&::-webkit-scrollbar": {
+                width: "0.5em",
+                height: "0.5em",
+              },
+              "&::-webkit-scrollbar-track": {
+                background: "#f0f0f0 !important",
+                borderRadius: "10px",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                backgroundColor: "#c1c1c1 !important",
+                borderRadius: "10px",
+                backgroundClip: "content-box",
+                border: "2px solid transparent",
+              },
+              ...paperSx
+            },
+            ...sx,
+          }}
+          variant={variant ? variant : "persistent"}
+          anchor={anchor ? anchor : "left"}
           PaperProps={{ style: { zIndex: 9999 } }}
           open={drawerOpen}
           onClose={toggleDrawer(false)}
           onOpen={() => {
-            console.log("onOpen");
             toggleDrawer(true);
           }}
           hideBackdrop

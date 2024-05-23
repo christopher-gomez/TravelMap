@@ -605,6 +605,7 @@ const IconComponent = ({
 export const POIDetails = ({
   title,
   image,
+  getPlacePhotos,
   icon,
   tags,
   description,
@@ -638,6 +639,12 @@ export const POIDetails = ({
 }) => {
   const [curImageIndex, setCurImageIndex] = useState(0);
 
+  useEffect(() => {
+    return () => {
+      setCurImageIndex(0);
+    };
+  }, []);
+
   const [_date, setDate] = useState(date);
   const [_day, setDay] = useState(day);
   const [_title, setTitle] = useState(title);
@@ -646,6 +653,23 @@ export const POIDetails = ({
   const [_time, setTime] = useState(time);
   const [isPlacesPOI, setIsPlacesPOI] = useState(false);
   const [_icon, setIcon] = useState(icon);
+  const [_image, setImage] = useState(image);
+
+  const [imageLoading, setImageLoading] = useState(
+    _image !== null && _image !== undefined && _image.length > 0 ? false : true
+  );
+
+  useEffect(() => {
+    if (imageLoading) {
+      if (getPlacePhotos && marker)
+        getPlacePhotos(marker, (photos) => {
+          if (!photos || photos.length === 0) return;
+
+          setImage(photos);
+          setImageLoading(false);
+        });
+    }
+  }, [imageLoading]);
 
   useEffect(() => {
     if (marker) {
@@ -692,78 +716,88 @@ export const POIDetails = ({
         </span>
       )} */}
 
-        <div
-          style={{
-            position: "relative",
-            width: "calc(100% + 64px)",
-            backgroundImage:
-              image && Array.isArray(image)
-                ? `url(${image[curImageIndex]})`
-                : image
-                ? `url(${image})`
-                : "none",
-            height: image ? "400px" : "100px",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            boxShadow: !image ? "none" : "",
-          }}
-          className="poi-image-container"
-        >
-          {/* <img
+        {!imageLoading || !marker ? (
+          <div
+            style={{
+              position: "relative",
+              width: "calc(100% + 64px)",
+              backgroundImage:
+                _image && Array.isArray(_image)
+                  ? `url(${_image[curImageIndex]})`
+                  : _image
+                  ? `url(${_image})`
+                  : "none",
+              height: _image ? "400px" : "100px",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              boxShadow: !_image ? "none" : "",
+            }}
+            className="poi-image-container"
+          >
+            {/* <img
             src={Array.isArray(image) ? image[curImageIndex] : image}
             style={{ width: "100%", height: "400px", marginBottom: ".5em" }}
           /> */}
-          {image && Array.isArray(image) && (
-            <>
-              <div
-                style={{
-                  position:
-                    "absolute" /* Positioned absolutely inside the relative parent */,
-                  top: "40%" /* Center vertically */,
-                  left: 0 /* Stretch from left to right */,
-                  right: 0,
-                  display: "flex",
-                  justifyContent:
-                    "space-between" /* Space out the arrow buttons */,
-                  alignItems: "center" /* Center the buttons vertically */,
-                }}
-              >
-                <IconButton
-                  sx={{
-                    background: "rgba(0, 0, 0, 0.5)",
-                    ml: 1,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurImageIndex(
-                      (curImageIndex - 1 + image.length) % image.length
-                    );
+            {_image && Array.isArray(_image) && (
+              <>
+                <div
+                  style={{
+                    position:
+                      "absolute" /* Positioned absolutely inside the relative parent */,
+                    top: "40%" /* Center vertically */,
+                    left: 0 /* Stretch from left to right */,
+                    right: 0,
+                    display: "flex",
+                    justifyContent:
+                      "space-between" /* Space out the arrow buttons */,
+                    alignItems: "center" /* Center the buttons vertically */,
                   }}
                 >
-                  <ArrowBack sx={{ color: "white" }} />
-                </IconButton>
-                <IconButton
-                  sx={{
-                    background: "rgba(0, 0, 0, 0.5)",
-                    mr: 1,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurImageIndex((curImageIndex + 1) % image.length);
-                  }}
-                >
-                  <ArrowForward sx={{ color: "white" }} />
-                </IconButton>
-              </div>
-              <div style={{ position: "absolute", right: 10, top: "90%" }}>
-                <small style={{ color: "white" }}>
-                  {curImageIndex + 1}/{image.length}
-                </small>
-              </div>
-            </>
-          )}
-        </div>
+                  <IconButton
+                    sx={{
+                      background: "rgba(0, 0, 0, 0.5)",
+                      ml: 1,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurImageIndex(
+                        (curImageIndex - 1 + _image.length) % _image.length
+                      );
+                    }}
+                  >
+                    <ArrowBack sx={{ color: "white" }} />
+                  </IconButton>
+                  <IconButton
+                    sx={{
+                      background: "rgba(0, 0, 0, 0.5)",
+                      mr: 1,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurImageIndex((curImageIndex + 1) % _image.length);
+                    }}
+                  >
+                    <ArrowForward sx={{ color: "white" }} />
+                  </IconButton>
+                </div>
+                <div style={{ position: "absolute", right: 10, top: "90%" }}>
+                  <small style={{ color: "white" }}>
+                    {curImageIndex + 1}/{_image.length}
+                  </small>
+                </div>
+              </>
+            )}
+          </div>
+        ) : marker ? (
+          <Skeleton
+            sx={{
+              position: "relative",
+              width: "calc(100% + 64px)",
+              height: "400px",
+            }}
+          />
+        ) : null}
         <Box
           sx={{
             position: "flex",
