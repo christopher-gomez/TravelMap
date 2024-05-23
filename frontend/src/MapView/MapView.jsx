@@ -1058,20 +1058,10 @@ const MapView = () => {
       }
     });
 
-    if (
-      markerClusterRef.current
-      //  &&
-      // _markers !== markerClusterRef.current.markers
-    ) {
+    if (markerClusterRef.current) {
       markerClusterRef.current.clearMarkers();
       markerClusterRef.current.addMarkers(_markers);
     }
-
-    // markerClusterRef.current.clusters.forEach((cluster) => {
-    //   if (cluster.markers.length === 1) {
-    //     cluster.markers[0].clusterHovered = false;
-    //   }
-    // });
 
     setRenderedMarkers(_markers);
 
@@ -1542,25 +1532,11 @@ const MapView = () => {
             }
           }
         }
-
-        // if (
-        //   !focusedMarkerRef.current ||
-        //   !c.markers.some((m) => m === focusedMarkerRef.current)
-        // ) {
-        //   c.marker.setZIndex(undefined);
-        //   c.marker.setOptions({ opacity: 0.2 });
-        // }
-
         toggleClusterOverlay(false, c);
       }
     });
 
     if (!anyHovered && focusedMarkerRef.current) {
-      // console.log("none hovered and focused marker");
-      // if (markerClusterRef.current.clusters.length > 0) {
-      //   console.log("current clusters: ", markerClusterRef.current.clusters);
-      // }
-
       focusedMarkerRef.current.setZIndex(9999);
       focusedMarkerRef.current.setOptions({ opacity: 1.0 });
       toggleOverlay(true, focusedMarkerRef.current);
@@ -1569,10 +1545,6 @@ const MapView = () => {
       focusedMarkerRef.current &&
       !focusedMarkerRef.current.hovered
     ) {
-      // console.log(
-      //   "disabling focused marker overlay: ",
-      //   focusedMarkerRef.current.info
-      // );
       focusedMarkerRef.current.setZIndex(undefined);
       focusedMarkerRef.current.setOptions({ opacity: 0.2 });
       toggleOverlay(false, focusedMarkerRef.current);
@@ -1646,18 +1618,12 @@ const MapView = () => {
   const markerHoveredOverlayRef = React.useRef(null);
 
   const onMarkerMouseOver = (marker, index) => {
-    // console.log("marker mouse over: " + marker.info);
-
     markerHoveredRef.current = true;
     marker["hovered"] = true;
-
-    // if (zoomingRef.current) return;
-
     renderOverlays();
   };
 
   const onMarkerMouseOut = (marker, index) => {
-    console.log("marker mouse out");
     marker["hovered"] = false;
     markerHoveredRef.current = false;
     renderOverlays();
@@ -2039,16 +2005,15 @@ const MapView = () => {
           m["info"] = important
             ? important.info + " and " + (count - 1) + " more"
             : count + " markers";
+
+          m["parentMarker"] = important ? important : closestMarker;
           m.addListener("mouseover", () => {
-            // onMarkerMouseOver(m, markers.indexOf(m));
-            m["clusterHovered"] = true;
-            for (const marker of markers) marker["clusterHovered"] = true;
+            m["parentMarker"]["clusterHovered"] = true;
             onMarkerMouseOver(m);
           });
 
           m.addListener("mouseout", () => {
-            m["clusterHovered"] = false;
-            for (const marker of markers) marker["clusterHovered"] = false;
+            m["parentMarker"]["clusterHovered"] = false;
             onMarkerMouseOut(m);
           });
 
@@ -2080,8 +2045,11 @@ const MapView = () => {
             ] = overlay;
           }
 
+          if (markers.find((m) => m.clusterHovered)) m["hovered"] = true;
+
           markers.forEach((marker) => {
             marker["hovered"] = false;
+            marker["clusterHovered"] = false;
             toggleOverlay(false, marker);
           });
 
