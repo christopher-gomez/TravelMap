@@ -1,7 +1,6 @@
 import * as React from "react";
-import { Global } from "@emotion/react";
-import { Drawer, IconButton } from "@mui/material";
-import ArrowBackIos from "@mui/icons-material/ArrowBackIos";
+import { Drawer } from "@mui/material";
+import { isElementOverflowing } from "./Utils";
 
 export default function StandardDrawer({
   open,
@@ -44,46 +43,60 @@ export default function StandardDrawer({
     }
   };
 
+  const paperRef = React.useRef(null);
+
+  const [contentHovered, setContentHovered] = React.useState(false);
+
   return (
     <React.Fragment>
       {open && (
         <Drawer
+          onPointerOver={(e) => {
+            if (!e.target) return;
+
+            // this needs to be a ref to the child Paper element
+            if (paperRef.current && isElementOverflowing(paperRef.current))
+              setContentHovered(true);
+          }}
+          onPointerOut={() => setContentHovered(false)}
           sx={{
             pointerEvents: "none",
             "> .MuiPaper-root": {
               pointerEvents: "all",
-              overflowY: "auto", // Set overflow to hidden to establish a block formatting context
+              overflowY: contentHovered ? "auto" : "hidden",
               display: "flex", // Make this a flex container
               flexDirection: "column", // Stack children vertically
               // borderRadius: "0em 1em 0em 0em",
               padding: "0",
+              pr: contentHovered ? "-.5em" : 0, // Reserve space for scrollbar
               minWidth: "420px",
               maxWidth: "420px",
               height: "100%", // Set the height to 100% of the viewport
               position: "relative",
-              // scrollbarWidth: "thin",
-              // scrollbarColor: "#c1c1c1 #f0f0f0",
               "&::-webkit-scrollbar": {
                 width: "0.5em",
                 height: "0.5em",
+                position: "absolute",
               },
               "&::-webkit-scrollbar-track": {
-                background: "#f0f0f0 !important",
-                borderRadius: "10px",
+                background: "transparent !important",
+                borderRadius: "20px",
+                position: "absolute",
               },
               "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "#c1c1c1 !important",
-                borderRadius: "10px",
+                backgroundColor: "#708090 !important",
+                borderRadius: "20px",
                 backgroundClip: "content-box",
                 border: "2px solid transparent",
+                position: "absolute",
               },
-              ...paperSx
+              ...paperSx,
             },
             ...sx,
           }}
           variant={variant ? variant : "persistent"}
           anchor={anchor ? anchor : "left"}
-          PaperProps={{ style: { zIndex: 9999 } }}
+          PaperProps={{ style: { zIndex: 9999 }, ref: paperRef }}
           open={drawerOpen}
           onClose={toggleDrawer(false)}
           onOpen={() => {

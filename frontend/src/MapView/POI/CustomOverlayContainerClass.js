@@ -124,3 +124,106 @@ export default class CustomOverlayContainerFactory {
     this.class = CustomOverlay;
   }
 }
+
+export class CustomVignetteOverlayFactory {
+  constructor(maps) {
+    class VignetteOverlay extends maps.OverlayView {
+      constructor(bounds, map, labelOverlay) {
+        super();
+        this.bounds = bounds;
+        this.map = map;
+        this.div = null;
+        this.labelOverlay = labelOverlay;
+
+        this.setMap(map);
+      }
+
+      onAdd() {
+        const div = document.createElement("div");
+        div.style.borderStyle = "none";
+        div.style.borderWidth = "0px";
+        div.style.position = "absolute";
+        div.style.zIndex = 9999 + 1;
+
+        div.id = "vignette-overlay";
+
+        // Create the dark overlay covering the entire map
+        const darkOverlay = document.createElement("div");
+        darkOverlay.style.width = "100%";
+        darkOverlay.style.height = "100%";
+        darkOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        darkOverlay.style.position = "absolute";
+        darkOverlay.style.top = "0";
+        darkOverlay.style.left = "0";
+        darkOverlay.style.pointerEvents = "none";
+
+        // Create the transparent window overlay
+        const windowOverlay = document.createElement("div");
+        windowOverlay.style.position = "absolute";
+        windowOverlay.style.background = "transparent";
+        windowOverlay.style.pointerEvents = "none";
+        windowOverlay.style.borderRadius = "50%";
+
+        div.appendChild(darkOverlay);
+        div.appendChild(windowOverlay);
+        this.div = div;
+        this.windowOverlay = windowOverlay;
+
+        const panes = this.getPanes();
+        panes.overlayLayer.appendChild(div);
+
+        this.draw();
+      }
+
+      draw() {
+        const overlayProjection = this.getProjection();
+        let sw = overlayProjection.fromLatLngToDivPixel(
+          this.bounds.getSouthWest()
+        );
+        let ne = overlayProjection.fromLatLngToDivPixel(
+          this.bounds.getNorthEast()
+        );
+
+        const padding = 100; // Padding in pixels
+        sw.x -= padding;
+        sw.y += padding;
+        ne.x += padding;
+        ne.y -= padding;
+
+        // Calculate the required width to fit the label overlay
+        let requiredWidth = ne.x - sw.x;
+        let requiredHeight = sw.y - ne.y;
+        if (this.labelOverlay && this.labelOverlay.div) {
+          const labelWidth = this.labelOverlay.div.children[0].clientWidth;
+          const labelHeight = this.labelOverlay.div.children[0].clientHeight;
+          if (requiredWidth < labelWidth) {
+            requiredWidth = labelWidth + padding;
+          }
+          if (requiredHeight < labelHeight) {
+            requiredHeight = labelHeight + padding;
+          }
+        }
+        const requiredSize = Math.max(requiredWidth, requiredHeight);
+
+        const windowOverlay = this.windowOverlay;
+        const centerX = (sw.x + ne.x) / 2;
+        const centerY = (sw.y + ne.y) / 2;
+
+        windowOverlay.style.left = centerX - requiredSize  / 2 + "px";
+        windowOverlay.style.top = centerY - requiredSize  / 2 + "px";
+        windowOverlay.style.width = requiredSize  + "px";
+        windowOverlay.style.height = requiredSize  + "px";
+        windowOverlay.style.boxShadow = `0 0 0 9999px rgba(0, 0, 0, 0.8)`;
+      }
+
+      onRemove() {
+        if (this.div) {
+          this.div.parentNode.removeChild(this.div);
+          this.div = null;
+        }
+      }
+    }
+
+    this.class = VignetteOverlay;
+  }
+}

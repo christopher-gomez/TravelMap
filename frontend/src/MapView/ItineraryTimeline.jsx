@@ -5,6 +5,7 @@ import {
   ArrowForward,
   ArrowForwardIos,
   Cancel,
+  Close,
   Delete,
   ExpandMore,
   ForkLeft,
@@ -33,6 +34,7 @@ import {
   createMarkersFromPOIs,
   findNearbyMarkers,
   findPlacesOfInterest,
+  isElementOverflowing,
 } from "../Util/Utils";
 import InputSlider from "../Util/InputSlider";
 import { ChipSelectMenu } from "../Util/MultipleSelect";
@@ -97,6 +99,7 @@ export default function ItineraryTimeline({
   englishDate,
   googleAccount,
   setLoginPopupOpen,
+  onSetSuggesting,
 }) {
   const [timelineOpen, setTimelineOpen] = useState(true);
 
@@ -171,6 +174,8 @@ export default function ItineraryTimeline({
         const final = [...nearbyMarkers, ...markers];
         if (final.length === 0) {
           setNoLocationsNearby(true);
+        } else {
+          setNoLocationsNearby(false);
         }
 
         setSuggestedActivities(final);
@@ -216,6 +221,8 @@ export default function ItineraryTimeline({
     if (suggesting) {
       suggestNearby();
     }
+
+    if (onSetSuggesting) onSetSuggesting(suggesting);
   }, [suggesting]);
 
   useEffect(() => {
@@ -332,6 +339,33 @@ export default function ItineraryTimeline({
           driveDuration += leg.duration.value;
           driveDistance += leg.distance.value;
         });
+
+        const routePath = result.routes[0].overview_path;
+        const arrowSymbol = {
+          path: mapsService.SymbolPath.FORWARD_CLOSED_ARROW,
+          strokeColor: "#ffee00",
+          fillColor: "#ffee00",
+          fillOpacity: 1,
+          scale: 3,
+          zIndex: 999,
+        };
+
+        const polyline = new mapsService.Polyline({
+          path: routePath,
+          strokeColor: "#FF0000",
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          icons: [
+            {
+              icon: arrowSymbol,
+              offset: "100%",
+              repeat: "100px",
+            },
+          ],
+          zIndex: 998,
+        });
+
+        polyline.setMap(map);
 
         setRouteDriveTime(secondsToTime(driveDuration));
         setRouteDriveDistance(metersToMiles(driveDistance));
@@ -501,9 +535,29 @@ export default function ItineraryTimeline({
                           WebkitUserSelect: "none",
                           WebkitTouchCallout: "none",
                           display: "inline-flex",
-                          paddingLeft: "16px",
                         }}
                       >
+                        <div
+                          style={{
+                            zIndex: 99999 + 2, // Ensure this is higher than the box's z-index
+                          }}
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              let newFilters = markerPropertyFilters.filter(
+                                (filter) => {
+                                  return (
+                                    filter.property !== FILTER_PROPERTIES.day
+                                  );
+                                }
+                              );
+                              setMarkerPropertyFilters(newFilters);
+                            }}
+                          >
+                            <Close />
+                          </IconButton>
+                        </div>
                         Day {currentDayFilter}
                         <div style={{ display: "flex", placeItems: "center" }}>
                           <IconButton
@@ -639,26 +693,30 @@ export default function ItineraryTimeline({
                   </>
                 )}
                 <Box
-                  onPointerOver={() => setContentHovered(true)}
+                  onPointerOver={(e) => {
+                    if (!e.target) return;
+
+                    if (isElementOverflowing(e.target)) setContentHovered(true);
+                  }}
                   onPointerOut={() => setContentHovered(false)}
                   sx={{
-                    pr: contentHovered ? "-.85em" : ".85em", // Reserve space for scrollbar
+                    pr: contentHovered ? "-.5em" : ".5em", // Reserve space for scrollbar
                     flex: "1 1 auto",
                     overflowY: contentHovered ? "auto" : "hidden",
                     boxSizing: "border-box",
                     "&::-webkit-scrollbar": {
-                      width: "0.75em",
-                      height: "0.85em",
+                      width: "0.5em",
+                      height: "0.5em",
                       position: "absolute",
                     },
                     "&::-webkit-scrollbar-track": {
-                      background: "#f0f0f0 !important",
-                      borderRadius: "10px",
+                      background: "transparent !important",
+                      borderRadius: "20px",
                       position: "absolute",
                     },
                     "&::-webkit-scrollbar-thumb": {
-                      backgroundColor: "#c1c1c1 !important",
-                      borderRadius: "10px",
+                      backgroundColor: "#708090 !important",
+                      borderRadius: "20px",
                       backgroundClip: "content-box",
                       border: "2px solid transparent",
                       position: "absolute",
@@ -765,7 +823,7 @@ export default function ItineraryTimeline({
                     WebkitTouchCallout: "none",
                   }}
                 >
-                  Activity Suggestions
+                  Nearby Activity Suggestions
                   <IconButton
                     size="small"
                     onClick={() => setSuggesting(false)}
@@ -949,7 +1007,11 @@ export default function ItineraryTimeline({
               </Box>
 
               <Box
-                onPointerOver={() => setContentHovered(true)}
+                onPointerOver={(e) => {
+                  if (!e.target) return;
+
+                  if (isElementOverflowing(e.target)) setContentHovered(true);
+                }}
                 onPointerOut={() => setContentHovered(false)}
                 sx={{
                   display: "flex",
@@ -957,23 +1019,26 @@ export default function ItineraryTimeline({
                   // placeContent: "center",
                   placeItems: "center",
                   pl: 1,
-                  pr: contentHovered ? "-.85em" : ".85em", // Reserve space for scrollbar
+                  pr: contentHovered ? "-.5em" : ".5em", // Reserve space for scrollbar
                   flex: "1 1 auto",
                   boxSizing: "border-box",
                   overflowY: contentHovered ? "auto" : "hidden",
                   "&::-webkit-scrollbar": {
-                    width: "0.75em",
-                    height: "0.85em",
+                    width: "0.5em",
+                    height: "0.5em",
+                    position: "absolute",
                   },
                   "&::-webkit-scrollbar-track": {
-                    background: "#f0f0f0 !important",
-                    borderRadius: "10px",
+                    background: "transparent !important",
+                    borderRadius: "20px",
+                    position: "absolute",
                   },
                   "&::-webkit-scrollbar-thumb": {
-                    backgroundColor: "#c1c1c1 !important",
-                    borderRadius: "10px",
+                    backgroundColor: "#708090 !important",
+                    borderRadius: "20px",
                     backgroundClip: "content-box",
                     border: "2px solid transparent",
+                    position: "absolute",
                   },
                 }}
               >
@@ -1034,7 +1099,7 @@ export default function ItineraryTimeline({
                 )}
                 {(suggestedActivities.length === 0 || fetchingNearby) &&
                   !noLocationsNearby && <CircularProgress sx={{ m: 2 }} />}
-                {noLocationsNearby && (
+                {suggestedActivities.length === 0 && noLocationsNearby && (
                   <Box sx={{ p: 1 }}>
                     <Typography
                       variant="subtitle1"

@@ -93,7 +93,9 @@ const DateComponent = ({
 
   return (
     <>
-      {(day || date) && !settingDate && (
+      {
+      // (day || date) && 
+      !settingDate && (
         <Box
           style={{
             display: "inline-flex",
@@ -150,6 +152,7 @@ const DateComponent = ({
               )}
             </span>
           )}
+          {!date && <span className="poi-date row">No date set yet</span>}
         </Box>
       )}
       {canEdit && !date && !settingDate && (
@@ -636,6 +639,7 @@ export const POIDetails = ({
   onConfirmDelete,
   onActivityMouseOver,
   onActivityMouseOut,
+  canEdit,
 }) => {
   const [curImageIndex, setCurImageIndex] = useState(0);
 
@@ -672,7 +676,7 @@ export const POIDetails = ({
   }, [imageLoading]);
 
   useEffect(() => {
-    if (marker) {
+    if (marker && canEdit) {
       setDate(marker.date);
       setDay(marker.day);
       setTitle(marker.info);
@@ -807,7 +811,7 @@ export const POIDetails = ({
             position: "relative",
           }}
         >
-          {marker && !marker.isPlacesPOI && (
+          {canEdit && marker && !marker.isPlacesPOI && (
             <IconButton
               sx={{ position: "absolute", left: 0, ml: "-32px" }}
               onClick={() => setConfirmingDelete(true)}
@@ -831,7 +835,10 @@ export const POIDetails = ({
             googleAccount={googleAccount}
             setLoginPopupOpen={setLoginPopupOpen}
             canEdit={
-              (marker && marker.iconType && marker.iconType === "emoji") ||
+              (canEdit &&
+                marker &&
+                marker.iconType &&
+                marker.iconType === "emoji") ||
               (marker && !marker.icon)
             }
           />
@@ -863,7 +870,10 @@ export const POIDetails = ({
           }}
           onEditingTitle={(editing) => setIsEditingTitle(editing)}
           canEdit={
-            marker !== undefined && marker !== null && !marker.isPlacesPOI
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
           }
         />
         {address && (
@@ -886,7 +896,7 @@ export const POIDetails = ({
             if (!date.start && !date.end) {
               // console.log("date has no start or end");
               if (_date && (_date.start !== null || _date.end !== null)) {
-                if (marker) {
+                if (canEdit && marker) {
                   marker["date"] = date;
                   marker["day"] = null;
                 }
@@ -911,7 +921,7 @@ export const POIDetails = ({
 
             const day = calculateDay(date);
 
-            if (marker) {
+            if (canEdit && marker) {
               marker["date"] = date;
               marker["day"] = day;
             }
@@ -923,19 +933,29 @@ export const POIDetails = ({
           }}
           isEditingTitle={isEditingTitle}
           canEdit={
-            marker !== undefined && marker !== null && !marker.isPlacesPOI
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
           }
           currentDayFilter={currentDayFilter}
           allMarkers={allMarkers}
           shouldShow={
             (_date !== null && _date !== undefined) ||
-            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+            (
+              // canEdit &&
+              marker !== undefined &&
+              marker !== null &&
+              !marker.isPlacesPOI)
           }
         />
         <Time
           time={_time}
           canEdit={
-            marker !== undefined && marker !== null && !marker.isPlacesPOI
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
           }
           googleAccount={googleAccount}
           setLoginPopupOpen={setLoginPopupOpen}
@@ -943,16 +963,19 @@ export const POIDetails = ({
           onUpdateTime={(time) => {
             if (time === _time) return;
 
-            if (marker) marker["time"] = time;
+            if (canEdit && marker) marker["time"] = time;
             setTime(time);
             if (onTimeUpdated) onTimeUpdated(time);
           }}
           shouldShow={
             (_time !== null && _time !== undefined) ||
-            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+            (canEdit &&
+              marker !== undefined &&
+              marker !== null &&
+              !marker.isPlacesPOI)
           }
         />
-        {marker && (
+        {canEdit && marker && (
           <a
             href={
               "https://www.google.com/search?q=" +
@@ -971,7 +994,7 @@ export const POIDetails = ({
           onTagsUpdated={(tags) => {
             if (tags === _tags) return;
 
-            if (marker) marker["tags"] = tags;
+            if (canEdit && marker) marker["tags"] = tags;
             setTags(tags);
 
             if (onTagsUpdated) onTagsUpdated(tags);
@@ -979,11 +1002,17 @@ export const POIDetails = ({
           googleAccount={googleAccount}
           setLoginPopupOpen={setLoginPopupOpen}
           canEdit={
-            marker !== undefined && marker !== null && !marker.isPlacesPOI
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
           }
           shouldShow={
             (tags !== null && tags !== undefined) ||
-            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+            (canEdit &&
+              marker !== undefined &&
+              marker !== null &&
+              !marker.isPlacesPOI)
           }
         />
 

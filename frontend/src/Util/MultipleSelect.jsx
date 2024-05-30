@@ -290,7 +290,7 @@ export function ChipSelectMenu({
           labelId="demo-multiple-chip-label"
           id="demo-multiple-chip"
           multiple={multiple}
-          value={value ?? personName}
+          value={value ? Array.isArray(value) && value.length > 0 ? value : "": ""}
           onChange={handleChange}
           open={open}
           onClose={() => setOpen(false)}

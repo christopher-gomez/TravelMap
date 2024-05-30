@@ -213,7 +213,6 @@ export function findPlacesOfInterest(
   filterOutNonLatinNames = true,
   googleAccount = null
 ) {
-
   if (!googleAccount) {
     callback([]);
     return;
@@ -443,4 +442,71 @@ export function createEmojiIcon(emoji, callback) {
     canvas.parentNode.removeChild(canvas);
   }
   callback(dataUrl);
+}
+
+export function isElementOverflowing(element) {
+  return (
+    element.scrollHeight > element.clientHeight ||
+    element.scrollWidth > element.clientWidth
+  );
+}
+
+export function objArraysEqual(arr1, arr2) {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+
+  const sortedArr1 = [...arr1].map((obj) => JSON.stringify(obj)).sort();
+  const sortedArr2 = [...arr2].map((obj) => JSON.stringify(obj)).sort();
+
+  for (let i = 0; i < sortedArr1.length; i++) {
+    if (sortedArr1[i] !== sortedArr2[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function arraysEqual(arr1, arr2) {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+
+  const sortedArr1 = [...arr1].sort();
+  const sortedArr2 = [...arr2].sort();
+
+  for (let i = 0; i < sortedArr1.length; i++) {
+    if (sortedArr1[i] !== sortedArr2[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function deepEqual(obj1, obj2) {
+  if (obj1 === obj2) {
+    return true;
+  }
+
+  if (typeof obj1 !== "object" || typeof obj2 !== "object") {
+    return false;
+  }
+
+  if (Object.keys(obj1).length !== Object.keys(obj2).length) {
+    return false;
+  }
+
+  for (const key in obj1) {
+    if (!(key in obj2)) {
+      return false;
+    }
+
+    if (!deepEqual(obj1[key], obj2[key])) {
+      return false;
+    }
+  }
+
+  return true;
 }

@@ -2,14 +2,19 @@ import * as React from "react";
 import { styled, alpha } from "@mui/material/styles";
 import InputBase from "@mui/material/InputBase";
 import FilterAlt from "@mui/icons-material/FilterAlt";
-import { IconButton, Popper, TextField, Typography } from "@mui/material";
+import { Box, IconButton, Popper, TextField, Typography } from "@mui/material";
 import "./SearchBar.css";
 import Autocomplete from "@mui/material/Autocomplete";
 import parse from "autosuggest-highlight/parse";
 import match from "autosuggest-highlight/match";
 import ClearIcon from "@mui/icons-material/Clear";
 import { Global } from "@emotion/react";
-import { LocationSearching } from "@mui/icons-material";
+import {
+  ArrowBack,
+  ArrowForward,
+  LocationSearching,
+} from "@mui/icons-material";
+import { useStackNavigation } from "../../Util/StackNavigation";
 
 const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
   position: "relative",
@@ -17,7 +22,7 @@ const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
   border:
     "5px solid #ffee00 !important" /* Gold border for a touch of vibrancy */,
   borderBottom: isFocused
-    ? "0px solid transparent !important"
+    ? "5px solid transparent !important"
     : "5px solid #ffee00 !important" /* Gold border for a touch of vibrancy */,
   backgroundColor: isFocused
     ? alpha(theme.palette.common.white, 1)
@@ -52,9 +57,9 @@ const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
 }));
 
 const SearchIconWrapper = styled("div")(({ theme }) => ({
-  padding: theme.spacing(0, 2),
+  padding: theme.spacing(0),
   height: "100%",
-  position: "absolute",
+  // position: "absolute",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -76,10 +81,10 @@ const StyledInputBase = styled(TextField)(({ theme, isFocused }) => ({
   "& .MuiInputBase-root": {
     fontFamily: `"Fredoka", sans-serif !important`,
     width: "100% !important",
-    padding: "2px 0px !important",
+    padding: "0px !important",
     borderRadius: isFocused ? "5em 5em 0 0" : "5em",
     // vertical padding + font size from searchIcon
-    paddingLeft: `calc(1em + ${theme.spacing(4)}) !important`,
+    // paddingLeft: `calc(1em + ${theme.spacing(4)}) !important`,
     transition: theme.transitions.create("width"),
     [theme.breakpoints.up("sm")]: {
       width: "12ch",
@@ -92,6 +97,7 @@ const StyledInputBase = styled(TextField)(({ theme, isFocused }) => ({
 
 const CustomPopper = styled(Popper)(({ theme }) => ({
   zIndex: "1 !important",
+  width: "102.65% !important",
   "& .MuiPaper-root": {
     zIndex: "1 !important",
     border:
@@ -99,15 +105,15 @@ const CustomPopper = styled(Popper)(({ theme }) => ({
     borderTop: "0px solid transparent !important",
     boxShadow: true ? "0px 2px 5px 0px rgba(0, 0, 0, 0.2)" : "none",
     borderRadius: "0 0 1em 1em",
-    width: "102.5%",
+    width: "100%",
     position: "absolute",
     left: "50%", // Position the left edge of the popper at the center of the parent
-    transform: "translateX(-50%)", // Shift the popper to the left by half its width
+    transform: "translateX(-56.45%)", // Shift the popper to the left by half its width
     fontFamily: `"Fredoka", sans-serif !important`,
     fontWeight: 500,
     "> .MuiAutocomplete-listbox": {
       "&::-webkit-scrollbar": {
-        "WebkitAppearance": "none",
+        WebkitAppearance: "none",
         width: "8px",
       },
       "&::-webkit-scrollbar-track": {
@@ -132,9 +138,20 @@ export default function SearchBar({
   onFilterClick,
   focusedMarker,
   focusedCluster,
+  cities,
+  tags,
+  times,
+  days,
 }) {
   const hint = React.useRef("");
   const [inputValue, setInputValue] = React.useState("");
+
+  const { back, forward, canGoBack, canGoForward, current, moveForwardToBack } =
+    useStackNavigation();
+
+  React.useEffect(() => {
+    console.log("nav state changed:", canGoBack, canGoForward, current);
+  }, [canGoBack, canGoForward, current]);
 
   React.useEffect(() => {
     if (focusedMarker) {
@@ -164,8 +181,35 @@ export default function SearchBar({
   // Map the unique markers to the options array
   const options = uniqueMarkers.map((option, i) => ({
     label: option.info,
-    id: i,
+    id: "marker-" + i,
   }));
+
+  if (cities)
+    options.push(
+      ...cities.map((city, i) => ({ label: "City: " + city, id: "city-" + i }))
+    );
+  if (tags)
+    options.push(
+      ...tags.map((tag, i) => ({ label: "Tag: " + tag, id: "tag-" + i }))
+    );
+  if (times)
+    options.push(
+      ...times.map((time, i) => ({ label: "Time: " + time, id: "time-" + i }))
+    );
+  if (days)
+    options.push(
+      ...days.map((day, i) => ({ label: "Day: " + day, id: "day-" + i }))
+    );
+
+  options.sort((a, b) => {
+    if (a.label < b.label) {
+      return -1;
+    }
+    if (a.label > b.label) {
+      return 1;
+    }
+    return 0;
+  });
 
   const [open, setOpen] = React.useState(false);
 
@@ -185,6 +229,7 @@ export default function SearchBar({
             } else if (inputValue) {
               const displayOptions = options.filter((option) =>
                 option.label
+                  .toString()
                   .toLowerCase()
                   .trim()
                   .includes(inputValue.toLowerCase().trim())
@@ -238,17 +283,22 @@ export default function SearchBar({
         }}
         onOpen={() => {
           setOpen(true);
-          setInputFocused(true);
+          // setInputFocused(true);
         }}
         onClose={() => {
           // setOpen(false);
         }}
-        componentsProps={{ popper: { open: open } }}
+        componentsProps={{
+          popper: {
+            open: open,
+          },
+        }}
         open={open}
         inputValue={inputValue}
         filterOptions={(options, state) => {
           const displayOptions = options.filter((option) =>
             option.label
+              .toString()
               .toLowerCase()
               .trim()
               .includes(state.inputValue.toLowerCase().trim())
@@ -302,23 +352,57 @@ export default function SearchBar({
           );
         }}
         renderInput={(params) => (
-          <>
+          <Box sx={{ display: "flex" }}>
             <SearchIconWrapper>
-              {/* Use IconButton for clickable icon */}
-              {/* <IconButton
-                sx={{ padding: 0 }}
-                onClick={(event) => {
-                  event.stopPropagation();
-
-                  if (onFilterClick) {
-                    onFilterClick(true);
-                  }
-                }}
-                aria-label="search filter"
-              >
-                <FilterAlt />
-              </IconButton> */}
-              <LocationSearching />
+              {(!canGoBack && !canGoForward) || inputFocused ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexFlow: "row",
+                    flex: "0 1 auto",
+                    placeItems: "center",
+                    placeContent: "center",
+                  }}
+                >
+                  <IconButton sx={{ pl: 2, pr: 1 }}>
+                    <LocationSearching />
+                  </IconButton>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexFlow: "row",
+                    flex: "0 1 auto",
+                    placeItems: "center",
+                    placeContent: "center",
+                  }}
+                >
+                  <IconButton
+                    disabled={!canGoBack}
+                    sx={{ pr: 0 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      back();
+                    }}
+                  >
+                    <ArrowBack />
+                  </IconButton>
+                  <IconButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      forward();
+                    }}
+                    disabled={!canGoForward}
+                    sx={{
+                      pl: 0,
+                      pr: 0,
+                    }}
+                  >
+                    <ArrowForward />
+                  </IconButton>
+                </Box>
+              )}
             </SearchIconWrapper>
             <Typography
               sx={{
@@ -332,6 +416,7 @@ export default function SearchBar({
               {hint.current}
             </Typography>
             <StyledInputBase
+              sx={{ flex: "1 1 auto" }}
               {...params}
               onFocus={() => {
                 setInputFocused(true);
@@ -350,6 +435,7 @@ export default function SearchBar({
                 // Find the matching option, preserving original option's casing.
                 const matchingOption = options.find((option) =>
                   option.label
+                    .toString()
                     .toLowerCase()
                     .startsWith(newValue.toLowerCase().trim())
                 );
@@ -376,6 +462,8 @@ export default function SearchBar({
                       if (onSearch) {
                         onSearch("");
                       }
+
+                      moveForwardToBack();
                     }}
                     aria-label="clear input"
                     size="small"
@@ -387,7 +475,7 @@ export default function SearchBar({
                 ) : null,
               }}
             />
-          </>
+          </Box>
         )}
         disablePortal
       />

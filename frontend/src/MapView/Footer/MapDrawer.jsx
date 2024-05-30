@@ -35,7 +35,7 @@ export default function MapDrawer({
   onConfirmDelete,
   onActivityMouseOver,
   onActivityMouseOut,
-  getPlacePhotos
+  getPlacePhotos,
 }) {
   let title =
     focusedCluster === null && focusedMarker === null
@@ -120,11 +120,14 @@ export default function MapDrawer({
       onNewActivity={onNewActivity}
       onNewEmojiIconSet={onNewEmojiIconSet}
       onConfirmDelete={onConfirmDelete}
+      canEdit={true}
     />
   ) : focusedCluster ? (
     focusedCluster.markers.map((m, i) => (
       <>
         <POIDetails
+          marker={m}
+          canEdit={false}
           icon={m.icon}
           image={m.photo}
           getPlacePhotos={getPlacePhotos}

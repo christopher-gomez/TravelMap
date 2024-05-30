@@ -62,6 +62,10 @@ export default function AppHeader({
                 onFilterClick={(open) => setFiltersOpen(open)}
                 focusedCluster={focusedCluster}
                 focusedMarker={focusedMarker}
+                cities={allCities}
+                tags={allTags}
+                days={markerDays}
+                times={allTimes}
               />
             </Grid>
             {allTags.length > 0 && markerDays.length > 0 && (
