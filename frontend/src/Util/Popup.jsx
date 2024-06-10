@@ -68,7 +68,7 @@ export default function Popup({
       {actions && (
         <DialogActions>
           {Array.isArray(actions)
-            ? actions.map((action, i) => action)
+            ? actions.map((action, i) => React.cloneElement(action, { key: 'popup-action'+i }))
             : actions}
         </DialogActions>
       )}

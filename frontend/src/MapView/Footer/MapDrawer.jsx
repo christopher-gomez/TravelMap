@@ -122,9 +122,9 @@ export default function MapDrawer({
       onConfirmDelete={onConfirmDelete}
       canEdit={true}
     />
-  ) : focusedCluster ? (
+  ) : focusedCluster && focusedCluster.markers ? (
     focusedCluster.markers.map((m, i) => (
-      <>
+      <div key={"drawer-location-" + i}>
         <POIDetails
           marker={m}
           canEdit={false}
@@ -149,7 +149,7 @@ export default function MapDrawer({
         {i !== focusedCluster.markers.length - 1 && (
           <hr style={{ color: "black", width: "100%" }} />
         )}
-      </>
+      </div>
     ))
   ) : null;
 

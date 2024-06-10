@@ -10,6 +10,7 @@ export default function ToolTipSpeedDial({
   icon,
   position = { bottom: 16, left: 16 },
   tooltip,
+  direction = "up",
   ...others
 }) {
   const [open, setOpen] = React.useState(false);
@@ -26,6 +27,7 @@ export default function ToolTipSpeedDial({
       onClose={handleClose}
       onOpen={handleOpen}
       open={open}
+      direction={direction}
       {...others}
     >
       {actions !== undefined &&

@@ -31,6 +31,10 @@ export default function AppFooter({
   // onTimeUpdated,
   // currentDayFilter,
   onRecenterMap,
+  setShouldVignette,
+  shouldVignette,
+  shouldKeepFocusCentered,
+  setShouldKeepFocusCentered,
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -48,10 +52,10 @@ export default function AppFooter({
     <>
       <ToolTipSpeedDial
         icon={<GpsFixed />}
-        position={{ bottom: 16 + drawerHeight, left: 16 }}
-        tooltip={{title: "Recenter Map", placement: "right"}}
+        // position={{ bottom: 16 + drawerHeight, left: 16 }}
+        tooltip={{ title: "Recenter Map", placement: "right" }}
         onClick={() => {
-          if(onRecenterMap) onRecenterMap();
+          if (onRecenterMap) onRecenterMap();
         }}
       />
       <MapFAB
@@ -66,6 +70,10 @@ export default function AppFooter({
         setMapLocked={setMapLocked}
         googleAccount={googleAccount}
         setErrorPopupOpen={setErrorPopupOpen}
+        setShouldVignette={setShouldVignette}
+        shouldVignette={shouldVignette}
+        shouldKeepFocusCentered={shouldKeepFocusCentered}
+        setShouldKeepFocusCentered={setShouldKeepFocusCentered}
       />
       {/* <MapDrawer
         onHeightChange={(height, open) => {

@@ -486,27 +486,38 @@ export function arraysEqual(arr1, arr2) {
 }
 
 export function deepEqual(obj1, obj2) {
-  if (obj1 === obj2) {
+  const seen = new WeakMap();
+
+  function compare(val1, val2) {
+    if (val1 === val2) {
+      return true;
+    }
+
+    if (typeof val1 !== "object" || val1 === null || typeof val2 !== "object" || val2 === null) {
+      return false;
+    }
+
+    if (seen.has(val1)) {
+      return seen.get(val1) === val2;
+    }
+
+    seen.set(val1, val2);
+
+    const keys1 = Object.keys(val1);
+    const keys2 = Object.keys(val2);
+
+    if (keys1.length !== keys2.length) {
+      return false;
+    }
+
+    for (let i = 0; i < keys1.length; i++) {
+      if (!Object.prototype.hasOwnProperty.call(val2, keys1[i]) || !compare(val1[keys1[i]], val2[keys1[i]])) {
+        return false;
+      }
+    }
+
     return true;
   }
 
-  if (typeof obj1 !== "object" || typeof obj2 !== "object") {
-    return false;
-  }
-
-  if (Object.keys(obj1).length !== Object.keys(obj2).length) {
-    return false;
-  }
-
-  for (const key in obj1) {
-    if (!(key in obj2)) {
-      return false;
-    }
-
-    if (!deepEqual(obj1[key], obj2[key])) {
-      return false;
-    }
-  }
-
-  return true;
+  return compare(obj1, obj2);
 }

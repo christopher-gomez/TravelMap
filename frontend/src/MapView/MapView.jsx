@@ -65,6 +65,7 @@ const MapView = () => {
   const [fetchingKey, setFetchingKey] = useState(false);
 
   const [itineraryData, setItineraryData] = useState(null);
+  const [fetchingData, setFetchingData] = useState(false);
 
   useEffect(() => {
     const fetchAPIKey = async () => {
@@ -79,6 +80,10 @@ const MapView = () => {
     };
 
     const fetchItineraryData = async (startCursor) => {
+      if (fetchingData) return;
+
+      setFetchingData(true);
+
       let results = [];
       let hasMore = true;
       let cursor = startCursor;
@@ -95,6 +100,7 @@ const MapView = () => {
       }
 
       setItineraryData(results);
+      setFetchingData(false);
     };
 
     if (!fetchedAPIKey) fetchAPIKey();
@@ -289,8 +295,6 @@ const MapView = () => {
     return places;
   }
 
-  function getMarkerIcon(marker) {}
-
   function getMarkerOverlayKey(marker, isCluster = false) {
     let cluster = marker;
     if (isCluster) {
@@ -403,26 +407,56 @@ const MapView = () => {
     }
   }, [itineraryData, map, maps]);
 
+  const canAdjustMapCenter = useRef(false);
+
   function calculateRealCenter() {
+    if (!mapRef.current) return null;
+
+    const boundsAndCenter = calculateMapCenterBounds();
+
+    if (!boundsAndCenter) return mapRef.current.getCenter();
+
+    let { center } = boundsAndCenter;
+
+    // if (!shouldKeepFocusCenteredRef.current)
+    //   center = mapRef.current.getCenter();
+    console.groupCollapsed("calculateRealCenter()");
+
     const rightMenu = document.getElementById("itinerary-menu");
-    if (!mapRef.current) return;
-
-    const bounds = mapRef.current.getBounds();
-    const center = mapRef.current.getCenter();
-
-    if (!bounds) return center;
+    const headerMenu = document.getElementById("header-menu");
+    const leftDrawer = document.getElementById("left-drawer");
 
     // Get the computed style of the right menu
     let rightMenuWidth = 0;
+    let headerMenuHeight = 0;
+    let leftDrawerWidth = 0;
+
     if (rightMenu) {
       const boundingRect = rightMenu.getBoundingClientRect();
-
+      // console.log("rightMenu boundingRect:", boundingRect);
+      // console.log("rightMenu boundingRect.right:", boundingRect.right);
+      // console.log("rightMenu boundingRect.left:", boundingRect.left);
+      // console.log("window.innerWidth:", window.innerWidth);
+      // console.log(
+      //   "boundingRect.right > 0 && boundingRect.left < window.innerWidth:",
+      //   boundingRect.right > 0 && boundingRect.left < window.innerWidth
+      // );
       // Check if the right menu is within the viewport
-      if (boundingRect.right > 0 && boundingRect.left < window.innerWidth) {
-        rightMenuWidth = boundingRect.width;
+      // if (boundingRect.right > 0 && boundingRect.left < window.innerWidth) {
+      if (timelineVisibleRef.current) {
+        rightMenuWidth = rightMenu.clientWidth;
       } else {
         rightMenuWidth = 20;
       }
+    }
+
+    if (headerMenu) {
+      const boundingRect = headerMenu.getBoundingClientRect();
+      headerMenuHeight = boundingRect.height;
+    }
+
+    if (leftDrawer) {
+      leftDrawerWidth = leftDrawer.clientWidth;
     }
 
     // Calculate the pixel offset
@@ -430,160 +464,277 @@ const MapView = () => {
     const worldCoordinateCenter = mapRef.current
       .getProjection()
       .fromLatLngToPoint(center);
-    const pixelOffset = rightMenuWidth / (256 * scale);
+    const pixelOffsetW =
+      Math.abs(rightMenuWidth - leftDrawerWidth) / (256 * scale);
+    const pixelOffsetH = headerMenuHeight / (256 * scale);
 
-    let sumX = 0;
-    let sumY = 0;
-    let count = 0;
-
-    // Include focusedMarker in the calculation if it exists
-    if (focusedMarkerRef.current) {
-      const worldCoordinateMarker = mapRef.current
-        .getProjection()
-        .fromLatLngToPoint(focusedMarkerRef.current.position);
-      sumX += worldCoordinateMarker.x;
-      sumY += worldCoordinateMarker.y;
-      count++;
-    }
-
-    // Include all markers in the focusedCluster if it exists
-    if (focusedClusterRef.current) {
-      focusedClusterRef.current.markers.forEach((marker) => {
-        const worldCoordinateMarker = mapRef.current
-          .getProjection()
-          .fromLatLngToPoint(marker.position);
-        sumX += worldCoordinateMarker.x;
-        sumY += worldCoordinateMarker.y;
-        count++;
-      });
-    }
-
-    // Include suggestedMarkers in the calculation if they exist
-    if (suggestedMarkersRef.current && suggestedMarkersRef.current.length > 0) {
-      suggestedMarkersRef.current.forEach((marker) => {
-        const worldCoordinateMarker = mapRef.current
-          .getProjection()
-          .fromLatLngToPoint(marker.position);
-        sumX += worldCoordinateMarker.x;
-        sumY += worldCoordinateMarker.y;
-        count++;
-      });
-    }
-
-    let newCenterX;
-    let newCenterY;
-
-    if (count > 0) {
-      const avgWorldCoordinateX = sumX / count;
-      const avgWorldCoordinateY = sumY / count;
-
-      newCenterX = avgWorldCoordinateX + pixelOffset;
-      newCenterY = avgWorldCoordinateY;
-    } else {
-      newCenterX = worldCoordinateCenter.x + pixelOffset;
-      newCenterY = worldCoordinateCenter.y;
-    }
+    let newCenterX = worldCoordinateCenter.x - pixelOffsetW;
+    let newCenterY = worldCoordinateCenter.y; // + pixelOffsetH;
 
     // Calculate the new center
     const newCenter = mapRef.current
       .getProjection()
       .fromPointToLatLng(new mapsRef.current.Point(newCenterX, newCenterY));
 
+    console.log("Center:", center);
+    console.log("New Center:", newCenter);
+    console.log(
+      "Pixel Offset W:",
+      pixelOffsetW,
+      "Pixel Offset H:",
+      pixelOffsetH
+    );
+    console.log(
+      "rightMenuWidth:",
+      rightMenuWidth,
+      "headerMenuHeight:",
+      headerMenuHeight,
+      "leftDrawerWidth:",
+      leftDrawerWidth
+    );
+    console.groupEnd();
+
+    // addDebuggingLine(center, newCenter); // Debugging line
+    // Debugging information
+    // console.log("World Coordinate Center:", worldCoordinateCenter);
+    // console.log("Pixel Offset:", pixelOffset);
+    // console.log("New Center X:", newCenterX, "New Center Y:", newCenterY);
+    // console.log("Calculated New Center:", newCenter);
+    // console.log("Bounds Center:", center);
+
     return newCenter;
   }
 
-  function adjustMapCenter() {
-    if (!mapRef.current) return;
+  const debuggingLine = useRef(null);
+  const originalCenterCircle = useRef(null);
+  const newCenterCircle = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (debuggingLine.current) {
+        debuggingLine.current.setMap(null);
+      }
+
+      if (originalCenterCircle.current) {
+        originalCenterCircle.current.setMap(null);
+      }
+
+      if (newCenterCircle.current) {
+        newCenterCircle.current.setMap(null);
+      }
+    };
+  }, []);
+
+  function addDebuggingLine(originalCenter, newCenter) {
+    if (!mapRef.current || !mapsRef.current) return;
+
+    // Remove the previous line if it exists
+    if (debuggingLine.current) {
+      debuggingLine.current.setMap(null);
+    }
+
+    if (originalCenterCircle.current) {
+      originalCenterCircle.current.setMap(null);
+    }
+
+    if (newCenterCircle.current) {
+      newCenterCircle.current.setMap(null);
+    }
+
+    // Create a new line
+    debuggingLine.current = new mapsRef.current.Polyline({
+      path: [originalCenter, newCenter],
+      geodesic: true,
+      strokeColor: "#FF0000",
+      strokeOpacity: 1.0,
+      strokeWeight: 2,
+    });
+
+    // Set the line on the map
+    debuggingLine.current.setMap(mapRef.current);
+
+    // Create a white circle at the original center
+    originalCenterCircle.current = new mapsRef.current.Circle({
+      strokeColor: "#FFFFFF",
+      strokeOpacity: 1.0,
+      strokeWeight: 2,
+      fillColor: "#FFFFFF",
+      fillOpacity: 1.0,
+      map: mapRef.current,
+      center: originalCenter,
+      radius: 2, // Radius in meters
+    });
+
+    // Create a green circle at the new center
+    newCenterCircle.current = new mapsRef.current.Circle({
+      strokeColor: "#00FF00",
+      strokeOpacity: 1.0,
+      strokeWeight: 2,
+      fillColor: "#00FF00",
+      fillOpacity: 1.0,
+      map: mapRef.current,
+      center: newCenter,
+      radius: 2, // Radius in meters
+    });
+  }
+
+  function adjustMapCenter(force = false) {
+    if (
+      (!canAdjustMapCenter.current && !force) ||
+      (!shouldKeepFocusCenteredRef.current && !force)
+    )
+      return;
+
+    const center = calculateRealCenter();
+    if (!center) return;
 
     console.groupCollapsed("adjustMapCenter()");
     console.trace();
     console.groupEnd();
-    mapRef.current.panTo(calculateRealCenter());
+
+    mapRef.current.panTo(center);
   }
+
+  const hasAddedIdle = useRef(false);
 
   useEffect(() => {
     mapRef.current = map;
 
     if (map) {
       map.addListener("bounds_changed", () => {
-        mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
-          const bounds = mapRef.current.getBounds();
-          let shouldAdjustCenter = false;
+        // console.groupCollapsed("bounds_changed");
+        // console.trace();
+        // console.groupEnd();
 
-          // Check if focused marker is out of bounds
-          if (focusedMarkerRef.current) {
-            const focusedMarkerPosition = focusedMarkerRef.current.position;
-            if (
-              (!suggestedMarkersRef.current ||
-                suggestedMarkersRef.current.length === 0) &&
-              (!bounds.contains(focusedMarkerPosition) ||
-                !mapRef.current.getCenter().equals(calculateRealCenter()))
-            ) {
-              shouldAdjustCenter = true;
+        if (!hasAddedIdle.current && shouldKeepFocusCenteredRef.current) {
+          hasAddedIdle.current = true;
+          mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
+            // console.log("bounds_changed -> idle");
+            const bounds = mapRef.current.getBounds();
+            let shouldAdjustCenter = false;
+            const realCenter = calculateRealCenter();
+
+            if (!realCenter) {
+              hasAddedIdle.current = false;
+              return;
             }
-          }
 
-          // Check if any markers within the focused cluster are out of bounds
-          if (focusedClusterRef.current) {
-            for (let marker of focusedClusterRef.current.markers) {
+            // Check if focused marker is out of bounds
+            if (focusedMarkerRef.current) {
+              const focusedMarkerPosition = focusedMarkerRef.current.position;
               if (
-                !bounds.contains(marker.position) ||
-                !mapRef.current.getCenter().equals(calculateRealCenter())
+                (!suggestedMarkersRef.current ||
+                  suggestedMarkersRef.current.length === 0) &&
+                (!bounds.contains(focusedMarkerPosition) ||
+                  !mapRef.current.getCenter().equals(realCenter))
               ) {
                 shouldAdjustCenter = true;
-                break;
               }
             }
-          }
 
-          // Check if any suggested markers are out of bounds
-          if (
-            suggestedMarkersRef.current &&
-            suggestedMarkersRef.current.length > 0
-          ) {
-            for (let marker of suggestedMarkersRef.current) {
-              if (
-                !bounds.contains(marker.position) ||
-                !mapRef.current.getCenter().equals(calculateRealCenter())
-              ) {
-                shouldAdjustCenter = true;
-                break;
+            // Check if any markers within the focused cluster are out of bounds
+            if (focusedClusterRef.current) {
+              for (let marker of focusedClusterRef.current.markers) {
+                if (
+                  !bounds.contains(marker.position) ||
+                  !mapRef.current.getCenter().equals(realCenter)
+                ) {
+                  shouldAdjustCenter = true;
+                  break;
+                }
               }
             }
-          }
 
-          if (shouldAdjustCenter) {
+            // Check if any suggested markers are out of bounds
+            // if (
+            //   suggestedMarkersRef.current &&
+            //   suggestedMarkersRef.current.length > 0
+            // ) {
+            //   for (let marker of suggestedMarkersRef.current) {
+            //     if (
+            //       !bounds.contains(marker.position) ||
+            //       !mapRef.current.getCenter().equals(realCenter)
+            //     ) {
+            //       shouldAdjustCenter = true;
+            //       break;
+            //     }
+            //   }
+            // }
+
             if (
-              focusedClusterRef.current ||
-              (suggestedMarkersRef.current &&
-                suggestedMarkersRef.current.length > 0)
+              isFilteringSingleDay.current &&
+              suggestedMarkersRef.current.length === 0 &&
+              !focusedMarkerRef.current &&
+              !focusedClusterRef.current
             ) {
-              const markerBounds = new mapsRef.current.LatLngBounds();
-              focusedClusterRef.current?.markers.forEach((m) =>
-                markerBounds.extend(m.position)
-              );
-              suggestedMarkersRef.current?.forEach((m) =>
-                markerBounds.extend(m.position)
-              );
-
-              if (
-                (focusedClusterRef.current &&
-                  focusedClusterRef.current.markers.some(
-                    (m) => !bounds.contains(m.position)
-                  )) ||
-                (suggestedMarkersRef.current &&
-                  suggestedMarkersRef.current.some(
-                    (m) => !bounds.contains(m.position)
-                  ))
-              )
-                mapRef.current.fitBounds(markerBounds);
-
-              adjustMapCenter();
-            } else {
-              adjustMapCenter();
+              for (let marker of renderedMarkersRef.current) {
+                if (
+                  !bounds.contains(marker.position) ||
+                  !mapRef.current.getCenter().equals(realCenter)
+                ) {
+                  shouldAdjustCenter = true;
+                  break;
+                }
+              }
             }
-          }
-        });
+            if (shouldAdjustCenter) {
+              if (
+                focusedClusterRef.current ||
+                // (suggestedMarkersRef.current &&
+                //   suggestedMarkersRef.current.length > 0)
+                //   ||
+                (isFilteringSingleDay.current &&
+                  suggestedMarkersRef.current.length === 0 &&
+                  !focusedMarkerRef.current &&
+                  !focusedClusterRef.current)
+              ) {
+                const markerBounds = new mapsRef.current.LatLngBounds();
+                focusedClusterRef.current?.markers.forEach((m) =>
+                  markerBounds.extend(m.position)
+                );
+                // suggestedMarkersRef.current?.forEach((m) =>
+                //   markerBounds.extend(m.position)
+                // );
+
+                if (
+                  isFilteringSingleDay.current &&
+                  suggestedMarkersRef.current.length === 0 &&
+                  !focusedMarkerRef.current &&
+                  !focusedClusterRef.current
+                ) {
+                  renderedMarkersRef.current
+                    .filter((m) => m.day)
+                    .forEach((m) => markerBounds.extend(m.position));
+                }
+
+                if (
+                  (focusedClusterRef.current &&
+                    focusedClusterRef.current.markers.some(
+                      (m) => !bounds.contains(m.position)
+                    )) ||
+                  // (suggestedMarkersRef.current &&
+                  //   suggestedMarkersRef.current.some(
+                  //     (m) => !bounds.contains(m.position)
+                  //   )) ||
+                  (isFilteringSingleDay.current &&
+                    !focusedMarkerRef.current &&
+                    !focusedClusterRef.current &&
+                    suggestedMarkersRef.current.length === 0 &&
+                    renderedMarkersRef.current
+                      .filter((m) => m.day)
+                      .some((m) => !bounds.contains(m.position)))
+                )
+                  mapRef.current.fitBounds(markerBounds);
+
+                adjustMapCenter();
+              } else {
+                adjustMapCenter();
+              }
+            }
+
+            hasAddedIdle.current = false;
+          });
+        }
       });
     }
 
@@ -604,14 +755,14 @@ const MapView = () => {
 
   const [markers, setMarkers] = useState([]);
   const markersRef = React.useRef(markers);
-  const [markerCluster, setMarkerCluster] = useState(undefined);
-  const markerClusterRef = React.useRef(markerCluster);
+  const [clusteredMarkersManager, setMarkerCluster] = useState(undefined);
+  const clusteredMarkersManagerRef = React.useRef(clusteredMarkersManager);
   const [currentZoom, setCurrentZoom] = useState(0);
   const currentZoomRef = React.useRef(currentZoom);
 
   useEffect(() => {
-    markerClusterRef.current = markerCluster;
-  }, [markerCluster]);
+    clusteredMarkersManagerRef.current = clusteredMarkersManager;
+  }, [clusteredMarkersManager]);
 
   const calculateDay = (activityDate) => {
     if (!activityDate) return null;
@@ -677,23 +828,68 @@ const MapView = () => {
   const [allTimes, setAllTimes] = useState([]);
   const [allCities, setAllCities] = useState([]);
   const [suggestedMarkers, setSuggestedMarkers] = useState([]);
+  const [suggestingFor, setSuggestingFor] = useState(null);
   const suggestedMarkersRef = React.useRef(suggestedMarkers);
 
   useEffect(() => {
     if (suggestedMarkers === suggestedMarkersRef.current) return;
 
+    // let shouldReRender = false;
+    // if (
+    //   suggestedMarkers.length === 0 &&
+    //   suggestedMarkersRef.current.length > 0
+    // ) {
+    //   shouldReRender = true;
+    //   suggestedMarkersRef.current.forEach((m) => {
+    //     m.overlay?.setMap(null);
+    //     m.setMap(null);
+
+    //     clusteredMarkersManager.clusters
+    //       .filter((c) => c.markers.includes(m))
+    //       .forEach((c) => {
+    //         c.marker.setMap(null);
+    //         c.marker.overlay?.setMap(null);
+    //       });
+    //   });
+    // }
+
     suggestedMarkersRef.current = suggestedMarkers;
 
     if (suggestedMarkers.length > 0) {
-      renderMarkers();
-      renderOverlays();
+      setSuggestingFor(focusedMarker);
+      const markers = [...suggestedMarkers];
+      if (focusedMarker) markers.push(focusedMarker);
+
+      onClusterClick({
+        marker: focusedMarker ? focusedMarker : null,
+        markers: markers,
+      });
+      // setFocusedCluster({
+      //   marker: focusedMarker ? focusedMarker : null,
+      //   markers: [...suggestedMarkers, focusedMarker],
+      // });
+
+      setSuggestedMarkers([]);
+      // return;
     }
+
+    // if (suggestedMarkers.length > 0 || shouldReRender) {
+    //   renderMarkers();
+    //   renderOverlays();
+    // }
   }, [suggestedMarkers]);
 
   const [markerPropertyFilters, setMarkerPropertyFilters] = useState([]);
   const markerPropertyFiltersRef = React.useRef(markerPropertyFilters);
 
+  const isFilteringSingleDay = React.useRef(false);
+
   const [markerInfoFilter, setMarkerInfoFilter] = useState(null);
+  const markerInfoFilterRef = React.useRef(markerInfoFilter);
+
+  useEffect(() => {
+    markerInfoFilterRef.current = markerInfoFilter;
+  }, [markerInfoFilter]);
 
   useEffect(() => {
     return () => {
@@ -705,6 +901,14 @@ const MapView = () => {
     if (markerPropertyFilters === markerPropertyFiltersRef.current) return;
 
     markerPropertyFiltersRef.current = markerPropertyFilters;
+
+    isFilteringSingleDay.current =
+      markerPropertyFiltersRef.current.filter(
+        (p) =>
+          p.property === FILTER_PROPERTIES.day &&
+          p.value.length === 1 &&
+          p.value[0] !== "All"
+      ).length > 0;
 
     let newDayFilter;
     if (
@@ -737,9 +941,10 @@ const MapView = () => {
       newDayFilter = null;
     }
 
+    setFocusedCluster(null);
+    setFocusedMarker(null);
+
     if (newDayFilter === currentDayFilter) {
-      setFocusedCluster(null);
-      setFocusedMarker(null);
       renderMarkers();
       renderOverlays();
     } else {
@@ -1017,9 +1222,9 @@ const MapView = () => {
       }
     });
 
-    if (markerClusterRef.current) {
-      markerClusterRef.current.clearMarkers();
-      markerClusterRef.current.addMarkers(_markers);
+    if (clusteredMarkersManagerRef.current) {
+      clusteredMarkersManagerRef.current.clearMarkers();
+      clusteredMarkersManagerRef.current.addMarkers(_markers);
     }
 
     setRenderedMarkers(_markers);
@@ -1034,26 +1239,95 @@ const MapView = () => {
           ? [focusedMarker, ...suggestedMarkers]
           : _markers
       );
-      firstRender.current = false;
+      // firstRender.current = false;
     }
     // }
   };
 
   const vignetteRef = useRef(null);
 
-  function smoothFitBounds(targetBounds, finalCenter, finalBounds) {
+  function smoothFitBounds(targetBounds, finalCenter, finalBounds, onComplete) {
+    console.groupCollapsed("smoothFitBounds()");
+    console.log("targetBounds:", targetBounds);
+    console.log("finalCenter:", finalCenter);
+    console.log("finalBounds:", finalBounds);
+    // console.trace();
+    console.groupEnd();
+
     map.fitBounds(targetBounds);
     maps.event.addListenerOnce(map, "bounds_changed", () => {
       if (finalCenter) {
         map.panTo(finalCenter);
+      } else {
+        if (onComplete) onComplete();
       }
 
       maps.event.addListenerOnce(map, "idle", () => {
         if (finalBounds) {
           map.fitBounds(finalBounds);
+          maps.event.addListenerOnce(map, "idle", () => {
+            if (onComplete) onComplete();
+          });
+        } else {
+          if (onComplete) onComplete();
         }
       });
     });
+  }
+
+  function calculateMapCenterBounds(markersToCenterOn = null) {
+    if (!mapRef.current || !mapsRef.current) return null;
+
+    const boundMarkers = markersToCenterOn
+      ? [...markersToCenterOn]
+      : focusedClusterRef.current
+      ? [...focusedClusterRef.current.markers, ...suggestedMarkersRef.current]
+      : focusedMarkerRef.current
+      ? [focusedMarkerRef.current, ...suggestedMarkersRef.current]
+      : markerInfoFilterRef.current
+      ? [
+          ...renderedMarkersRef.current.filter((m) => {
+            return m.info
+              .toLowerCase()
+              .includes(markerInfoFilterRef.current.toLowerCase());
+          }),
+          ...suggestedMarkersRef.current,
+        ]
+      : isFilteringSingleDay.current
+      ? [
+          ...renderedMarkersRef.current.filter((m) => m.day),
+          ...suggestedMarkersRef.current,
+        ]
+      : suggestedMarkersRef.current.length > 0
+      ? suggestedMarkersRef.current
+      : renderedMarkersRef.current;
+
+    let targetBoundMarkers = boundMarkers;
+
+    // if (
+    //   markerPropertyFilters.filter(
+    //     (f) =>
+    //       f.property === FILTER_PROPERTIES.day &&
+    //       f.value.length === 1 &&
+    //       f.value[0] !== "All"
+    //   ).length > 0 &&
+    //   suggestedMarkers.length > 0
+    // ) {
+    //   targetBoundMarkers = suggestedMarkers;
+    // }
+
+    var bounds = new maps.LatLngBounds();
+
+    // Extend the bounds to include each marker's position
+    for (const marker of targetBoundMarkers) {
+      bounds.extend(marker.position);
+    }
+
+    return {
+      bounds,
+      center: bounds.getCenter(),
+      boundMarkers: targetBoundMarkers,
+    };
   }
 
   function centerMap(
@@ -1062,84 +1336,123 @@ const MapView = () => {
     finalCenter,
     finalBounds
   ) {
-    if (!maps) return;
+    canAdjustMapCenter.current = false;
 
-    console.log("centerMap()");
-    if (vignetteRef.current) vignetteRef.current.setMap(null);
-    vignetteRef.current = null;
-    const boundMarkers = markersToCenterOn
-      ? [...markersToCenterOn]
-      : focusedCluster
-      ? [...focusedCluster.markers, ...suggestedMarkers]
-      : focusedMarker
-      ? [focusedMarker, ...suggestedMarkers]
-      : markerInfoFilter
-      ? [
-          ...renderedMarkers.filter((m) => {
-            return m.info
-              .toLowerCase()
-              .includes(markerInfoFilter.toLowerCase());
-          }),
-          ...suggestedMarkers,
-        ]
-      : suggestedMarkers.length > 0
-      ? suggestedMarkers
-      : renderedMarkers;
+    const boundsAndCenter = calculateMapCenterBounds(markersToCenterOn);
 
-    if (!boundMarkers || boundMarkers.length === 0) return;
-
-    var bounds = new maps.LatLngBounds();
-
-    // Extend the bounds to include each marker's position
-    for (const marker of boundMarkers) {
-      bounds.extend(marker.position);
+    if (!boundsAndCenter) {
+      canAdjustMapCenter.current = true;
+      return;
     }
+
+    const { bounds, center: boundsCenter, boundMarkers } = boundsAndCenter;
+
+    console.groupCollapsed("centerMap()");
+    console.trace();
+    console.groupEnd();
+
+    if (
+      focusedMarkerRef.current ||
+      suggestedMarkersRef.current.length > 0 ||
+      focusedClusterRef.current ||
+      isFilteringSingleDay.current
+    ) {
+      if (!vignetteRef.current && shouldVignetteRef.current)
+        vignetteRef.current = new vignetteFactoryRef.current.class(
+          finalBounds ? finalBounds : bounds,
+          mapRef.current,
+          focusedMarkerRef.current ? focusedMarkerRef.current.overlay : null
+        );
+      else if (vignetteRef.current && shouldVignetteRef.current) {
+        vignetteRef.current.updateAndRedraw(
+          finalBounds ? finalBounds : bounds,
+          focusedMarkerRef.current ? focusedMarkerRef.current.overlay : null,
+          mapRef.current
+        );
+      } else {
+        if (vignetteRef.current) {
+          vignetteRef.current.setMap(null);
+          vignetteRef.current = null;
+        }
+      }
+    }
+
+    // if (vignetteRef.current) vignetteRef.current.setMap(null);
+    // vignetteRef.current = null;
 
     function checkAndAdjustBounds() {
-      if (
-        fitToBounds ||
-        (focusedMarker && suggestedMarkers.length > 0) ||
-        !boundMarkers.every((marker) =>
-          map.getBounds().contains(marker.position)
-        ) ||
-        (markerPropertyFilters.filter(
-          (f) =>
-            f.property === FILTER_PROPERTIES.day &&
-            f.value.length === 1 &&
-            f.value[0] !== "All"
-        ).length > 0 &&
-          boundMarkers.length > 1)
-      ) {
-        setTimeout(() => {
-          smoothFitBounds(bounds, finalCenter, finalBounds); // Adjust the viewport if any marker is outside the current view
-        }, 250);
-      }
+      setTimeout(() => {
+        console.groupCollapsed("checkAndAdjustBounds()");
+        console.log("fitToBounds:", fitToBounds);
+        console.log("focusedMarkerRef.current:", focusedMarkerRef.current);
+        console.log(
+          "suggestedMarkersRef.current:",
+          suggestedMarkersRef.current
+        );
+        console.log(
+          "!boundMarkers.every((marker) => mapRef.current.getBounds().contains(marker.position))",
+          !boundMarkers.every((marker) =>
+            mapRef.current.getBounds().contains(marker.position)
+          )
+        );
+        console.log(
+          "isFilteringSingleDay.current:",
+          isFilteringSingleDay.current
+        );
+        console.groupEnd();
+        // console.log("checking and adjusting bounds");
+        if (
+          fitToBounds ||
+          (focusedMarkerRef.current &&
+            suggestedMarkersRef.current.length > 0) ||
+          (boundMarkers.length > 1 &&
+            !boundMarkers.every((marker) =>
+              mapRef.current.getBounds().contains(marker.position)
+            )) ||
+          (isFilteringSingleDay.current && boundMarkers.length > 1)
+        ) {
+          smoothFitBounds(bounds, finalCenter, finalBounds, () => {
+            if (!firstRender.current) canAdjustMapCenter.current = true;
+            else firstRender.current = false;
+          }); // Adjust the viewport if any marker is outside the current view
+        } else {
+          if (!firstRender.current) canAdjustMapCenter.current = true;
+          else firstRender.current = false;
 
-      if (
-        focusedMarker ||
-        suggestedMarkers.length > 0 ||
-        focusedCluster ||
-        markerPropertyFilters.filter(
-          (f) =>
-            f.property === FILTER_PROPERTIES.day &&
-            f.value.length === 1 &&
-            f.value[0] !== "All"
-        ).length > 0
-      ) {
-        setTimeout(() => {
-          vignetteRef.current = new vignetteFactoryRef.current.class(
-            finalBounds ? finalBounds : bounds,
-            map,
-            focusedMarker ? focusedMarker.overlay : null
-          );
-        }, 250);
-      }
+          // if (
+          //   focusedMarkerRef.current ||
+          //   suggestedMarkersRef.current.length > 0 ||
+          //   focusedClusterRef.current ||
+          //   isFilteringSingleDay.current
+          // ) {
+          //   if (!vignetteRef.current)
+          //     vignetteRef.current = new vignetteFactoryRef.current.class(
+          //       finalBounds ? finalBounds : bounds,
+          //       mapRef.current,
+          //       focusedMarkerRef.current
+          //         ? focusedMarkerRef.current.overlay
+          //         : null
+          //     );
+          //   else {
+          //     vignetteRef.current.updateAndRedraw(
+          //       finalBounds ? finalBounds : bounds,
+          //       focusedMarkerRef.current
+          //         ? focusedMarkerRef.current.overlay
+          //         : null
+          //     );
+          //   }
+          // }
+        }
+      }, 0);
     }
 
-    const boundsCenter = bounds.getCenter();
-    const mapCenter = map.getCenter();
+    const mapCenter = mapRef.current.getCenter();
 
-    if (!mapCenter.equals(boundsCenter) && !fitToBounds) {
+    if (
+      (shouldKeepFocusCenteredRef.current && !mapCenter.equals(boundsCenter)) ||
+      !mapRef.current.getBounds().contains(boundsCenter)
+    ) {
+      // console.log("panning to bounds center");
       map.panTo(boundsCenter);
 
       const listener = maps.event.addListenerOnce(map, "idle", () => {
@@ -1377,7 +1690,7 @@ const MapView = () => {
 
   function renderOverlays() {
     if (
-      !markerClusterRef.current ||
+      !clusteredMarkersManagerRef.current ||
       !clusterOverlaysRef.current ||
       !markersRef.current ||
       !mapRef.current
@@ -1385,7 +1698,7 @@ const MapView = () => {
       return;
 
     const clusteredMarkers = [];
-    markerClusterRef.current.clusters.forEach((cluster) => {
+    clusteredMarkersManagerRef.current.clusters.forEach((cluster) => {
       cluster.markers?.forEach((marker) => {
         if (marker !== focusedMarkerRef.current && !marker.hovered) {
           // toggleOverlay(false, marker);
@@ -1398,7 +1711,7 @@ const MapView = () => {
       clusterOverlaysRef.current
     ).filter(
       (x) =>
-        !markerClusterRef.current.clusters.some(
+        !clusteredMarkersManagerRef.current.clusters.some(
           (c) => getMarkerOverlayKey(c, true) === x
         )
     );
@@ -1408,7 +1721,7 @@ const MapView = () => {
       delete clusterOverlaysRef.current[key];
     });
 
-    markerClusterRef.current.clusters.forEach((cluster) => {
+    clusteredMarkersManagerRef.current.clusters.forEach((cluster) => {
       const isClusterHovered =
         cluster.marker.hovered || cluster.markers.some((m) => m.hovered);
       const isInFocusedCluster =
@@ -1425,7 +1738,9 @@ const MapView = () => {
       );
       const anyMarkerHovered =
         renderedMarkersRef.current.some((m) => m.hovered) ||
-        markerClusterRef.current.clusters.some((c) => c.marker.hovered);
+        clusteredMarkersManagerRef.current.clusters.some(
+          (c) => c.marker.hovered
+        );
 
       if (isClusterHovered) {
         cluster.marker.setZIndex(9999);
@@ -1450,6 +1765,7 @@ const MapView = () => {
             if (m.hovered) {
               toggleOverlay(true, m);
               // icon = m.icon;
+              toggleClusterOverlay(false, cluster);
             }
           });
 
@@ -1463,9 +1779,7 @@ const MapView = () => {
           cluster.markers.forEach((m) => toggleOverlay(false, m));
         } else if (isInFocusedCluster || isClusterInSuggested) {
           cluster.marker.setOptions({
-            opacity:
-              //  !anyMarkerHovered || cluster.marker.hovered ?
-              1.0,
+            opacity: anyMarkerHovered && !cluster.marker.hovered ? 0.2 : 1.0,
             //  : 0.2,
           });
           cluster.marker.setZIndex(
@@ -1478,7 +1792,7 @@ const MapView = () => {
             //   focusedClusterRef.current?.markers.includes(cluster.marker) ||
             //   isClusterInSuggested
             //   ?
-            false,
+            isClusterInSuggested && !anyMarkerHovered ? true : false,
             // : true,
             cluster
           );
@@ -1529,7 +1843,7 @@ const MapView = () => {
 
     if (active) {
       let foundInCluster = false;
-      markerClusterRef.current.clusters?.forEach((c) => {
+      clusteredMarkersManagerRef.current.clusters?.forEach((c) => {
         if (foundInCluster) return;
 
         c.markers.forEach((m) => {
@@ -1588,17 +1902,18 @@ const MapView = () => {
   const onMarkerMouseOver = (marker, index) => {
     markerHoveredRef.current = true;
     marker["hovered"] = true;
-    markerClusterRef.current.clusters.forEach((cluster) => {
+    clusteredMarkersManagerRef.current.clusters.forEach((cluster) => {
       cluster.markers.forEach((m) => {
         if (m !== marker) m["hovered"] = false;
       });
     });
 
     if (
+      shouldVignetteRef.current &&
       (!focusedClusterRef.current ||
         (focusedClusterRef.current &&
           !focusedClusterRef.current.markers.includes(marker) &&
-          markerClusterRef.current.clusters
+          clusteredMarkersManagerRef.current.clusters
             .find((c) => c.markers.includes(marker) || c.marker === marker)
             ?.markers.some((m) =>
               focusedClusterRef.current.markers.includes(m)
@@ -1606,12 +1921,13 @@ const MapView = () => {
       (!focusedMarkerRef.current || focusedMarkerRef.current !== marker) &&
       (suggestedMarkersRef.current.length === 0 ||
         (!suggestedMarkersRef.current.includes(marker) &&
-          markerClusterRef.current.clusters
+          clusteredMarkersManagerRef.current.clusters
             .find((c) => c.markers.includes(marker) || c.marker === marker)
             ?.markers.some((m) => suggestedMarkersRef.current.includes(m)) ===
-            false))
+            false)) &&
+      !isFilteringSingleDay.current
     )
-      if (vignetteRef.current) vignetteRef.current.setMap(null);
+      vignetteRef.current?.setMap(null);
 
     renderOverlays();
   };
@@ -1620,34 +1936,38 @@ const MapView = () => {
     marker["hovered"] = false;
     markerHoveredRef.current = false;
 
+    if (
+      shouldVignetteRef.current &&
+      vignetteRef.current &&
+      vignetteRef.current.map === null
+    )
+      vignetteRef.current.setMap(mapRef.current);
+
     renderOverlays();
-    if (vignetteRef.current) vignetteRef.current.setMap(mapRef.current);
   };
 
   const [focusedMarker, setFocusedMarker] = useState(null);
   const focusedMarkerRef = React.useRef(null);
 
   useEffect(() => {
-    focusedMarkerRef.current = focusedMarker;
+    // if (focusedMarker && focusedMarkerRef.current) {
+    //   if (vignetteRef.current && vignetteRef.current.map) {
+    //     vignetteRef.current.setMap(null);
+    //   }
+    // }
 
-    if (vignetteRef.current) vignetteRef.current.setMap(null);
-    vignetteRef.current = null;
+    focusedMarkerRef.current = focusedMarker;
 
     if (focusedMarker) {
       // annoying hack
       focusedMarker.hovered = false;
       setFocusedCluster(null);
-    }
 
-    if (map && maps && focusedMarker) {
-      if (
-        markerCluster &&
-        markerCluster.clusters.find((c) => c.markers.includes(focusedMarker))
-      ) {
-        const cluster = markerCluster.clusters.find((c) =>
-          c.markers.includes(focusedMarker)
-        );
+      const cluster = clusteredMarkersManager?.clusters?.find((c) =>
+        c.markers.includes(focusedMarker)
+      );
 
+      if (cluster) {
         if (cluster.markers.length > 1) {
           centerMap(true, cluster.markers, focusedMarker.position);
         } else {
@@ -1656,42 +1976,85 @@ const MapView = () => {
       } else {
         centerMap(false, [focusedMarker]);
       }
+    } else {
+      canAdjustMapCenter.current = false;
     }
 
-    if (!focusedMarker && !focusedCluster) {
-      if (suggestedMarkers.length > 0) {
-        suggestedMarkers.forEach((m) => {
-          if (m.isPlacesPOI) m.setMap(null);
-        });
-        setSuggestedMarkers([]);
-      }
+    if (!isFilteringSingleDay.current && !focusedMarker && !focusedCluster) {
+      // console.log(
+      //   "not filtering single day and no focused marker or cluster hiding vignette",
+      //   focusedMarker,
+      //   focusedCluster
+      // );
+      if (vignetteRef.current) vignetteRef.current.setMap(null);
+      vignetteRef.current = null;
+    } else if (
+      isFilteringSingleDay.current &&
+      !focusedCluster &&
+      !focusedMarker &&
+      shouldVignetteRef.current &&
+      vignetteRef.current
+    ) {
+      vignetteRef.current.updateAndRedraw(
+        calculateMapCenterBounds().bounds,
+        null,
+        mapRef.current
+      );
     }
 
-    renderOverlays();
+    // if (!focusedMarker && !focusedCluster) {
+    //   if (suggestedMarkers.length > 0) {
+    //     suggestedMarkers.forEach((m) => {
+    //       if (m.isPlacesPOI) m.setMap(null);
+    //     });
+    //     setSuggestedMarkers([]);
+    //   }
+    // }
+
+    // renderOverlays();
   }, [focusedMarker]);
 
   const [focusedCluster, setFocusedCluster] = useState(null);
   const focusedClusterRef = React.useRef(null);
 
   useEffect(() => {
-    if (vignetteRef.current) vignetteRef.current.setMap(null);
-    vignetteRef.current = null;
-
     focusedClusterRef.current = focusedCluster;
     if (focusedCluster) {
-      focusedCluster.marker.hovered = false;
+      setFocusedMarker(null);
+      setSuggestedMarkers([]);
+      if (focusedCluster.marker) focusedCluster.marker.hovered = false;
       focusedCluster.markers?.forEach((m) => {
         m["clusterHovered"] = false;
         m["hovered"] = false;
       });
-    }
 
-    if (focusedCluster && map && maps) {
-      setFocusedMarker(null);
       centerMap(true, focusedCluster.markers);
+    } else {
+      canAdjustMapCenter.current = false;
     }
 
-    renderOverlays();
+    if (!isFilteringSingleDay.current && !focusedMarker && !focusedCluster) {
+      if (vignetteRef.current) vignetteRef.current.setMap(null);
+      vignetteRef.current = null;
+    } else if (
+      isFilteringSingleDay.current &&
+      !focusedCluster &&
+      !focusedMarker &&
+      shouldVignetteRef.current &&
+      vignetteRef.current
+    ) {
+      vignetteRef.current.updateAndRedraw(
+        calculateMapCenterBounds().bounds,
+        null,
+        mapRef.current
+      );
+    }
+
+    if (!focusedCluster) {
+      setSuggestingFor(null);
+    }
+
+    // renderOverlays();
   }, [focusedCluster]);
 
   const { push, clear, current } = useStackNavigation();
@@ -1707,19 +2070,21 @@ const MapView = () => {
   }, []);
 
   useEffect(() => {
-    console.log("current stack nav item changed:", current);
-
     if (current) {
       if (current.type === "marker") {
         if (current.target !== focusedMarker) {
+          setFocusedCluster(null);
           setFocusedMarker(current.target);
         }
       } else if (current.type === "cluster") {
         if (current.target !== focusedCluster) {
+          setFocusedMarker(null);
           setFocusedCluster(current.target);
         }
       }
     }
+
+    renderOverlays();
   }, [current]);
 
   const onMarkerClick = (marker) => {
@@ -1798,8 +2163,6 @@ const MapView = () => {
     getPlaceDetails = true,
     altPlaceName = null,
   }) {
-    // if (isNaN(position.lat) || isNaN(position.lng))
-    //   console.log("position is NaN", title, position.lat, position.lng);
     const _position = new maps.LatLng(position.lat, position.lng);
     const marker = new maps.Marker({
       label,
@@ -1888,6 +2251,8 @@ const MapView = () => {
   const placesPhotosDictRef = React.useRef({});
 
   function getPlacePhoto(marker, callback = null) {
+    if (!placesServiceRef.current) return;
+
     if (!marker || !marker.placeId || marker.placeId === "INVALID") {
       if (callback) callback([]);
       return;
@@ -1938,11 +2303,16 @@ const MapView = () => {
 
   const clusterOverlaysRef = React.useRef({});
 
+  const onClusterClick = (cluster) => {
+    setFocusedCluster(cluster);
+    push({ type: "cluster", target: cluster });
+  };
+
   useEffect(() => {
     if (markers.length === 0 || maps === undefined) return;
 
-    if (markerClusterRef.current) {
-      markerClusterRef.current.clearMarkers();
+    if (clusteredMarkersManagerRef.current) {
+      clusteredMarkersManagerRef.current.clearMarkers();
     }
 
     const markerCluster = new MarkerClusterer({
@@ -1990,13 +2360,7 @@ const MapView = () => {
           }
 
           if (
-            markerPropertyFiltersRef.current.length > 0 &&
-            markerPropertyFiltersRef.current.filter(
-              (p) =>
-                p.property === FILTER_PROPERTIES.day &&
-                p.value.length === 1 &&
-                p.value[0] !== "All"
-            ).length > 0 &&
+            isFilteringSingleDay.current &&
             markers.find((m) => m.tags && m.tags.includes("Accommodation"))
           ) {
             important = markers.find(
@@ -2041,8 +2405,7 @@ const MapView = () => {
 
           m.addListener("click", () => {
             const cluster = { marker: m, markers: markers };
-            setFocusedCluster(cluster);
-            push({ type: "cluster", target: cluster });
+            onClusterClick(cluster);
           });
 
           // if (markers.find((m) => m.clusterHovered)) m["hovered"] = true;
@@ -2123,15 +2486,20 @@ const MapView = () => {
     }
   }, [currentRenderType]);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [timelineOpen, setTimelineOpen] = useState(true);
+  // const [filtersOpen, setFiltersOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [timelineVisible, setTimelineVisible] = useState(false);
+  const timelineVisibleRef = React.useRef(false);
 
   useEffect(() => {
     if (!map || !maps) return;
 
-    console.log("timeline open effect");
-    adjustMapCenter();
-  }, [timelineOpen]);
+    timelineVisibleRef.current = timelineVisible;
+
+    setTimeout(() => {
+      adjustMapCenter();
+    }, 100);
+  }, [timelineVisible]);
 
   const updateFilters = (property, value) => {
     let newFilters = markerPropertyFilters.filter((filter) => {
@@ -2163,13 +2531,38 @@ const MapView = () => {
     setMarkerPropertyFilters(newFilters);
   };
 
+  const [shouldVignette, setShouldVignette] = useState(false);
+  const shouldVignetteRef = React.useRef(false);
+
+  useEffect(() => {
+    var prev = shouldVignetteRef.current;
+    shouldVignetteRef.current = shouldVignette;
+
+    if (prev !== shouldVignetteRef.current) centerMap(false);
+  }, [shouldVignette]);
+
+  const [shouldKeepFocusCentered, setShouldKeepFocusCentered] = useState(false);
+  const shouldKeepFocusCenteredRef = React.useRef(false);
+
+  useEffect(() => {
+    var prev = shouldKeepFocusCenteredRef.current;
+    shouldKeepFocusCenteredRef.current = shouldKeepFocusCentered;
+    if (prev !== shouldKeepFocusCenteredRef.current) centerMap(false);
+  }, [shouldKeepFocusCentered]);
+
   if (!fetchedAPIKey) return null;
 
   return (
     <React.Fragment>
       <AppHeader
-        setFocusedCluster={setFocusedCluster}
-        setFocusedMarker={setFocusedMarker}
+        setFocusedCluster={(c) => {
+          setFocusedMarker(null);
+          setFocusedCluster(c);
+        }}
+        setFocusedMarker={(m) => {
+          setFocusedCluster(null);
+          setFocusedMarker(m);
+        }}
         markers={renderedMarkers}
         noLocationItems={noLocationItems}
         allCities={allCities}
@@ -2180,10 +2573,9 @@ const MapView = () => {
         focusedCluster={focusedCluster}
         currentFilters={markerPropertyFilters}
         onSearch={(search) => {
-          setFocusedMarker(null);
-          setFocusedCluster(null);
-
           if (search === "") {
+            setFocusedMarker(null);
+            setFocusedCluster(null);
             setMarkerInfoFilter(null);
           } else {
             if (markers.filter((m) => m.info === search).length === 1) {
@@ -2227,64 +2619,133 @@ const MapView = () => {
           // setTimelineHidden(open);
           // setFiltersOpen(open);
         }}
+        suggestingFor={suggestingFor}
       />
-      {/* Timeline */}
-      {((!focusedMarker &&
-        currentDayFilter !== null &&
-        currentDayFilter !== "All" &&
-        currentDayFilter !== "Not Set") ||
-        focusedMarker ||
-        (suggestedMarkers && suggestedMarkers.length > 0)) && (
-        <ItineraryTimeline
-          onSetSuggesting={() => {
-            adjustMapCenter();
-          }}
-          focusedActivity={focusedMarker}
-          timelineActivities={
-            currentDayFilter === "All" || currentDayFilter === "Not Set"
-              ? null
-              : timelineActivities
-          }
-          directionsRenderer={directionsRenderer}
-          directionsService={directionsService}
-          mapsService={maps}
-          map={map}
-          currentDayFilter={currentDayFilter}
-          englishDate={currentEnglishDate}
-          allDays={markerDays}
-          markerPropertyFilters={markerPropertyFilters}
-          setMarkerPropertyFilters={setMarkerPropertyFilters}
-          onActivityClick={onMarkerClick}
-          onSetSuggested={(markers) => {
-            setSuggestedMarkers(markers);
-            if (markers.length === 0) adjustMapCenter();
-          }}
-          allMarkers={markers}
-          onActivityMouseOver={onMarkerMouseOver}
-          onActivityMouseOut={onMarkerMouseOut}
-          open={timelineOpen}
-          onSetOpen={setTimelineOpen}
-          placesService={placesService}
-          createOverlay={createOverlay}
-          geocoderService={geocoderService}
-          googleAccount={googleAccount}
-          setLoginPopupOpen={setLoginPopupOpen}
-        />
-      )}
-      <GoogleMapReact
-        options={createOptions}
-        bootstrapURLKeys={{
-          key: fetchedAPIKey,
-          language: "en",
-          region: "US",
-          libraries: ["places", "routes", "geometry", "geocoder"],
+      <div
+        style={{
+          height: "100%",
+          width: "100%",
+          display: "flex",
+          flexFlow: "column",
+          position: "relative",
         }}
-        defaultCenter={defaultProps.center}
-        defaultZoom={defaultProps.zoom}
-        yesIWantToUseGoogleMapApiInternals
-        onGoogleApiLoaded={onGoogleApiLoaded}
-        // layerTypes={["TransitLayer"]}
-      />
+      >
+        <GoogleMapReact
+          options={createOptions}
+          bootstrapURLKeys={{
+            key: fetchedAPIKey,
+            language: "en",
+            region: "US",
+            libraries: ["places", "routes", "geometry", "geocoder"],
+          }}
+          defaultCenter={defaultProps.center}
+          defaultZoom={defaultProps.zoom}
+          yesIWantToUseGoogleMapApiInternals
+          onGoogleApiLoaded={onGoogleApiLoaded}
+          // layerTypes={["TransitLayer"]}
+        ></GoogleMapReact>
+        {/* Timeline */}
+        {((!focusedMarker &&
+          currentDayFilter !== null &&
+          currentDayFilter !== "All" &&
+          currentDayFilter !== "Not Set") ||
+          focusedMarker ||
+          (suggestedMarkers && suggestedMarkers.length > 0)) && (
+          <ItineraryTimeline
+            onSetSuggesting={() => {
+              adjustMapCenter();
+            }}
+            focusedActivity={focusedMarker}
+            timelineActivities={
+              currentDayFilter === "All" || currentDayFilter === "Not Set"
+                ? null
+                : timelineActivities
+            }
+            directionsRenderer={directionsRenderer}
+            directionsService={directionsService}
+            mapsService={maps}
+            map={map}
+            currentDayFilter={currentDayFilter}
+            englishDate={currentEnglishDate}
+            allDays={markerDays}
+            markerPropertyFilters={markerPropertyFilters}
+            setMarkerPropertyFilters={setMarkerPropertyFilters}
+            onActivityClick={onMarkerClick}
+            onSetSuggested={(markers) => {
+              setSuggestedMarkers(markers);
+              // if (markers.length === 0 && (focusedMarker || focusedCluster))
+              //   adjustMapCenter();
+            }}
+            allMarkers={markers}
+            onActivityMouseOver={onMarkerMouseOver}
+            onActivityMouseOut={onMarkerMouseOut}
+            open={timelineOpen}
+            onSetOpen={setTimelineVisible}
+            placesService={placesService}
+            createOverlay={createOverlay}
+            geocoderService={geocoderService}
+            googleAccount={googleAccount}
+            setLoginPopupOpen={setLoginPopupOpen}
+          />
+        )}
+        <AppFooter
+          currentMapStyle={currentMapStyle}
+          currentRenderType={currentRenderType}
+          setCurrentMapStyle={setCurrentMapStyle}
+          setCurrentRenderType={setCurrentRenderType}
+          focusedCluster={focusedCluster}
+          focusedMarker={focusedMarker}
+          setMapLocked={setMapLocked}
+          mapLocked={mapLocked}
+          allMarkers={markers}
+          onDrawerClose={() => {
+            // setFocusedMarker(null);
+            // setFocusedCluster(null);
+            // if (mapRef.current) mapRef.current.setZoom(13);
+          }}
+          setFocusedMarker={(m) => {
+            setFocusedCluster(null);
+            setFocusedMarker(m);
+          }}
+          googleAccount={googleAccount}
+          onUpdateDate={(date) => {
+            if (!focusedMarker) return;
+
+            renderMarkers();
+            updateActivityDate(focusedMarker, googleAccount);
+          }}
+          onUpdateTitle={(title) => {
+            if (!focusedMarker) return;
+
+            updateActivityTitle(focusedMarker, googleAccount);
+            focusedMarker.overlay?.updateProps({
+              title: title,
+            });
+          }}
+          calculateDay={calculateDay}
+          setLoginPopupOpen={setLoginPopupOpen}
+          setErrorPopupOpen={setErrorPopupOpen}
+          allTags={allTags}
+          onTagsUpdated={(tags) => {
+            if (!focusedMarker) return;
+
+            updateActivityTags(focusedMarker, googleAccount);
+          }}
+          allTimes={allTimes}
+          onTimeUpdated={(time) => {
+            if (!focusedMarker) return;
+
+            renderMarkers();
+            updateActivityTime(focusedMarker, googleAccount);
+          }}
+          currentDayFilter={currentDayFilter}
+          onRecenterMap={() => adjustMapCenter(true)}
+          setShouldVignette={setShouldVignette}
+          shouldVignette={shouldVignette}
+          setShouldKeepFocusCentered={setShouldKeepFocusCentered}
+          shouldKeepFocusCentered={shouldKeepFocusCentered}
+        />
+      </div>
       <MapDrawer
         focusedCluster={focusedCluster}
         focusedMarker={focusedMarker}
@@ -2298,7 +2759,10 @@ const MapView = () => {
 
           if (mapRef.current) mapRef.current.setZoom(13);
         }}
-        setFocusedMarker={setFocusedMarker}
+        setFocusedMarker={(m) => {
+          setFocusedCluster(null);
+          setFocusedMarker(m);
+        }}
         googleAccount={googleAccount}
         onUpdateDate={(date) => {
           if (!focusedMarker) return;
@@ -2363,56 +2827,6 @@ const MapView = () => {
         }}
         onActivityMouseOver={onMarkerMouseOver}
         onActivityMouseOut={onMarkerMouseOut}
-      />
-      <AppFooter
-        currentMapStyle={currentMapStyle}
-        currentRenderType={currentRenderType}
-        setCurrentMapStyle={setCurrentMapStyle}
-        setCurrentRenderType={setCurrentRenderType}
-        focusedCluster={focusedCluster}
-        focusedMarker={focusedMarker}
-        setMapLocked={setMapLocked}
-        mapLocked={mapLocked}
-        allMarkers={markers}
-        onDrawerClose={() => {
-          // setFocusedMarker(null);
-          // setFocusedCluster(null);
-          // if (mapRef.current) mapRef.current.setZoom(13);
-        }}
-        setFocusedMarker={setFocusedMarker}
-        googleAccount={googleAccount}
-        onUpdateDate={(date) => {
-          if (!focusedMarker) return;
-
-          renderMarkers();
-          updateActivityDate(focusedMarker, googleAccount);
-        }}
-        onUpdateTitle={(title) => {
-          if (!focusedMarker) return;
-
-          updateActivityTitle(focusedMarker, googleAccount);
-          focusedMarker.overlay?.updateProps({
-            title: title,
-          });
-        }}
-        calculateDay={calculateDay}
-        setLoginPopupOpen={setLoginPopupOpen}
-        setErrorPopupOpen={setErrorPopupOpen}
-        allTags={allTags}
-        onTagsUpdated={(tags) => {
-          if (!focusedMarker) return;
-
-          updateActivityTags(focusedMarker, googleAccount);
-        }}
-        allTimes={allTimes}
-        onTimeUpdated={(time) => {
-          if (!focusedMarker) return;
-
-          renderMarkers();
-          updateActivityTime(focusedMarker, googleAccount);
-        }}
-        currentDayFilter={currentDayFilter}
-        onRecenterMap={centerMap}
       />
       <GoogleSignIn
         onGoogleAccount={(googleAccount) => setGoogleAccount(googleAccount)}

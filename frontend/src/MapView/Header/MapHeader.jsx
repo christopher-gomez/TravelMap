@@ -19,6 +19,7 @@ export default function AppHeader({
   setFocusedCluster,
   setFocusedMarker,
   currentFilters,
+  suggestingFor
 }) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [devOpen, setDevOpen] = React.useState(false);
@@ -33,6 +34,7 @@ export default function AppHeader({
   return (
     <>
       <AppBar
+        id="header-menu"
         position="absolute"
         sx={{
           backgroundColor: "rgba(0, 0, 0, 0)",
@@ -66,6 +68,7 @@ export default function AppHeader({
                 tags={allTags}
                 days={markerDays}
                 times={allTimes}
+                suggestingFor={suggestingFor}
               />
             </Grid>
             {allTags.length > 0 && markerDays.length > 0 && (

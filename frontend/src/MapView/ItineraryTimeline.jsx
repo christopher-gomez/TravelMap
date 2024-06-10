@@ -7,6 +7,8 @@ import {
   Cancel,
   Close,
   Delete,
+  DirectionsCar,
+  DirectionsWalk,
   ExpandMore,
   ForkLeft,
   Star,
@@ -27,9 +29,9 @@ import {
   ListItem,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FILTER_PROPERTIES, FILTER_TYPE } from "./Header/FilterDialog";
-import Timeline from "../Util/Timeline";
+import Timeline, { HorizontalActivityTimeline } from "../Util/Timeline";
 import {
   createMarkersFromPOIs,
   findNearbyMarkers,
@@ -38,7 +40,8 @@ import {
 } from "../Util/Utils";
 import InputSlider from "../Util/InputSlider";
 import { ChipSelectMenu } from "../Util/MultipleSelect";
-
+import ActivityTimeline from "../Util/Timeline";
+import { CustomInfoWindowFactory } from "./POI/CustomOverlayContainerClass";
 export const timeOrder = {
   Morning: 0,
   "All Day": 1,
@@ -105,10 +108,13 @@ export default function ItineraryTimeline({
 
   useEffect(() => {
     if (open !== undefined) setTimelineOpen(open);
+    if (open !== undefined && onSetOpen !== undefined) onSetOpen(open);
   }, [open]);
 
   useEffect(() => {
-    if (onSetOpen && timelineOpen !== open) onSetOpen(timelineOpen);
+    if (onSetOpen !== undefined) {
+      onSetOpen(timelineOpen);
+    }
   }, [timelineOpen]);
 
   const [routing, setRouting] = useState(false);
@@ -246,7 +252,14 @@ export default function ItineraryTimeline({
   useEffect(() => {
     if (!routing) {
       setRoutingData([]);
+      setRouteDriveTime(null);
+      setRouteDriveDistance(null);
     } else {
+      if (!directionsService) {
+        setRouting(false);
+        return;
+      }
+
       setSuggesting(false);
       setRoutingData([
         timelineActivities[0],
@@ -255,13 +268,17 @@ export default function ItineraryTimeline({
     }
   }, [routing]);
 
-  useEffect(() => {
-    if (!directionsService || !directionsRenderer) return;
-
+  const findRoute = () => {
     if (routingData.length === 0) {
       setRouteDriveTime(null);
       setRouteDriveDistance(null);
-      directionsRenderer.setMap(null);
+      polylineRef.current.forEach((poly) => poly.setMap(null));
+      polylineRef.current = [];
+      infoWindowsRef.current.forEach((infoWindow) => {
+        // infoWindow.close();
+        infoWindow.setMap(null);
+      });
+      infoWindowsRef.current = [];
     } else {
       if (routingData.length === 2) {
         const waypoints = timelineActivities
@@ -285,11 +302,26 @@ export default function ItineraryTimeline({
         );
       }
     }
+  };
+
+  useEffect(() => {
+    // if (!directionsService || !directionsRenderer) return;
+    findRoute();
   }, [routingData]);
 
   useEffect(() => {
     setSuggesting(false);
     setRouting(false);
+    setRoutingData([]);
+    setRouteDriveTime(null);
+    setRouteDriveDistance(null);
+    polylineRef.current.forEach((poly) => poly.setMap(null));
+    polylineRef.current = [];
+    infoWindowsRef.current.forEach((infoWindow) => {
+      // infoWindow.close();
+      infoWindow.setMap(null);
+    });
+    infoWindowsRef.current = [];
   }, [currentDayFilter]);
 
   function secondsToTime(seconds) {
@@ -308,94 +340,221 @@ export default function ItineraryTimeline({
   }
   function metersToMiles(meters) {
     const miles = meters * 0.000621371;
-    return `${miles.toFixed(3)} miles`;
+    return `${miles.toFixed(2)} miles`;
   }
 
-  function calculateRoute(start, end, waypoints) {
-    if (!directionsService || !directionsRenderer) return;
+  const polylineRef = useRef([]);
+  const infoWindowsRef = useRef([]);
+  const infoWindowFactory = useRef(null);
 
-    // const mileThreshold = 1; // 1 mile
-    const distanceInMeters =
-      mapsService.geometry.spherical.computeDistanceBetween(start, end);
-    // const distanceInMiles = distanceInMeters * 0.000621371;
+  useEffect(() => {
+    if (!mapsService) return;
+    infoWindowFactory.current = new CustomInfoWindowFactory(mapsService);
+  }, [mapsService]);
 
-    const travelMode = "DRIVING"; // "WALKING", "BICYCLING", "TRANSIT
+  const [travelMode, setTravelMode] = useState("DRIVING");
 
-    const driveRequest = {
-      origin: start,
-      destination: end,
-      travelMode,
-      waypoints: waypoints,
-    };
+  useEffect(() => {
+    if (routing) {
+      findRoute();
+    }
+  }, [travelMode]);
 
-    directionsService.route(driveRequest, (result, status) => {
-      if (status === "OK") {
-        // console.log("Route calculated", result);
-        directionsRenderer.setMap(map);
-        directionsRenderer.setDirections(result);
-        let driveDuration = 0;
-        let driveDistance = 0;
-        result.routes[0].legs.forEach((leg) => {
-          driveDuration += leg.duration.value;
-          driveDistance += leg.distance.value;
-        });
-
-        const routePath = result.routes[0].overview_path;
-        const arrowSymbol = {
-          path: mapsService.SymbolPath.FORWARD_CLOSED_ARROW,
-          strokeColor: "#ffee00",
-          fillColor: "#ffee00",
-          fillOpacity: 1,
-          scale: 3,
-          zIndex: 999,
-        };
-
-        const polyline = new mapsService.Polyline({
-          path: routePath,
-          strokeColor: "#FF0000",
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          icons: [
-            {
-              icon: arrowSymbol,
-              offset: "100%",
-              repeat: "100px",
-            },
-          ],
-          zIndex: 998,
-        });
-
-        polyline.setMap(map);
-
-        setRouteDriveTime(secondsToTime(driveDuration));
-        setRouteDriveDistance(metersToMiles(driveDistance));
-
-        const walkRequest = {
+  async function calculateSegmentRoute(start, end, travelMode) {
+    return new Promise((resolve, reject) => {
+      directionsService.route(
+        {
           origin: start,
           destination: end,
-          travelMode: "WALKING",
-          waypoints: waypoints,
-        };
-
-        directionsService.route(walkRequest, (result, status) => {
+          travelMode,
+        },
+        (result, status) => {
           if (status === "OK") {
-            // console.log("Route calculated", result);
-
-            let walkDuration = 0;
-            let walkDistance = 0;
-            result.routes[0].legs.forEach((leg) => {
-              walkDuration += leg.duration.value;
-
-              walkDistance += leg.distance.value;
-            });
-
-            setRouteWalkTime(secondsToTime(walkDuration));
-            setRouteWalkDistance(metersToMiles(walkDistance));
+            resolve(result);
+          } else {
+            reject(status);
           }
-        });
-      }
+        }
+      );
     });
   }
+
+  function calculateAvoidanceOffset(existingInfoWindows, position) {
+    const offset = { x: 10, y: 0 };
+    const offsetIncrement = 10; // Pixels to move the InfoWindow if it overlaps
+
+    existingInfoWindows.forEach((infoWindow) => {
+      const infoWindowPosition = infoWindow.getPosition();
+      const distance = mapsService.geometry.spherical.computeDistanceBetween(
+        position,
+        infoWindowPosition
+      );
+
+      if (distance < offsetIncrement / 2) {
+        offset.y += offsetIncrement * 5; // Adjust the y-offset to avoid overlap
+        offset.x += offsetIncrement * 2; // Adjust the x-offset to avoid overlap
+      }
+    });
+
+    return offset;
+  }
+
+  const routeCache = useRef({}); // Cache dictionary to store route results
+
+  async function calculateRoute(start, end, waypoints) {
+    if (!directionsService || !directionsRenderer) return;
+
+    // const travelMode = "DRIVING"; // or "WALKING", "BICYCLING", etc.
+
+    // Split waypoints into individual segments
+    const segments = [];
+    let previousPoint = start;
+    waypoints.forEach((waypoint) => {
+      segments.push({ start: previousPoint, end: waypoint.location });
+      previousPoint = waypoint.location;
+    });
+    segments.push({ start: previousPoint, end: end });
+
+    // Clear existing polylines and InfoWindows
+    polylineRef.current.forEach((poly) => poly.setMap(null));
+    polylineRef.current = [];
+    infoWindowsRef.current.forEach((infoWindow) => {
+      infoWindow.setMap(null);
+    });
+    infoWindowsRef.current = [];
+
+    // Calculate routes for each segment
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const cacheKey = `${travelMode} ${segment.start.lat()}_${segment.start.lng()}_${segment.end.lat()}_${segment.end.lng()}`;
+
+      let result;
+      if (routeCache.current[cacheKey]) {
+        result = routeCache.current[cacheKey];
+      } else {
+        try {
+          result = await calculateSegmentRoute(
+            segment.start,
+            segment.end,
+            travelMode
+          );
+          routeCache.current[cacheKey] = result;
+        } catch (error) {
+          console.error(`Error calculating segment ${i}:`, error);
+          continue; // Skip this segment and continue with the next one
+        }
+      }
+
+      const routePath = result.routes[0].overview_path;
+
+      // Create polyline for the segment
+      const polyline = new mapsService.Polyline({
+        path: routePath,
+        strokeColor: generateColor(i, segments.length),
+        strokeOpacity: 1,
+        strokeWeight: 5,
+        icons: [
+          {
+            icon: {
+              path: mapsService.SymbolPath.FORWARD_CLOSED_ARROW,
+              strokeColor: "#000000",
+              strokeWeight: 1,
+              fillColor: "#ffee00",
+              fillOpacity: 1,
+              scale: 3.5,
+              zIndex: 999,
+            },
+            offset: "100%",
+            repeat: "100px",
+          },
+        ],
+        zIndex: 998,
+      });
+
+      polyline.setMap(map);
+      polylineRef.current.push(polyline);
+
+      // Calculate midpoint for InfoBox
+      const midpointIndex = Math.floor(routePath.length / 2);
+      const midpoint = routePath[midpointIndex];
+
+      const infoWindowContent = `
+        <div style="background-color: white; padding: 5px; border-radius: 5px;">
+          <h3 style="margin: 0;">${
+            travelMode === "DRIVING" ? "🚗" : "🚶"
+          } ${secondsToTime(result.routes[0].legs[0].duration.value)}</h3>
+          <p style="margin: 0;">${metersToMiles(
+            result.routes[0].legs[0].distance.value
+          )}</p>
+        </div>
+      `;
+
+      const offset = { x: 0, y: 0 };
+
+      const myOptions = {
+        content: infoWindowContent,
+        disableAutoPan: false,
+        maxWidth: 0,
+        boxStyle: {
+          boxShadow: "0 0 10px rgba(0, 0, 0, 0.5)",
+          width: "auto",
+        },
+        stemStyle: {},
+        closeBoxMargin: "10px 2px 2px 2px",
+        closeBoxURL: "http://www.google.com/intl/en_us/mapfiles/close.gif",
+        isHidden: false,
+        pane: "overlayLayer",
+        enableEventPropagation: false,
+        position: midpoint,
+        pixelOffset: new mapsService.Size(offset.x, offset.y),
+      };
+
+      const infoWindow = infoWindowFactory.current.create(myOptions);
+
+      infoWindow.setMap(map);
+      infoWindowsRef.current.push(infoWindow);
+
+      // Add hover events to polyline
+      mapsService.event.addListener(polyline, "mouseover", () => {
+        polylineRef.current.forEach((poly, index) => {
+          if (poly !== polyline) {
+            poly.setVisible(false);
+            if (infoWindowsRef.current[index]) {
+              infoWindowsRef.current[index].setMap(null);
+            }
+          }
+        });
+      });
+
+      mapsService.event.addListener(polyline, "mouseout", () => {
+        polylineRef.current.forEach((poly, index) => {
+          if (poly !== polyline) {
+            poly.setVisible(true);
+            if (infoWindowsRef.current[index]) {
+              infoWindowsRef.current[index].setMap(map);
+            }
+          }
+        });
+      });
+    }
+  }
+
+  function generateColor(index, total) {
+    const hue = (index / total) * 360;
+    return `hsl(${hue}, 100%, 50%)`;
+  }
+
+  useEffect(() => {
+    return () => {
+      polylineRef.current.forEach((poly) => poly.setMap(null));
+      polylineRef.current = [];
+      infoWindowsRef.current.forEach((infoWindow) => {
+        // infoWindow.close();
+        infoWindow.setMap(null);
+      });
+      infoWindowsRef.current = [];
+    };
+  }, []);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -420,10 +579,49 @@ export default function ItineraryTimeline({
           transition: "transform 0.3s ease-in-out",
           maxWidth: "25vw",
           display: "flex",
-          flexDirection: "column",
+          flexDirection: "row",
           // overflowY: "auto",
         }}
       >
+        <div
+          style={{
+            position: !timelineOpen ? "absolute" : "relative",
+            top: 0,
+            bottom: 0,
+            left: !timelineOpen ? -55 : 0,
+            // padding: "10px",
+            // cursor: "pointer",
+            borderRadius: "1em 0 0 1em",
+            border: !timelineOpen ? "1px solid black" : "none",
+            backgroundColor: !timelineOpen
+              ? "rgba(255,255,255,1)"
+              : "rgba(0,0,0,0)",
+            display: "flex",
+            alignContent: "center",
+            alignItems: "center",
+            justifyContent: "center",
+            justifyItems: "center",
+            transition: "all .7s ease",
+            padding: 0,
+            marginRight: !timelineOpen ? "16px" : 0,
+            cursor: "pointer",
+            zIndex: 99999 + 1, // Ensure this is higher than the box's z-index
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setTimelineOpen(!timelineOpen);
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerEnter={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <IconButton size="large" sx={{ pr: timelineOpen ? 0 : "unset" }}>
+            {!timelineOpen ? <ArrowBackIos /> : <ArrowForwardIos />}
+          </IconButton>
+        </div>
         <div
           style={{
             maxHeight: "100vh",
@@ -431,87 +629,27 @@ export default function ItineraryTimeline({
             flexDirection: "column",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: !timelineOpen ? -55 : 0,
-              // padding: "10px",
-              // cursor: "pointer",
-              borderRadius: "1em",
-              border: !timelineOpen ? "1px solid black" : "none",
-              backgroundColor: !timelineOpen
-                ? "rgba(255,255,255,1)"
-                : "rgba(0,0,0,0)",
-              display: "flex",
-              alignContent: "center",
-              alignItems: "center",
-              justifyContent: "center",
-              justifyItems: "center",
-              transition: "all .7s ease",
-              padding: "16px",
-              paddingLeft: 0,
-              marginRight: "16px",
-              cursor: timelineOpen ? "auto" : "pointer",
-              zIndex: 99999 + 1, // Ensure this is higher than the box's z-index
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setTimelineOpen(!timelineOpen);
-            }}
-            onPointerOver={(e) => {
-              e.stopPropagation();
-            }}
-            onPointerEnter={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            <IconButton
-              size="large"
-              // onClick={() => {
-              //   setTimelineOpen(!timelineOpen);
-              // }}
-            >
-              {!timelineOpen ? <ArrowBackIos /> : <ArrowForwardIos />}
-            </IconButton>
-          </div>
-          {!suggesting &&
-            timelineActivities &&
-            timelineActivities.length > 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  right: 0,
-                  display: "flex",
-                  justifyContent: "center",
-                  justifyItems: "center",
-                  alignContent: "center",
-                  alignItems: "center",
-                  padding: "10px",
-                  cursor: "pointer",
-                }}
+          {
+            // !suggesting &&
+            timelineActivities && timelineActivities.length > 0 && (
+              <Box
+                sx={{ display: "flex", flexFlow: "column", zIndex: "999999" }}
               >
-                <IconButton
-                  onClick={() => {
-                    setRouting(!routing);
+                <div
+                  style={{
+                    flex: "0 1 auto",
+                    display: "flex",
+                    width: "100%",
+                    flexFlow: "column",
                   }}
                 >
-                  {routing ? <Cancel /> : <ForkLeft />}
-                </IconButton>
-              </div>
-            )}
-          {!suggesting &&
-            timelineActivities &&
-            timelineActivities.length > 0 && (
-              <>
-                <div style={{ flex: "0 1 auto" }}>
                   <div
                     style={{
                       display: "flex",
                       paddingTop: "16px",
                       paddingLeft: "16px",
+                      justifyContent: "space-between",
+                      width: "100%",
                     }}
                   >
                     <div
@@ -625,73 +763,121 @@ export default function ItineraryTimeline({
                         </div>
                       </h2>
                     </div>
-                  </div>
-                </div>
-                {routing && (
-                  <>
-                    <h3
+                    <div
                       style={{
-                        fontFamily: "'Fredoka', sans-serif",
-                        paddingLeft: "32px",
-                        margin: "0px",
+                        // position: "absolute",
+                        // top: 0,
+                        // right: 0,
+                        display: "flex",
+                        justifyContent: "center",
+                        justifyItems: "center",
+                        alignContent: "center",
+                        alignItems: "center",
+                        // padding: "10px",
+                        cursor: "pointer",
+                        placeSelf: "flex-start",
+                        marginTop: "-16px",
                       }}
                     >
-                      Routing
-                    </h3>
-                    {routeDriveTime && routeDriveDistance && (
-                      <div
+                      {routing && (
+                        <>
+                          <IconButton
+                            color={
+                              travelMode === "DRIVING" ? "primary" : "default"
+                            }
+                            onClick={() => {
+                              setTravelMode("DRIVING");
+                            }}
+                          >
+                            <DirectionsCar />
+                          </IconButton>
+                          <IconButton
+                            color={
+                              travelMode === "WALKING" ? "primary" : "default"
+                            }
+                            onClick={() => {
+                              setTravelMode("WALKING");
+                            }}
+                          >
+                            <DirectionsWalk />
+                          </IconButton>
+                        </>
+                      )}
+                      <IconButton
+                        onClick={() => {
+                          setRouting(!routing);
+                        }}
+                      >
+                        {routing ? <Cancel /> : <ForkLeft />}
+                      </IconButton>
+                    </div>
+                  </div>
+                  {/* {routing && (
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: "'Fredoka', sans-serif",
+                      paddingLeft: "32px",
+                      margin: "0px",
+                    }}
+                  >
+                    Routing
+                  </h3>
+                  {routeDriveTime && routeDriveDistance && (
+                    <div
+                      style={{
+                        paddingLeft: "46px",
+                        marginTop: "0px",
+                      }}
+                    >
+                      <p
                         style={{
-                          paddingLeft: "46px",
+                          fontFamily: "'Fredoka', sans-serif",
+                          margin: "0px",
+                        }}
+                      >
+                        Driving: {routeDriveTime}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: "'Fredoka', sans-serif",
+                          paddingLeft: "16px",
+                          margin: "0px",
+                        }}
+                      >
+                        {routeDriveDistance}
+                      </p>
+                    </div>
+                  )}
+
+                  {routeWalkTime && routeWalkDistance && (
+                    <div
+                      style={{
+                        paddingLeft: "46px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontFamily: "'Fredoka', sans-serif",
+                          margin: "0px",
+                        }}
+                      >
+                        Walking: {routeWalkTime}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: "'Fredoka', sans-serif",
+                          paddingLeft: "16px",
                           marginTop: "0px",
                         }}
                       >
-                        <p
-                          style={{
-                            fontFamily: "'Fredoka', sans-serif",
-                            margin: "0px",
-                          }}
-                        >
-                          Driving: {routeDriveTime}
-                        </p>
-                        <p
-                          style={{
-                            fontFamily: "'Fredoka', sans-serif",
-                            paddingLeft: "16px",
-                            margin: "0px",
-                          }}
-                        >
-                          {routeDriveDistance}
-                        </p>
-                      </div>
-                    )}
-
-                    {routeWalkTime && routeWalkDistance && (
-                      <div
-                        style={{
-                          paddingLeft: "46px",
-                        }}
-                      >
-                        <p
-                          style={{
-                            fontFamily: "'Fredoka', sans-serif",
-                            margin: "0px",
-                          }}
-                        >
-                          Walking: {routeWalkTime}
-                        </p>
-                        <p
-                          style={{
-                            fontFamily: "'Fredoka', sans-serif",
-                            paddingLeft: "16px",
-                            marginTop: "0px",
-                          }}
-                        >
-                          {routeWalkDistance}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
+                        {routeWalkDistance}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )} */}
+                </div>
                 <Box
                   onPointerOver={(e) => {
                     if (!e.target) return;
@@ -700,9 +886,9 @@ export default function ItineraryTimeline({
                   }}
                   onPointerOut={() => setContentHovered(false)}
                   sx={{
-                    pr: contentHovered ? "-.5em" : ".5em", // Reserve space for scrollbar
+                    // pr: contentHovered ? "-.5em" : ".5em", // Reserve space for scrollbar
                     flex: "1 1 auto",
-                    overflowY: contentHovered ? "auto" : "hidden",
+                    overflowX: contentHovered ? "auto" : "hidden",
                     boxSizing: "border-box",
                     "&::-webkit-scrollbar": {
                       width: "0.5em",
@@ -723,7 +909,7 @@ export default function ItineraryTimeline({
                     },
                   }}
                 >
-                  <Timeline
+                  <ActivityTimeline
                     driveDuration={routeDriveTime}
                     walkDuration={routeWalkTime}
                     driveDistance={routeDriveDistance}
@@ -756,256 +942,219 @@ export default function ItineraryTimeline({
                     }
                   />
                 </Box>
-              </>
-            )}
-          <div
-            style={{
-              flex: "0 1 auto",
-              paddingTop:
-                timelineActivities && timelineActivities.length > 0
-                  ? "10px"
-                  : 0,
-            }}
-          >
-            {!suggesting && !routing && (
-              <Box
+              </Box>
+            )
+          }
+
+          {
+          // (!timelineActivities || !timelineActivities.length === 0) &&
+           (
+            <Box
+              sx={{
+                display: "flex",
+                flexFlow: "column",
+                placeItems: "center",
+                p: 2,
+                flex: "0 1 auto",
+              }}
+            >
+              <Typography
+                variant="h5"
                 sx={{
-                  width: "100%",
-                  display: "flex",
-                  placeContent: "end",
-                  pl:
-                    !timelineActivities || timelineActivities.length === 0
-                      ? 4
-                      : 0,
-                  pb:
-                    timelineActivities && timelineActivities.length > 0 ? 1 : 0,
-                  pr:
-                    timelineActivities && timelineActivities.length > 0 ? 1 : 0,
+                  fontFamily: "'Fredoka', sans-serif",
+                  display: "inline",
+                  userSelect: "none",
+                  msUserSelect: "none",
+                  MozUserSelect: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none",
+                  textAlign: "center",
                 }}
               >
-                <Button
+                Nearby Activity Suggestions
+                {/* <IconButton
+                  size="small"
+                  onClick={() => setSuggesting(false)}
                   sx={{
-                    p:
-                      !timelineActivities || timelineActivities.length === 0
-                        ? 2
-                        : 0,
-                  }}
-                  onClick={() => {
-                    setSuggesting(true);
+                    position: "absolute",
+                    p: 0,
+                    ml: 1,
+                    ">.MuiSvgIcon-root": {
+                      fontSize: "1em",
+                    },
                   }}
                 >
-                  Find Suggestions
-                </Button>
-              </Box>
-            )}
-          </div>
+                  <Cancel />
+                </IconButton> */}
+              </Typography>
+              <Accordion
+                expanded={settingsOpen}
+                onChange={(_, expanded) => setSettingsOpen(expanded)}
+                sx={{
+                  background: "none",
+                  boxShadow: "none",
+                  "& .MuiAccordionSummary-content": {
+                    justifyContent: "center",
+                  },
+                  "& .MuiAccordionDetails-root": {
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    pt: 0,
+                    pb: 0,
+                    mb: 1,
+                  },
+                }}
+              >
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography
+                    variant="body1"
+                    sx={{ fontFamily: "'Fredoka', sans-serif", ml: "24px" }}
+                  >
+                    Settings
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <InputSlider
+                    value={suggestRadius}
+                    label="Search Radius (meters)"
+                    min={100}
+                    max={10000}
+                    onValueChanged={(value) => setSuggestRadius(value)}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={!googleAccount ? false : usingGooglePOIs}
+                        onChange={(_, checked) => {
+                          if (!googleAccount) {
+                            setLoginPopupOpen(true);
+
+                            return;
+                          }
+                          setUsingGooglePOIs(checked);
+                        }}
+                      />
+                    }
+                    labelPlacement="start"
+                    label={
+                      <Typography
+                        variant="body1"
+                        sx={{ fontFamily: "'Fredoka', sans-serif", mb: 0 }}
+                      >
+                        Search Google Places
+                      </Typography>
+                    }
+                  />
+                  {usingGooglePOIs && (
+                    <>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={filterNonLatin}
+                            onChange={(_, checked) =>
+                              setFilterNonLatin(checked)
+                            }
+                          />
+                        }
+                        labelPlacement="start"
+                        label={
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              fontFamily: "'Fredoka', sans-serif",
+                              mb: 0,
+                            }}
+                          >
+                            Filter Non-English Locations
+                          </Typography>
+                        }
+                      />
+                      <Typography
+                        variant="body1"
+                        sx={{ fontFamily: "'Fredoka', sans-serif", mb: 1 }}
+                      >
+                        Suggested Types
+                      </Typography>
+                      <Grid
+                        container
+                        spacing={1}
+                        sx={{ placeContent: "center", placeItems: "center" }}
+                      >
+                        {suggestLocationDefaultTypes.map((type, i) => (
+                          <Grid item key={"suggested-type-" + i}>
+                            <Chip
+                              variant="filled"
+                              sx={{
+                                backgroundColor: "white",
+                                opacity: suggestedTypes.includes(type)
+                                  ? 1
+                                  : 0.65,
+                                border: "1px solid gray",
+                              }}
+                              key={"suggested-type-filter-chip-" + i}
+                              label={type.replace("_", " ")}
+                              onDelete={() => {
+                                if (suggestedTypes.includes(type))
+                                  setSuggestedTypes(
+                                    suggestedTypes.filter((t) => t !== type)
+                                  );
+                                else
+                                  setSuggestedTypes([...suggestedTypes, type]);
+                              }}
+                              deleteIcon={
+                                suggestedTypes.includes(type) ? (
+                                  <Delete />
+                                ) : (
+                                  <Add
+                                    sx={{
+                                      opacity: "1 !important",
+                                      color: "black",
+                                    }}
+                                  />
+                                )
+                              }
+                            />
+                          </Grid>
+                        ))}
+                        {/* {suggestedTypes.length !==
+                suggestLocationDefaultTypes.length && (
+                <Grid item>
+                  <ChipSelectMenu
+                    multiple={false}
+                    label={"Add Type"}
+                    icon={<Add />}
+                    options={suggestLocationDefaultTypes.filter(
+                      (type) => !suggestedTypes.includes(type)
+                    )}
+                    onChange={(selected) => {
+                      setSuggestedTypes([...suggestedTypes, selected]);
+                    }}
+                  />
+                </Grid>
+              )} */}
+                      </Grid>
+                    </>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+              {/* {settingsDirty && ( */}
+              <Button
+                variant="contained"
+                sx={{ mt: 2, pb: 0 }}
+                onClick={() => {
+                  if (suggesting) suggestNearby();
+                  else setSuggesting(true);
+                }}
+              >
+                Search
+              </Button>
+              {/* )} */}
+            </Box>
+          )}
 
           {suggesting && (
             <>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexFlow: "column",
-                  placeItems: "center",
-                  pt: 2,
-                  flex: "0 1 auto",
-                }}
-              >
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontFamily: "'Fredoka', sans-serif",
-                    display: "inline",
-                    userSelect: "none",
-                    msUserSelect: "none",
-                    MozUserSelect: "none",
-                    WebkitUserSelect: "none",
-                    WebkitTouchCallout: "none",
-                  }}
-                >
-                  Nearby Activity Suggestions
-                  <IconButton
-                    size="small"
-                    onClick={() => setSuggesting(false)}
-                    sx={{
-                      position: "absolute",
-                      p: 0,
-                      ml: 1,
-                      ">.MuiSvgIcon-root": {
-                        fontSize: "1em",
-                      },
-                    }}
-                  >
-                    <Cancel />
-                  </IconButton>
-                </Typography>
-                <Accordion
-                  expanded={settingsOpen}
-                  onChange={(_, expanded) => setSettingsOpen(expanded)}
-                  sx={{
-                    background: "none",
-                    boxShadow: "none",
-                    "& .MuiAccordionSummary-content": {
-                      justifyContent: "center",
-                    },
-                    "& .MuiAccordionDetails-root": {
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      pt: 0,
-                      pb: 0,
-                      mb: 1,
-                    },
-                  }}
-                >
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography
-                      variant="body1"
-                      sx={{ fontFamily: "'Fredoka', sans-serif", ml: "24px" }}
-                    >
-                      Settings
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <InputSlider
-                      value={suggestRadius}
-                      label="Search Radius (meters)"
-                      min={100}
-                      max={10000}
-                      onValueChanged={(value) => setSuggestRadius(value)}
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={!googleAccount ? false : usingGooglePOIs}
-                          onChange={(_, checked) => {
-                            if (!googleAccount) {
-                              setLoginPopupOpen(true);
-
-                              return;
-                            }
-                            setUsingGooglePOIs(checked);
-                          }}
-                        />
-                      }
-                      labelPlacement="start"
-                      label={
-                        <Typography
-                          variant="body1"
-                          sx={{ fontFamily: "'Fredoka', sans-serif", mb: 0 }}
-                        >
-                          Search Google Places
-                        </Typography>
-                      }
-                    />
-                    {usingGooglePOIs && (
-                      <>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={filterNonLatin}
-                              onChange={(_, checked) =>
-                                setFilterNonLatin(checked)
-                              }
-                            />
-                          }
-                          labelPlacement="start"
-                          label={
-                            <Typography
-                              variant="body1"
-                              sx={{
-                                fontFamily: "'Fredoka', sans-serif",
-                                mb: 0,
-                              }}
-                            >
-                              Filter Non-English Locations
-                            </Typography>
-                          }
-                        />
-                        <Typography
-                          variant="body1"
-                          sx={{ fontFamily: "'Fredoka', sans-serif", mb: 1 }}
-                        >
-                          Suggested Types
-                        </Typography>
-                        <Grid
-                          container
-                          spacing={1}
-                          sx={{ placeContent: "center", placeItems: "center" }}
-                        >
-                          {suggestLocationDefaultTypes.map((type, i) => (
-                            <Grid item key={"suggested-type-" + i}>
-                              <Chip
-                                variant="filled"
-                                sx={{
-                                  backgroundColor: "white",
-                                  opacity: suggestedTypes.includes(type)
-                                    ? 1
-                                    : 0.65,
-                                  border: "1px solid gray",
-                                }}
-                                key={"suggested-type-filter-chip-" + i}
-                                label={type.replace("_", " ")}
-                                onDelete={() => {
-                                  if (suggestedTypes.includes(type))
-                                    setSuggestedTypes(
-                                      suggestedTypes.filter((t) => t !== type)
-                                    );
-                                  else
-                                    setSuggestedTypes([
-                                      ...suggestedTypes,
-                                      type,
-                                    ]);
-                                }}
-                                deleteIcon={
-                                  suggestedTypes.includes(type) ? (
-                                    <Delete />
-                                  ) : (
-                                    <Add
-                                      sx={{
-                                        opacity: "1 !important",
-                                        color: "black",
-                                      }}
-                                    />
-                                  )
-                                }
-                              />
-                            </Grid>
-                          ))}
-                          {/* {suggestedTypes.length !==
-                  suggestLocationDefaultTypes.length && (
-                  <Grid item>
-                    <ChipSelectMenu
-                      multiple={false}
-                      label={"Add Type"}
-                      icon={<Add />}
-                      options={suggestLocationDefaultTypes.filter(
-                        (type) => !suggestedTypes.includes(type)
-                      )}
-                      onChange={(selected) => {
-                        setSuggestedTypes([...suggestedTypes, selected]);
-                      }}
-                    />
-                  </Grid>
-                )} */}
-                        </Grid>
-                      </>
-                    )}
-                    {settingsDirty && (
-                      <Button
-                        variant="contained"
-                        sx={{ mt: 2, pb: 0 }}
-                        onClick={() => {
-                          suggestNearby();
-                        }}
-                      >
-                        Refresh
-                      </Button>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-
               <Box
                 onPointerOver={(e) => {
                   if (!e.target) return;
@@ -1042,7 +1191,7 @@ export default function ItineraryTimeline({
                   },
                 }}
               >
-                {suggestedActivities.length > 0 && !fetchingNearby && (
+                {/* {suggestedActivities.length > 0 && !fetchingNearby && (
                   <List
                     sx={{
                       pt: 0,
@@ -1096,7 +1245,7 @@ export default function ItineraryTimeline({
                       </ListItem>
                     ))}
                   </List>
-                )}
+                )} */}
                 {(suggestedActivities.length === 0 || fetchingNearby) &&
                   !noLocationsNearby && <CircularProgress sx={{ m: 2 }} />}
                 {suggestedActivities.length === 0 && noLocationsNearby && (

@@ -142,6 +142,7 @@ export default function SearchBar({
   tags,
   times,
   days,
+  suggestingFor,
 }) {
   const hint = React.useRef("");
   const [inputValue, setInputValue] = React.useState("");
@@ -150,14 +151,11 @@ export default function SearchBar({
     useStackNavigation();
 
   React.useEffect(() => {
-    console.log("nav state changed:", canGoBack, canGoForward, current);
-  }, [canGoBack, canGoForward, current]);
-
-  React.useEffect(() => {
     if (focusedMarker) {
       setInputValue(focusedMarker.info);
     } else if (focusedCluster) {
-      setInputValue("Multiple locations");
+      if (!suggestingFor) setInputValue("Multiple Activities");
+      else setInputValue("Suggested Activities Near " + suggestingFor.info);
     } else {
       setInputValue("");
     }
@@ -429,6 +427,8 @@ export default function SearchBar({
               // isFocused={inputFocused}
               placeholder="Search…"
               onChange={(e) => {
+                if (!inputFocused) return;
+
                 const newValue = e.target.value;
                 setInputValue(newValue);
 

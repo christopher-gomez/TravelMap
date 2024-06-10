@@ -660,7 +660,7 @@ export const POIDetails = ({
   const [_image, setImage] = useState(image);
 
   const [imageLoading, setImageLoading] = useState(
-    _image !== null && _image !== undefined && _image.length > 0 ? false : true
+    image !== null && image !== undefined && image.length > 0 ? false : true
   );
 
   useEffect(() => {
@@ -684,6 +684,10 @@ export const POIDetails = ({
       setTime(marker.time);
       setIsPlacesPOI(marker.isPlacesPOI !== undefined ? true : false);
       setIcon(marker.icon);
+    }
+
+    if(marker && !imageLoading) {
+      setImageLoading(true);
     }
   }, [marker]);
 

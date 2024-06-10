@@ -73,6 +73,7 @@ export default function StandardDrawer({
               maxWidth: "420px",
               height: "100%", // Set the height to 100% of the viewport
               position: "relative",
+              boxShadow: 'inset -2px 10px 20px rgba(0, 0, 0, 0.9)',
               "&::-webkit-scrollbar": {
                 width: "0.5em",
                 height: "0.5em",
@@ -96,12 +97,12 @@ export default function StandardDrawer({
           }}
           variant={variant ? variant : "persistent"}
           anchor={anchor ? anchor : "left"}
-          PaperProps={{ style: { zIndex: 9999 }, ref: paperRef }}
+          PaperProps={{ style: { zIndex: 9999 }, ref: paperRef, id: anchor + "-drawer"}}
           open={drawerOpen}
           onClose={toggleDrawer(false)}
-          onOpen={() => {
-            toggleDrawer(true);
-          }}
+          // onOpen={() => {
+          //   toggleDrawer(true);
+          // }}
           hideBackdrop
         >
           {/* <div

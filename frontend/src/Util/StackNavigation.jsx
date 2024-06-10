@@ -20,19 +20,21 @@ export function StackNavigationProvider({ children }) {
 
   useEffect(() => {
     backStackRef.current = backStack;
-    console.log("backStack updated", backStack);
+    // console.log("backStack updated", backStack);
   }, [backStack]);
 
   useEffect(() => {
     currentRef.current = current;
+    // console.log("current updated", current);
   }, [current]);
 
   useEffect(() => {
     forwardStackRef.current = forwardStack;
-    console.log("forwardStack updated", forwardStack);
+    // console.log("forwardStack updated", forwardStack);
   }, [forwardStack]);
 
   const push = (page) => {
+    // console.log("pushing page", page, currentRef.current);
     if (currentRef.current !== null && page !== currentRef.current) {
       setBackStack([...backStackRef.current, currentRef.current]);
       setForwardStack([]);
@@ -43,7 +45,7 @@ export function StackNavigationProvider({ children }) {
       backStackRef.current.length > 0 &&
       deepEqual(page, backStackRef.current[backStackRef.current.length - 1])
     ) {
-      console.log("found same object at top of backstack");
+      // console.log("found same object at top of backstack");
       const newBackStack = [...backStackRef.current];
       newBackStack.pop();
       setBackStack(newBackStack);
@@ -90,10 +92,15 @@ export function StackNavigationProvider({ children }) {
     setBackStack([]);
     setForwardStack([]);
     setCurrent(null);
-    console.log("cleared stack");
+    // console.log("cleared stack");
   };
 
   const moveForwardToBack = () => {
+    // console.log(
+    //   "moving forward to back",
+    //   currentRef.current,
+    //   forwardStackRef.current
+    // );
     if (currentRef.current && forwardStackRef.current.length > 0)
       setBackStack([
         ...forwardStackRef.current,

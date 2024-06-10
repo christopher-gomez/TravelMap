@@ -3,7 +3,16 @@ import ToolTipSpeedDial from "../../Util/SpeedDial";
 import SatelliteAltIcon from "@mui/icons-material/SatelliteAlt";
 import DirectionsTransitIcon from "@mui/icons-material/DirectionsTransit";
 import MapIcon from "@mui/icons-material/Map";
-import { Google, Lock, LockOpen, Logout } from "@mui/icons-material";
+import {
+  CenterFocusStrong,
+  CropFree,
+  FlashlightOff,
+  FlashlightOn,
+  Google,
+  Lock,
+  LockOpen,
+  Logout,
+} from "@mui/icons-material";
 import { PromptSignIn, SignOut } from "../../Util/GooglePrompt";
 
 export default function MapFAB({
@@ -18,6 +27,10 @@ export default function MapFAB({
   // setSignInToken,
   googleAccount,
   setErrorPopupOpen,
+  setShouldVignette,
+  shouldVignette,
+  shouldKeepFocusCentered,
+  setShouldKeepFocusCentered,
 }) {
   const speedDialActions = [
     {
@@ -47,6 +60,20 @@ export default function MapFAB({
         else setCurrentRenderType("roadmap");
       },
     },
+    {
+      icon: shouldVignette ? <FlashlightOn /> : <FlashlightOff />,
+      name: shouldVignette
+        ? "Disable Focus Spotlight"
+        : "Enable Focus Spotlight",
+      onClick: () => setShouldVignette(!shouldVignette),
+    },
+    {
+      icon: shouldKeepFocusCentered ? <CenterFocusStrong /> : <CropFree />,
+      name: shouldKeepFocusCentered
+        ? "Disable Focus Center Lock"
+        : "Enable Focus Center Lock",
+      onClick: () => setShouldKeepFocusCentered(!shouldKeepFocusCentered),
+    },
   ];
 
   if (currentRenderType === "roadmap") {
@@ -61,6 +88,7 @@ export default function MapFAB({
   }
   return (
     <ToolTipSpeedDial
+      direction="left"
       actions={speedDialActions}
       icon={<MapIcon />}
       position={{ bottom: 16 + drawerHeight, right: 16 }}
