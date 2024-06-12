@@ -4,10 +4,6 @@ import SatelliteAltIcon from "@mui/icons-material/SatelliteAlt";
 import DirectionsTransitIcon from "@mui/icons-material/DirectionsTransit";
 import MapIcon from "@mui/icons-material/Map";
 import {
-  CenterFocusStrong,
-  CropFree,
-  FlashlightOff,
-  FlashlightOn,
   Google,
   Lock,
   LockOpen,
@@ -27,10 +23,6 @@ export default function MapFAB({
   // setSignInToken,
   googleAccount,
   setErrorPopupOpen,
-  setShouldVignette,
-  shouldVignette,
-  shouldKeepFocusCentered,
-  setShouldKeepFocusCentered,
 }) {
   const speedDialActions = [
     {
@@ -48,31 +40,12 @@ export default function MapFAB({
       },
     },
     {
-      icon: mapLocked ? <LockOpen /> : <Lock />,
-      name: mapLocked ? "Unlock Map Control" : "Lock Map Control",
-      onClick: () => setMapLocked(!mapLocked),
-    },
-    {
       icon: <SatelliteAltIcon />,
       name: "Toggle Satellite",
       onClick: () => {
         if (currentRenderType === "roadmap") setCurrentRenderType("satellite");
         else setCurrentRenderType("roadmap");
       },
-    },
-    {
-      icon: shouldVignette ? <FlashlightOn /> : <FlashlightOff />,
-      name: shouldVignette
-        ? "Disable Focus Spotlight"
-        : "Enable Focus Spotlight",
-      onClick: () => setShouldVignette(!shouldVignette),
-    },
-    {
-      icon: shouldKeepFocusCentered ? <CenterFocusStrong /> : <CropFree />,
-      name: shouldKeepFocusCentered
-        ? "Disable Focus Center Lock"
-        : "Enable Focus Center Lock",
-      onClick: () => setShouldKeepFocusCentered(!shouldKeepFocusCentered),
     },
   ];
 

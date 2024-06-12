@@ -291,12 +291,6 @@
   border: 2px solid #ffee00; /* Gold border for a touch of vibrancy */
 }
 
-.poi-image-container {
-  -webkit-box-shadow: inset 0px -11px 17px 0px rgba(0, 0, 0, 0.41);
-  -moz-box-shadow: inset 0px -11px 17px 0px rgba(0, 0, 0, 0.41);
-  box-shadow: inset 0px -11px 17px 0px rgba(0, 0, 0, 0.41);
-}
-
 .poi-related {
   display: inline-block;
   font-family: "Fredoka", sans-serif;

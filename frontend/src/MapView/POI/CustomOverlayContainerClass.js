@@ -292,6 +292,9 @@ export class CustomInfoWindowFactory {
         this.stemStyle = options.stemStyle || {};
         this.pixelOffset = options.pixelOffset || new maps.Size(0, 0);
         this.visible = options.visible || true;
+        this.onClose = options.onClose;
+        this.onHover = options.onHover;
+        this.onClick = options.onClick;
         this.div = null;
         this.stemDiv = null;
 
@@ -315,6 +318,23 @@ export class CustomInfoWindowFactory {
           this.div.className = "custom-info-window";
           this.div.style.position = "absolute";
           this.div.style.zIndex = 9999 + 1;
+          this.div.style.display = 'flex';
+          this.div.style.flexDirection = 'row';
+          this.div.style.alignItems = 'center';
+          this.div.style.justifyContent = 'center';
+          this.div.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+          this.div.style.backdropFilter = 'blur(10px)';
+          this.div.style.borderRadius = '5px';
+          this.div.style.padding = '5px';
+
+          this.div.addEventListener('pointerover', () => {
+            if (this.onHover) this.onHover(this);
+          });
+
+          this.div.addEventListener('pointerleave', () => {
+            if (this.onHover) this.onHover(null);
+          });
+
           this.setBoxStyle();
 
           if (typeof this.content === "string") {
@@ -329,10 +349,10 @@ export class CustomInfoWindowFactory {
           this.setStemStyle();
           this.div.appendChild(this.stemDiv);
 
-          const panes = this.getPanes();
-          panes.overlayLayer.appendChild(this.div);
+          this.addCloseButton();
 
-          // this.addCloseButton();
+          const panes = this.getPanes();
+          panes.floatPane.appendChild(this.div);
         }
       }
 
@@ -351,8 +371,9 @@ export class CustomInfoWindowFactory {
           } else {
             console.log("Positioning to the left of the point");
             // Position to the left of the point
-            this.div.style.left = (pixel.x - this.div.offsetWidth - this.pixelOffset.width) + "px";
-            this.stemDiv.style.left = (this.div.offsetWidth - 10) + "px"; // Position stem to the right of the div
+            this.div.style.left =
+              pixel.x - this.div.offsetWidth - this.pixelOffset.width + "px";
+            this.stemDiv.style.left = this.div.offsetWidth - 10 + "px"; // Position stem to the right of the div
           }
 
           this.div.style.top = pixel.y + this.pixelOffset.height + "px";
@@ -426,17 +447,53 @@ export class CustomInfoWindowFactory {
       }
 
       addCloseButton() {
-        if (!this.customOptions.closeBoxURL) return;
-
-        const closeBox = document.createElement("img");
-        closeBox.src = this.customOptions.closeBoxURL;
-        closeBox.style.cursor = "pointer";
-        closeBox.style.position = "absolute";
+        const closeBox = document.createElement("div");
+        closeBox.style.width = "12px";
+        closeBox.style.height = "12px";
+        // closeBox.style.position = "absolute";
         closeBox.style.right = this.customOptions.closeBoxMargin || "2px";
-        closeBox.style.top = this.customOptions.closeBoxMargin || "2px";
+        closeBox.style.top = 0;
+        closeBox.style.margin = '2px';
+        closeBox.style.marginLeft = '.5em';
+        closeBox.style.alignSelf = 'start';
+        closeBox.style.cursor = "pointer";
+        closeBox.style.display = "flex";
+        closeBox.style.alignItems = "center";
+        closeBox.style.justifyContent = "center";
+
+        // Create the close icon using pseudo-elements
+        const closeIcon = document.createElement("div");
+        closeIcon.style.position = "relative";
+        closeIcon.style.width = "100%";
+        closeIcon.style.height = "100%";
+
+        const line1 = document.createElement("div");
+        line1.style.position = "absolute";
+        line1.style.width = "2px";
+        line1.style.height = "100%";
+        line1.style.backgroundColor = "#000";
+        line1.style.transform = "rotate(45deg)";
+        line1.style.top = "0";
+        line1.style.left = "50%";
+        line1.style.transformOrigin = "center";
+
+        const line2 = document.createElement("div");
+        line2.style.position = "absolute";
+        line2.style.width = "2px";
+        line2.style.height = "100%";
+        line2.style.backgroundColor = "#000";
+        line2.style.transform = "rotate(-45deg)";
+        line2.style.top = "0";
+        line2.style.left = "50%";
+        line2.style.transformOrigin = "center";
+
+        closeIcon.appendChild(line1);
+        closeIcon.appendChild(line2);
+
+        closeBox.appendChild(closeIcon);
 
         closeBox.addEventListener("click", () => {
-          this.setVisible(false);
+          if (this.onClose) this.onClose(this);
         });
 
         this.div.appendChild(closeBox);
@@ -450,4 +507,3 @@ export class CustomInfoWindowFactory {
     return new this.class(options);
   }
 }
-

@@ -263,6 +263,7 @@ function SwipeableEdgeDrawer({
               pt: 2,
               pb: 2,
             }}
+            id="swipe-drawer-header"
           >
             <Puller />
             <StyledBox
@@ -329,12 +330,12 @@ function SwipeableEdgeDrawer({
             }}
             ref={drawerRef}
           >
-            <div className={`scroll-fade-top ${atTop ? "hidden" : ""}`}></div>
-            {!DrawerContent && <Skeleton variant="rectangular" height="100%" />}
+            {/* <div className={`scroll-fade-top ${atTop ? "hidden" : ""}`}></div> */}
+            {/* {!DrawerContent && <Skeleton variant="rectangular" height="100%" />} */}
             {DrawerContent}
-            <div
+            {/* <div
               className={`scroll-fade-bottom ${atBottom ? "hidden" : ""}`}
-            ></div>
+            ></div> */}
           </StyledBox>
         </SwipeableDrawer>
       )}

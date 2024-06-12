@@ -29,6 +29,7 @@ export default function ActivityTimeline({
         MozUserSelect: "none",
         WebkitUserSelect: "none",
         WebkitTouchCallout: "none",
+        p: 0
         // flexFlow: "row !important",
       }}
     >
@@ -67,7 +68,8 @@ export default function ActivityTimeline({
                   MozUserSelect: "none",
                   WebkitUserSelect: "none",
                   WebkitTouchCallout: "none",
-                  fontWeight: hovered === activity ? "bolder" : "normal",
+                  pl: 0
+                  // fontWeight: hovered === activity ? "bolder" : "normal",
                 }}
               >
                 {activity.time}
@@ -113,7 +115,8 @@ export default function ActivityTimeline({
                 MozUserSelect: "none",
                 WebkitUserSelect: "none",
                 WebkitTouchCallout: "none",
-                fontWeight: hovered === activity ? "bolder" : "normal",
+                pr: 1
+                // fontWeight: hovered === activity ? "bolder" : "normal",
               }}
             >
               {activity.label}

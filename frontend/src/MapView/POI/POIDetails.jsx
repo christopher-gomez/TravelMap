@@ -94,67 +94,68 @@ const DateComponent = ({
   return (
     <>
       {
-      // (day || date) && 
-      !settingDate && (
-        <Box
-          style={{
-            display: "inline-flex",
-            flexFlow: "row",
-            placeItems: "center",
-            // width: "100%",
-          }}
-        >
-          {date && (
-            <span className="poi-date row">
-              {`${new Date(dayjs(date.start)).toLocaleDateString(
-                "en-US",
-                options
-              )}${
-                date.end
-                  ? " - " +
-                    new Date(dayjs(date.end)).toLocaleDateString(
-                      "en-US",
-                      options
-                    )
-                  : ""
-              }`}{" "}
-              -{" "}
-            </span>
-          )}
-          {day && (
-            <span className="poi-day row">
-              {Array.isArray(day)
-                ? "Days " + day[0] + "-" + day[day.length - 1]
-                : "Day " + day}
-              {canEdit && (
-                <IconButton
-                  sx={{
-                    p: 0,
-                    position: "absolute",
-                    pl: 1,
-                    position: "absolute",
-                    height: "fit-content",
-                    placeContent: "center",
-                    placeItems: "center",
-                    verticalAlign: "middle", // Align the icon vertically with the text
-                  }}
-                  onClick={() => {
-                    if (!googleAccount) {
-                      setLoginPopupOpen(true);
-                      return;
-                    }
+        // (day || date) &&
+        !settingDate && (
+          <Box
+            style={{
+              display: "inline-flex",
+              flexFlow: "row",
+              placeItems: "center",
+              // width: "100%",
+            }}
+          >
+            {date && (
+              <span className="poi-date row">
+                {`${new Date(dayjs(date.start)).toLocaleDateString(
+                  "en-US",
+                  options
+                )}${
+                  date.end
+                    ? " - " +
+                      new Date(dayjs(date.end)).toLocaleDateString(
+                        "en-US",
+                        options
+                      )
+                    : ""
+                }`}{" "}
+                -{" "}
+              </span>
+            )}
+            {day && (
+              <span className="poi-day row">
+                {Array.isArray(day)
+                  ? "Days " + day[0] + "-" + day[day.length - 1]
+                  : "Day " + day}
+                {canEdit && (
+                  <IconButton
+                    sx={{
+                      p: 0,
+                      position: "absolute",
+                      pl: 1,
+                      position: "absolute",
+                      height: "fit-content",
+                      placeContent: "center",
+                      placeItems: "center",
+                      verticalAlign: "middle", // Align the icon vertically with the text
+                    }}
+                    onClick={() => {
+                      if (!googleAccount) {
+                        setLoginPopupOpen(true);
+                        return;
+                      }
 
-                    setSettingDate(true);
-                  }}
-                >
-                  <Edit />
-                </IconButton>
-              )}
-            </span>
-          )}
-          {!date && <span className="poi-date row">No date set yet</span>}
-        </Box>
-      )}
+                      setSettingDate(true);
+                    }}
+                  >
+                    <Edit />
+                  </IconButton>
+                )}
+              </span>
+            )}
+            {!date && <span className="poi-date row">No date set yet</span>}
+          </Box>
+        )
+      }
       {canEdit && !date && !settingDate && (
         <Button
           variant="contained"
@@ -423,6 +424,9 @@ const Tags = ({
 
       {canEdit && allTags !== undefined && (
         <ChipSelectMenu
+          chipSx={{
+            boxShadow: "none",
+          }}
           icon={<Add />}
           options={allTags.filter((tag) => {
             if (!controlledTags || controlledTags.length === 0) return true;
@@ -488,6 +492,9 @@ const Time = ({
     >
       {allTimes && canEdit && (
         <ChipSelectMenu
+          chipSx={{
+            boxShadow: "none",
+          }}
           icon={time ? <Edit /> : undefined}
           deleteIcon={time ? <Delete /> : <Add />}
           onDelete={time ? () => setControlledTime(null) : undefined}
@@ -686,7 +693,7 @@ export const POIDetails = ({
       setIcon(marker.icon);
     }
 
-    if(marker && !imageLoading) {
+    if (marker && !imageLoading) {
       setImageLoading(true);
     }
   }, [marker]);
@@ -728,7 +735,7 @@ export const POIDetails = ({
           <div
             style={{
               position: "relative",
-              width: "calc(100% + 64px)",
+              width: "calc(100% + 64px + 1em)",
               backgroundImage:
                 _image && Array.isArray(_image)
                   ? `url(${_image[curImageIndex]})`
@@ -946,11 +953,8 @@ export const POIDetails = ({
           allMarkers={allMarkers}
           shouldShow={
             (_date !== null && _date !== undefined) ||
-            (
-              // canEdit &&
-              marker !== undefined &&
-              marker !== null &&
-              !marker.isPlacesPOI)
+            // canEdit &&
+            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
           }
         />
         <Time
@@ -1162,103 +1166,1001 @@ export const POIDetails = ({
   );
 };
 
-export const POIDetailsTitle = ({ title, tags, day, date }) => {
+export const POIDetailsMobile = ({
+  title,
+  image,
+  getPlacePhotos,
+  icon,
+  tags,
+  description,
+  day,
+  time,
+  date,
+  hideDescription = true,
+  onClick,
+  related,
+  setFocusedMarker,
+  offsetCenter,
+  googleAccount,
+  setLoginPopupOpen,
+  onUpdateDate,
+  marker,
+  calculateDay,
+  link,
+  onUpdateTitle,
+  allTags,
+  onTagsUpdated,
+  allTimes,
+  onTimeUpdated,
+  currentDayFilter,
+  allMarkers,
+  address,
+  onNewActivity,
+  onNewEmojiIconSet,
+  onConfirmDelete,
+  onActivityMouseOver,
+  onActivityMouseOut,
+  canEdit,
+}) => {
+  const [curImageIndex, setCurImageIndex] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      setCurImageIndex(0);
+    };
+  }, []);
+
+  const [_date, setDate] = useState(date);
+  const [_day, setDay] = useState(day);
+  const [_title, setTitle] = useState(title);
+  const [_tags, setTags] = useState(tags);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [_time, setTime] = useState(time);
+  const [isPlacesPOI, setIsPlacesPOI] = useState(false);
+  const [_icon, setIcon] = useState(icon);
+  const [_image, setImage] = useState(image);
+
+  const [imageLoading, setImageLoading] = useState(
+    image !== null && image !== undefined && image.length > 0 ? false : true
+  );
+
+  useEffect(() => {
+    if (imageLoading) {
+      if (getPlacePhotos && marker)
+        getPlacePhotos(marker, (photos) => {
+          if (!photos || photos.length === 0) return;
+
+          setImage(photos);
+          setImageLoading(false);
+        });
+    }
+  }, [imageLoading]);
+
+  useEffect(() => {
+    if (marker && canEdit) {
+      setDate(marker.date);
+      setDay(marker.day);
+      setTitle(marker.info);
+      setTags(marker.tags);
+      setTime(marker.time);
+      setIsPlacesPOI(marker.isPlacesPOI !== undefined ? true : false);
+      setIcon(marker.icon);
+    }
+
+    if (marker && !imageLoading) {
+      setImageLoading(true);
+    }
+  }, [marker]);
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   return (
-    <div className="content mobile">
-      {title &&
-        (Array.isArray(title) ? (
-          title.map((t, i) => (
-            <h1 className="poi-title" key={title + "-title"}>
-              {t}
-              {i !== title.length - 1 && ","}
-            </h1>
-          ))
-        ) : (
-          <h1 className="poi-title">{title}</h1>
-        ))}
-      {(day || date) && (
-        <div
-          style={{
-            display: "flex",
-            flexFlow: "row",
-            alignContent: "center",
-            justifyContent: "center",
-            alignItems: "center",
-            marginBottom: ".5em",
+    <>
+      <div
+        className="content"
+        style={{ cursor: onClick ? "pointer" : "default" }}
+        onClick={onClick}
+        onPointerOver={() => {
+          if (onActivityMouseOver) onActivityMouseOver();
+        }}
+        onPointerOut={() => {
+          if (onActivityMouseOut) onActivityMouseOut();
+        }}
+      >
+        {/* {date && (
+        <span className="poi-date">{`${new Date(date.start).toLocaleDateString(
+          "en-US",
+          options
+        )}${
+          date.end
+            ? " - " + new Date(date.end).toLocaleDateString("en-US", options)
+            : ""
+        }`}</span>
+      )}
+      {day && (
+        <span className="poi-day">
+          {Array.isArray(day)
+            ? "Days: " + day[0] + "-" + day[day.length - 1]
+            : "Day: " + day}
+        </span>
+      )} */}
+
+        {!imageLoading || !marker ? (
+          <div
+            style={{
+              position: "relative",
+              width: "calc(100% + 64px + 1em)",
+              backgroundImage:
+                _image && Array.isArray(_image)
+                  ? `url(${_image[curImageIndex]})`
+                  : _image
+                  ? `url(${_image})`
+                  : "none",
+              height: _image ? "400px" : "100px",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              boxShadow: !_image ? "none" : "",
+            }}
+            className="poi-image-container"
+          >
+            {/* <img
+            src={Array.isArray(image) ? image[curImageIndex] : image}
+            style={{ width: "100%", height: "400px", marginBottom: ".5em" }}
+          /> */}
+            {_image && Array.isArray(_image) && (
+              <>
+                <div
+                  style={{
+                    position:
+                      "absolute" /* Positioned absolutely inside the relative parent */,
+                    top: "40%" /* Center vertically */,
+                    left: 0 /* Stretch from left to right */,
+                    right: 0,
+                    display: "flex",
+                    justifyContent:
+                      "space-between" /* Space out the arrow buttons */,
+                    alignItems: "center" /* Center the buttons vertically */,
+                  }}
+                >
+                  <IconButton
+                    sx={{
+                      background: "rgba(0, 0, 0, 0.5)",
+                      ml: 1,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurImageIndex(
+                        (curImageIndex - 1 + _image.length) % _image.length
+                      );
+                    }}
+                  >
+                    <ArrowBack sx={{ color: "white" }} />
+                  </IconButton>
+                  <IconButton
+                    sx={{
+                      background: "rgba(0, 0, 0, 0.5)",
+                      mr: 1,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurImageIndex((curImageIndex + 1) % _image.length);
+                    }}
+                  >
+                    <ArrowForward sx={{ color: "white" }} />
+                  </IconButton>
+                </div>
+                <div style={{ position: "absolute", right: 10, top: "90%" }}>
+                  <small style={{ color: "white" }}>
+                    {curImageIndex + 1}/{_image.length}
+                  </small>
+                </div>
+              </>
+            )}
+          </div>
+        ) : marker ? (
+          <Skeleton
+            sx={{
+              position: "relative",
+              width: "calc(100% + 64px)",
+              height: "400px",
+            }}
+          />
+        ) : null}
+        {/* <Box
+          sx={{
+            position: "flex",
+            width: "100%",
+            placeContent: "center",
+            placeItems: "center",
+            position: "relative",
           }}
         >
-          {date && (
-            <span className="poi-date row">
-              {`${new Date(date.start).toLocaleDateString("en-US", options)}${
-                date.end
-                  ? " - " +
-                    new Date(date.end).toLocaleDateString("en-US", options)
-                  : ""
-              }`}{" "}
-              -{" "}
-            </span>
+          {canEdit && marker && !marker.isPlacesPOI && (
+            <IconButton
+              sx={{ position: "absolute", left: 0, ml: "-32px" }}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              <Delete />
+            </IconButton>
           )}
-          {day && (
-            <span className="poi-day row">
-              {Array.isArray(day)
-                ? "Days " + day[0] + "-" + day[day.length - 1]
-                : "Day " + day}
-            </span>
-          )}
-        </div>
-      )}
-      {tags && (
-        <div className="poi-tags row">
-          {tags.map((tag, i) => (
-            <span className="poi-tag" key={title + "-tag-" + i}>
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
+          <IconComponent
+            icon={_icon}
+            shouldShow={_icon || (marker && !marker.isPlacesPOI)}
+            onEmojiSelect={(emoji, img) => {
+              setIcon({
+                url:
+                  "data:image/svg+xml;charset=UTF-8," +
+                  encodeURIComponent(
+                    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">${emoji}</text></svg>`
+                  ),
+              });
+              onNewEmojiIconSet(marker, emoji);
+            }}
+            googleAccount={googleAccount}
+            setLoginPopupOpen={setLoginPopupOpen}
+            canEdit={
+              (canEdit &&
+                marker &&
+                marker.iconType &&
+                marker.iconType === "emoji") ||
+              (marker && !marker.icon)
+            }
+          />
+        </Box> */}
+        {/* {marker && marker.isPlacesPOI ? (
+          <Typography
+            variant="subtitle2"
+            sx={{
+              mt: 2,
+              mb: 0,
+              fontStyle: "italic",
+              fontSize: ".8em !important",
+            }}
+          >
+            Suggested Place of Interest
+          </Typography>
+        ) : null} */}
+        {/* <Title
+          setMarginTop={!icon}
+          title={_title}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          onUpdateTitle={(title) => {
+            if (title === _title) return;
+
+            if (marker) marker["info"] = title;
+            setTitle(title);
+            if (onUpdateTitle) onUpdateTitle(title);
+          }}
+          onEditingTitle={(editing) => setIsEditingTitle(editing)}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+        /> */}
+        {/* {address && (
+          <Typography variant="subtitle2" className="poi-address">
+            {address}
+          </Typography>
+        )} */}
+        {/* {link && ( */}
+        {/* )} */}
+        {/* <DateComponent
+          date={_date}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          day={_day}
+          onUpdateDate={(date) => {
+            if (!calculateDay) return;
+
+            // console.log("on update date: ", date);
+
+            if (!date.start && !date.end) {
+              // console.log("date has no start or end");
+              if (_date && (_date.start !== null || _date.end !== null)) {
+                if (canEdit && marker) {
+                  marker["date"] = date;
+                  marker["day"] = null;
+                }
+
+                setDate({ start: null, end: null });
+                setDay(null);
+
+                if (onUpdateDate) onUpdateDate(date);
+              }
+              return;
+            }
+
+            if (
+              date !== null &&
+              _date !== null &&
+              date !== undefined &&
+              _date !== undefined &&
+              date.start === _date.start &&
+              date.end === _date.end
+            )
+              return;
+
+            const day = calculateDay(date);
+
+            if (canEdit && marker) {
+              marker["date"] = date;
+              marker["day"] = day;
+            }
+
+            setDate(date);
+            setDay(day);
+
+            if (onUpdateDate) onUpdateDate(date);
+          }}
+          isEditingTitle={isEditingTitle}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+          currentDayFilter={currentDayFilter}
+          allMarkers={allMarkers}
+          shouldShow={
+            (_date !== null && _date !== undefined) ||
+            // canEdit &&
+            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+          }
+        /> */}
+        {/* <Time
+          time={_time}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          allTimes={allTimes}
+          onUpdateTime={(time) => {
+            if (time === _time) return;
+
+            if (canEdit && marker) marker["time"] = time;
+            setTime(time);
+            if (onTimeUpdated) onTimeUpdated(time);
+          }}
+          shouldShow={
+            (_time !== null && _time !== undefined) ||
+            (canEdit &&
+              marker !== undefined &&
+              marker !== null &&
+              !marker.isPlacesPOI)
+          }
+        /> */}
+        {/* {canEdit && marker && (
+          <a
+            href={
+              "https://www.google.com/search?q=" +
+              encodeURIComponent(marker.placesSearchName ?? marker.info)
+            }
+            target="_blank"
+            rel="noreferrer"
+            style={{ marginBottom: ".5em" }}
+          >
+            Google
+          </a>
+        )}
+        <Tags
+          tags={tags}
+          allTags={allTags}
+          onTagsUpdated={(tags) => {
+            if (tags === _tags) return;
+
+            if (canEdit && marker) marker["tags"] = tags;
+            setTags(tags);
+
+            if (onTagsUpdated) onTagsUpdated(tags);
+          }}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+          shouldShow={
+            (tags !== null && tags !== undefined) ||
+            (canEdit &&
+              marker !== undefined &&
+              marker !== null &&
+              !marker.isPlacesPOI)
+          }
+        /> */}
+
+        {description && !hideDescription && (
+          <p
+            className="poi-description"
+            style={{ marginTop: "1em", marginBottom: 0 }}
+          >
+            {description}
+          </p>
+        )}
+        {!description && !hideDescription && (
+          <div
+            className="poi-description"
+            style={{
+              marginTop: "1em",
+              marginBottom: 0,
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            <Skeleton
+              height={"100%"}
+              width={"100%"}
+              sx={{ transform: "none !important" }}
+            />
+          </div>
+        )}
+        {related && related.length > 0 && (
+          <div style={{ display: "flex", flexFlow: "column", width: "100%" }}>
+            <h4 style={{ marginBottom: "8px", paddingLeft: "16px" }}>
+              Related
+            </h4>
+            <div className="poi-tags" style={{ alignSelf: "center" }}>
+              {related.map((related, i) => (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFocusedMarker(related);
+                    // offsetCenter(related.position, 0, 70);
+                  }}
+                  className="poi-related"
+                  key={"related" + related.info + "-" + i}
+                >
+                  {related.info}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {marker && marker.isPlacesPOI && marker.rating && (
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              flexFlow: "column",
+              placeContent: "center",
+              placeItems: "center",
+              mb: marker.types ? 0 : 1,
+            }}
+          >
+            <Rating readOnly value={marker.rating} precision={0.5} />
+            {marker.userRatingsTotal && (
+              <Typography variant="caption">
+                {marker.userRatingsTotal}{" "}
+                {marker.userRatingsTotal === 1 ? "review" : "reviews"}
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        {marker && marker.isPlacesPOI && marker.types && (
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <Tags
+              tags={marker.types.map((t) => {
+                return (t[0].toUpperCase() + t.slice(1)).replaceAll("_", " ");
+              })}
+              canEdit={false}
+            />
+          </Box>
+        )}
+
+        {marker && marker.isPlacesPOI && (
+          <Button
+            variant="contained"
+            onClick={async () => {
+              if (!googleAccount) {
+                setLoginPopupOpen(true);
+                return;
+              }
+
+              await createNewActivity(marker, googleAccount);
+              marker.isPlacesPOI = undefined;
+              setIsPlacesPOI(false);
+              onNewActivity(marker);
+            }}
+          >
+            Add to Trip Itinerary Places of Interest
+          </Button>
+        )}
+
+        {/* <div className="poi-extra-info">
+        </div> */}
+      </div>
+      {/* {confirmingDelete && ( */}
+      {/* <Popup
+        title={"Confirm Activity Delete"}
+        // setOpen={confirmingDelete}
+        open={confirmingDelete}
+        dividers
+        actions={[
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setConfirmingDelete(false);
+            }}
+          >
+            Cancel
+          </Button>,
+          <Button
+            onClick={() => {
+              setConfirmingDelete(false);
+
+              if (!googleAccount) {
+                setLoginPopupOpen(true);
+                return;
+              }
+
+              onConfirmDelete(marker);
+            }}
+            variant="contained"
+            sx={{ backgroundColor: "#C70000", color: "white" }}
+          >
+            Confirm
+          </Button>,
+        ]}
+      >
+        <Typography>Are you sure you want to delete this activity?</Typography>
+      </Popup> */}
+      {/* )} */}
+    </>
   );
 };
 
-export const POIDetailsDescription = ({ description }) => {
-  const [atBottom, setAtBottom] = useState(false);
-  const [atTop, setAtTop] = useState(true);
-  const scrollableRef = useRef(null);
+export const POIDetailsTitle = ({
+  title,
+  image,
+  getPlacePhotos,
+  icon,
+  tags,
+  description,
+  day,
+  time,
+  date,
+  hideDescription = true,
+  onClick,
+  related,
+  setFocusedMarker,
+  offsetCenter,
+  googleAccount,
+  setLoginPopupOpen,
+  onUpdateDate,
+  marker,
+  calculateDay,
+  link,
+  onUpdateTitle,
+  allTags,
+  onTagsUpdated,
+  allTimes,
+  onTimeUpdated,
+  currentDayFilter,
+  allMarkers,
+  address,
+  onNewActivity,
+  onNewEmojiIconSet,
+  onConfirmDelete,
+  onActivityMouseOver,
+  onActivityMouseOut,
+  canEdit,
+}) => {
+  const [curImageIndex, setCurImageIndex] = useState(0);
 
   useEffect(() => {
-    const scrollable = scrollableRef.current;
-    // Attach the scroll event listener
-    scrollable.addEventListener("scroll", checkScroll);
-
-    // Remove the event listener on cleanup
     return () => {
-      scrollable.removeEventListener("scroll", checkScroll);
+      setCurImageIndex(0);
     };
-  }, [scrollableRef]);
+  }, []);
 
-  const checkScroll = () => {
-    if (scrollableRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollableRef.current;
-      // Set state based on scroll position
-      setAtBottom(scrollTop + clientHeight >= scrollHeight);
-      setAtTop(scrollTop === 0);
+  const [_date, setDate] = useState(date);
+  const [_day, setDay] = useState(day);
+  const [_title, setTitle] = useState(title);
+  const [_tags, setTags] = useState(tags);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [_time, setTime] = useState(time);
+  const [isPlacesPOI, setIsPlacesPOI] = useState(false);
+  const [_icon, setIcon] = useState(icon);
+  const [_image, setImage] = useState(image);
+
+  const [imageLoading, setImageLoading] = useState(
+    image !== null && image !== undefined && image.length > 0 ? false : true
+  );
+
+  useEffect(() => {
+    if (imageLoading) {
+      if (getPlacePhotos && marker)
+        getPlacePhotos(marker, (photos) => {
+          if (!photos || photos.length === 0) return;
+
+          setImage(photos);
+          setImageLoading(false);
+        });
     }
-  };
+  }, [imageLoading]);
+
+  useEffect(() => {
+    if (marker && canEdit) {
+      setDate(marker.date);
+      setDay(marker.day);
+      setTitle(marker.info);
+      setTags(marker.tags);
+      setTime(marker.time);
+      setIsPlacesPOI(marker.isPlacesPOI !== undefined ? true : false);
+      setIcon(marker.icon);
+    }
+
+    if (marker && !imageLoading) {
+      setImageLoading(true);
+    }
+  }, [marker]);
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
-    <div className="content mobile">
-      {description && (
-        <>
-          {/* <div className={`scroll-fade-top ${atTop ? "hidden" : ""}`}></div> */}
-          <p className="poi-description" ref={scrollableRef}>
+    <>
+      <div className="content mobile">
+        <Box
+          sx={{
+            position: "flex",
+            width: "100%",
+            placeContent: "center",
+            placeItems: "center",
+            position: "relative",
+          }}
+        >
+          {canEdit && marker && !marker.isPlacesPOI && (
+            <IconButton
+              sx={{ position: "absolute", left: 0 }}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              <Delete />
+            </IconButton>
+          )}
+          <IconComponent
+            icon={_icon}
+            shouldShow={_icon || (marker && !marker.isPlacesPOI)}
+            onEmojiSelect={(emoji, img) => {
+              setIcon({
+                url:
+                  "data:image/svg+xml;charset=UTF-8," +
+                  encodeURIComponent(
+                    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">${emoji}</text></svg>`
+                  ),
+              });
+              onNewEmojiIconSet(marker, emoji);
+            }}
+            googleAccount={googleAccount}
+            setLoginPopupOpen={setLoginPopupOpen}
+            canEdit={
+              (canEdit &&
+                marker &&
+                marker.iconType &&
+                marker.iconType === "emoji") ||
+              (marker && !marker.icon)
+            }
+          />
+        </Box>
+        {marker && marker.isPlacesPOI ? (
+          <Typography
+            variant="subtitle2"
+            sx={{
+              mt: 2,
+              mb: 0,
+              fontStyle: "italic",
+              fontSize: ".8em !important",
+            }}
+          >
+            Suggested Place of Interest
+          </Typography>
+        ) : null}
+        <Title
+          setMarginTop={!icon}
+          title={_title}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          onUpdateTitle={(title) => {
+            if (title === _title) return;
+
+            if (marker) marker["info"] = title;
+            setTitle(title);
+            if (onUpdateTitle) onUpdateTitle(title);
+          }}
+          onEditingTitle={(editing) => setIsEditingTitle(editing)}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+        />
+        {address && (
+          <Typography variant="subtitle2" className="poi-address">
+            {address}
+          </Typography>
+        )}
+        {/* {link && ( */}
+        {/* )} */}
+        <DateComponent
+          date={_date}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          day={_day}
+          onUpdateDate={(date) => {
+            if (!calculateDay) return;
+
+            // console.log("on update date: ", date);
+
+            if (!date.start && !date.end) {
+              // console.log("date has no start or end");
+              if (_date && (_date.start !== null || _date.end !== null)) {
+                if (canEdit && marker) {
+                  marker["date"] = date;
+                  marker["day"] = null;
+                }
+
+                setDate({ start: null, end: null });
+                setDay(null);
+
+                if (onUpdateDate) onUpdateDate(date);
+              }
+              return;
+            }
+
+            if (
+              date !== null &&
+              _date !== null &&
+              date !== undefined &&
+              _date !== undefined &&
+              date.start === _date.start &&
+              date.end === _date.end
+            )
+              return;
+
+            const day = calculateDay(date);
+
+            if (canEdit && marker) {
+              marker["date"] = date;
+              marker["day"] = day;
+            }
+
+            setDate(date);
+            setDay(day);
+
+            if (onUpdateDate) onUpdateDate(date);
+          }}
+          isEditingTitle={isEditingTitle}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+          currentDayFilter={currentDayFilter}
+          allMarkers={allMarkers}
+          shouldShow={
+            (_date !== null && _date !== undefined) ||
+            // canEdit &&
+            (marker !== undefined && marker !== null && !marker.isPlacesPOI)
+          }
+        />
+        <Time
+          time={_time}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          allTimes={allTimes}
+          onUpdateTime={(time) => {
+            if (time === _time) return;
+
+            if (canEdit && marker) marker["time"] = time;
+            setTime(time);
+            if (onTimeUpdated) onTimeUpdated(time);
+          }}
+          shouldShow={
+            (_time !== null && _time !== undefined) ||
+            (canEdit &&
+              marker !== undefined &&
+              marker !== null &&
+              !marker.isPlacesPOI)
+          }
+        />
+        {canEdit && marker && (
+          <a
+            href={
+              "https://www.google.com/search?q=" +
+              encodeURIComponent(marker.placesSearchName ?? marker.info)
+            }
+            target="_blank"
+            rel="noreferrer"
+            style={{ marginBottom: ".5em" }}
+          >
+            Google
+          </a>
+        )}
+        <Tags
+          tags={tags}
+          allTags={allTags}
+          onTagsUpdated={(tags) => {
+            if (tags === _tags) return;
+
+            if (canEdit && marker) marker["tags"] = tags;
+            setTags(tags);
+
+            if (onTagsUpdated) onTagsUpdated(tags);
+          }}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          canEdit={
+            canEdit &&
+            marker !== undefined &&
+            marker !== null &&
+            !marker.isPlacesPOI
+          }
+          shouldShow={
+            (tags !== null && tags !== undefined) ||
+            (canEdit &&
+              marker !== undefined &&
+              marker !== null &&
+              !marker.isPlacesPOI)
+          }
+        />
+
+        {/* {description && !hideDescription && (
+          <p
+            className="poi-description"
+            style={{ marginTop: "1em", marginBottom: 0 }}
+          >
             {description}
           </p>
-          {/* <div
-            className={`scroll-fade-bottom ${atBottom ? "hidden" : ""}`}
-          ></div> */}
-        </>
-      )}
-    </div>
+        )} */}
+        {/* {!description && !hideDescription && (
+          <div
+            className="poi-description"
+            style={{
+              marginTop: "1em",
+              marginBottom: 0,
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            <Skeleton
+              height={"100%"}
+              width={"100%"}
+              sx={{ transform: "none !important" }}
+            />
+          </div>
+        )} */}
+        {/* {related && related.length > 0 && (
+          <div style={{ display: "flex", flexFlow: "column", width: "100%" }}>
+            <h4 style={{ marginBottom: "8px", paddingLeft: "16px" }}>
+              Related
+            </h4>
+            <div className="poi-tags" style={{ alignSelf: "center" }}>
+              {related.map((related, i) => (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFocusedMarker(related);
+                    // offsetCenter(related.position, 0, 70);
+                  }}
+                  className="poi-related"
+                  key={"related" + related.info + "-" + i}
+                >
+                  {related.info}
+                </span>
+              ))}
+            </div>
+          </div>
+        )} */}
+        {/* 
+        {marker && marker.isPlacesPOI && marker.rating && (
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              flexFlow: "column",
+              placeContent: "center",
+              placeItems: "center",
+              mb: marker.types ? 0 : 1,
+            }}
+          >
+            <Rating readOnly value={marker.rating} precision={0.5} />
+            {marker.userRatingsTotal && (
+              <Typography variant="caption">
+                {marker.userRatingsTotal}{" "}
+                {marker.userRatingsTotal === 1 ? "review" : "reviews"}
+              </Typography>
+            )}
+          </Box>
+        )} */}
+        {/* 
+        {marker && marker.isPlacesPOI && marker.types && (
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <Tags
+              tags={marker.types.map((t) => {
+                return (t[0].toUpperCase() + t.slice(1)).replaceAll("_", " ");
+              })}
+              canEdit={false}
+            />
+          </Box>
+        )} */}
+
+        {/* {marker && marker.isPlacesPOI && (
+          <Button
+            variant="contained"
+            onClick={async () => {
+              if (!googleAccount) {
+                setLoginPopupOpen(true);
+                return;
+              }
+
+              await createNewActivity(marker, googleAccount);
+              marker.isPlacesPOI = undefined;
+              setIsPlacesPOI(false);
+              onNewActivity(marker);
+            }}
+          >
+            Add to Trip Itinerary Places of Interest
+          </Button>
+        )} */}
+
+        {/* <div className="poi-extra-info">
+        </div> */}
+      </div>
+      {/* {confirmingDelete && ( */}
+      <Popup
+        title={"Confirm Activity Delete"}
+        // setOpen={confirmingDelete}
+        open={confirmingDelete}
+        dividers
+        actions={[
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setConfirmingDelete(false);
+            }}
+          >
+            Cancel
+          </Button>,
+          <Button
+            onClick={() => {
+              setConfirmingDelete(false);
+
+              if (!googleAccount) {
+                setLoginPopupOpen(true);
+                return;
+              }
+
+              onConfirmDelete(marker);
+            }}
+            variant="contained"
+            sx={{ backgroundColor: "#C70000", color: "white" }}
+          >
+            Confirm
+          </Button>,
+        ]}
+      >
+        <Typography>Are you sure you want to delete this activity?</Typography>
+      </Popup>
+      {/* )} */}
+    </>
   );
 };
 

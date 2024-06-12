@@ -1,8 +1,22 @@
-import { AppBar, Chip, Grid, Toolbar, Typography } from "@mui/material";
+import { AppBar, Chip, Grid, Toolbar, Typography, styled } from "@mui/material";
 import * as React from "react";
 import SearchBar from "./SearchBar";
 import FilterDialog, { Filters } from "./FilterDialog";
 import DevDialog from "./DevDialog";
+
+const StyledGrid = styled(Grid)(({ theme }) => ({
+  display: "flex",
+  placeItems: "center",
+  flexWrap: "wrap",
+  
+  "@media (max-width: 600px)": {
+    placeContent: "center",
+  },
+
+  "@media (min-width: 600px)": {
+    placeContent: "flex-start",
+  }
+}));
 
 export default function AppHeader({
   markers,
@@ -19,7 +33,21 @@ export default function AppHeader({
   setFocusedCluster,
   setFocusedMarker,
   currentFilters,
-  suggestingFor
+  suggestingFor,
+  timelineActivities,
+  mapsService,
+  onActivityClick,
+  allMarkers,
+  onSetSuggested,
+  onActivityMouseOver,
+  onActivityMouseOut,
+  placesService,
+  createOverlay,
+  geocoderService,
+  googleAccount,
+  setLoginPopupOpen,
+  onSetSuggesting,
+  currentDayFilter
 }) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [devOpen, setDevOpen] = React.useState(false);
@@ -51,11 +79,10 @@ export default function AppHeader({
             flexWrap: "wrap",
           }}
         >
-          <Grid
+          <StyledGrid
             container
             alignItems="center"
             spacing={focusedMarker || focusedCluster ? 4 : 1}
-            style={{ flexWrap: "wrap" }}
           >
             <Grid item xs={12} sm={"auto"} sx={{ marginTop: "1em" }}>
               <SearchBar
@@ -69,6 +96,7 @@ export default function AppHeader({
                 days={markerDays}
                 times={allTimes}
                 suggestingFor={suggestingFor}
+                currentDayFilter={currentDayFilter}
               />
             </Grid>
             {allTags.length > 0 && markerDays.length > 0 && (
@@ -109,10 +137,26 @@ export default function AppHeader({
                   setFocusedCluster={setFocusedCluster}
                   setFocusedMarker={setFocusedMarker}
                   currentFilters={currentFilters}
+                  focusedActivity={focusedMarker}
+                  focusedCluster={focusedCluster}
+                  timelineActivities={timelineActivities}
+                  mapsService={mapsService}
+                  onActivityClick={onActivityClick}
+                  allMarkers={allMarkers}
+                  onSetSuggested={onSetSuggested}
+                  onActivityMouseOver={onActivityMouseOver}
+                  onActivityMouseOut={onActivityMouseOut}
+                  placesService={placesService}
+                  createOverlay={createOverlay}
+                  geocoderService={geocoderService}
+                  googleAccount={googleAccount}
+                  setLoginPopupOpen={setLoginPopupOpen}
+                  onSetSuggesting={onSetSuggesting}
+                  suggestingFor={suggestingFor}
                 />
               </Grid>
             )}
-          </Grid>
+          </StyledGrid>
           {/* <Typography
           variant="h4"
           component="div"

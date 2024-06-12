@@ -6,6 +6,7 @@ import StandardDrawer from "../../Util/StandardDrawer";
 import {
   POIDetails,
   POIDetailsDescription,
+  POIDetailsMobile,
   POIDetailsTitle,
 } from "../POI/POIDetails";
 import { isMobile } from "mobile-device-detect";
@@ -85,72 +86,136 @@ export default function MapDrawer({
   let address = focusedMarker ? focusedMarker.address : null;
 
   let content = focusedMarker ? (
-    <POIDetails
-      icon={icon}
-      getPlacePhotos={getPlacePhotos}
-      image={focusedMarker.photo}
-      title={title}
-      day={day}
-      date={date}
-      time={time}
-      address={address}
-      description={description}
-      hideDescription={
-        focusedMarker.description === "" ||
-        !focusedMarker.description ||
-        focusedMarker.description === null
-      }
-      tags={tags}
-      related={related}
-      setFocusedMarker={setFocusedMarker}
-      offsetCenter={offsetCenter}
-      googleAccount={googleAccount}
-      setLoginPopupOpen={setLoginPopupOpen}
-      onUpdateDate={onUpdateDate}
-      calculateDay={calculateDay}
-      marker={focusedMarker}
-      link={link}
-      onUpdateTitle={onUpdateTitle}
-      allTags={allTags}
-      onTagsUpdated={onTagsUpdated}
-      allTimes={allTimes}
-      onTimeUpdated={onTimeUpdated}
-      currentDayFilter={currentDayFilter}
-      allMarkers={allMarkers}
-      onNewActivity={onNewActivity}
-      onNewEmojiIconSet={onNewEmojiIconSet}
-      onConfirmDelete={onConfirmDelete}
-      canEdit={true}
-    />
+    isMobile ? (
+      <POIDetailsMobile
+        icon={icon}
+        getPlacePhotos={getPlacePhotos}
+        image={focusedMarker.photo}
+        title={title}
+        day={day}
+        date={date}
+        time={time}
+        address={address}
+        description={description}
+        hideDescription={
+          focusedMarker.description === "" ||
+          !focusedMarker.description ||
+          focusedMarker.description === null
+        }
+        tags={tags}
+        related={related}
+        setFocusedMarker={setFocusedMarker}
+        offsetCenter={offsetCenter}
+        googleAccount={googleAccount}
+        setLoginPopupOpen={setLoginPopupOpen}
+        onUpdateDate={onUpdateDate}
+        calculateDay={calculateDay}
+        marker={focusedMarker}
+        link={link}
+        onUpdateTitle={onUpdateTitle}
+        allTags={allTags}
+        onTagsUpdated={onTagsUpdated}
+        allTimes={allTimes}
+        onTimeUpdated={onTimeUpdated}
+        currentDayFilter={currentDayFilter}
+        allMarkers={allMarkers}
+        onNewActivity={onNewActivity}
+        onNewEmojiIconSet={onNewEmojiIconSet}
+        onConfirmDelete={onConfirmDelete}
+        canEdit={true}
+      />
+    ) : (
+      <POIDetails
+        icon={icon}
+        getPlacePhotos={getPlacePhotos}
+        image={focusedMarker.photo}
+        title={title}
+        day={day}
+        date={date}
+        time={time}
+        address={address}
+        description={description}
+        hideDescription={
+          focusedMarker.description === "" ||
+          !focusedMarker.description ||
+          focusedMarker.description === null
+        }
+        tags={tags}
+        related={related}
+        setFocusedMarker={setFocusedMarker}
+        offsetCenter={offsetCenter}
+        googleAccount={googleAccount}
+        setLoginPopupOpen={setLoginPopupOpen}
+        onUpdateDate={onUpdateDate}
+        calculateDay={calculateDay}
+        marker={focusedMarker}
+        link={link}
+        onUpdateTitle={onUpdateTitle}
+        allTags={allTags}
+        onTagsUpdated={onTagsUpdated}
+        allTimes={allTimes}
+        onTimeUpdated={onTimeUpdated}
+        currentDayFilter={currentDayFilter}
+        allMarkers={allMarkers}
+        onNewActivity={onNewActivity}
+        onNewEmojiIconSet={onNewEmojiIconSet}
+        onConfirmDelete={onConfirmDelete}
+        canEdit={true}
+      />
+    )
   ) : focusedCluster && focusedCluster.markers ? (
-    focusedCluster.markers.map((m, i) => (
-      <div key={"drawer-location-" + i}>
-        <POIDetails
-          marker={m}
-          canEdit={false}
-          icon={m.icon}
-          image={m.photo}
-          getPlacePhotos={getPlacePhotos}
-          onActivityMouseOver={() => {
-            if (onActivityMouseOver) onActivityMouseOver(m);
-          }}
-          onActivityMouseOut={() => {
-            if (onActivityMouseOut) onActivityMouseOut(m);
-          }}
-          title={m.info}
-          day={m.day}
-          date={m.date}
-          time={m.time}
-          hideDescription={true}
-          onClick={() => setFocusedMarker(m)}
-          // description={m.description}
-          // tags={m.tags}
-        />
-        {i !== focusedCluster.markers.length - 1 && (
+    focusedCluster.markers.map((m, i) =>
+      isMobile ? (
+        <div key={"drawer-location-" + i}>
+          <POIDetailsMobile
+            marker={m}
+            canEdit={false}
+            icon={m.icon}
+            image={m.photo}
+            getPlacePhotos={getPlacePhotos}
+            onActivityMouseOver={() => {
+              if (onActivityMouseOver) onActivityMouseOver(m);
+            }}
+            onActivityMouseOut={() => {
+              if (onActivityMouseOut) onActivityMouseOut(m);
+            }}
+            title={m.info}
+            day={m.day}
+            date={m.date}
+            time={m.time}
+            hideDescription={true}
+            onClick={() => setFocusedMarker(m)}
+          />
+        </div>
+      ) : (
+        <div key={"drawer-location-" + i}>
+          <POIDetails
+            marker={m}
+            canEdit={false}
+            icon={m.icon}
+            image={m.photo}
+            getPlacePhotos={getPlacePhotos}
+            onActivityMouseOver={() => {
+              if (onActivityMouseOver) onActivityMouseOver(m);
+            }}
+            onActivityMouseOut={() => {
+              if (onActivityMouseOut) onActivityMouseOut(m);
+            }}
+            title={m.info}
+            day={m.day}
+            date={m.date}
+            time={m.time}
+            hideDescription={true}
+            onClick={() => setFocusedMarker(m)}
+            // description={m.description}
+            // tags={m.tags}
+          />
+          {/* {i !== focusedCluster.markers.length - 1 && (
           <hr style={{ color: "black", width: "100%" }} />
-        )}
-      </div>
-    ))
+        )} */}
+        </div>
+      )
+    )
   ) : null;
 
   return isMobile ? (
@@ -159,7 +224,34 @@ export default function MapDrawer({
       hidden={!focusedMarker && !focusedCluster}
       // headerHeight={drawerHeaderHeight}
       HeaderContent={
-        <POIDetailsTitle title={title} tags={tags} day={day} date={date} />
+        <POIDetailsTitle
+          icon={icon}
+          getPlacePhotos={getPlacePhotos}
+          title={title}
+          day={day}
+          date={date}
+          time={time}
+          address={address}
+          tags={tags}
+          related={related}
+          googleAccount={googleAccount}
+          setLoginPopupOpen={setLoginPopupOpen}
+          onUpdateDate={onUpdateDate}
+          calculateDay={calculateDay}
+          marker={focusedMarker}
+          link={link}
+          onUpdateTitle={onUpdateTitle}
+          allTags={allTags}
+          onTagsUpdated={onTagsUpdated}
+          allTimes={allTimes}
+          onTimeUpdated={onTimeUpdated}
+          currentDayFilter={currentDayFilter}
+          allMarkers={allMarkers}
+          onNewActivity={onNewActivity}
+          onNewEmojiIconSet={onNewEmojiIconSet}
+          onConfirmDelete={onConfirmDelete}
+          canEdit={true}
+        />
       }
       DrawerContent={content}
       onClose={() => {}}

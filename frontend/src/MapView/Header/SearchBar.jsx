@@ -47,7 +47,7 @@ const Search = styled("div")(({ theme, useBoxShadow, isFocused }) => ({
     marginRight: theme.spacing(1),
   },
   boxShadow: true
-    ? "0px 0px 5px 0px rgba(0, 0, 0, 0.3)"
+    ? "0px 2px 15px 2px rgba(0, 0, 0, 0.6)"
     : "0px 10px 5px 0px rgba(0, 0, 0, 0.3)",
   // marginTop: "10px",
   zIndex: 10000000000,
@@ -143,6 +143,7 @@ export default function SearchBar({
   times,
   days,
   suggestingFor,
+  currentDayFilter,
 }) {
   const hint = React.useRef("");
   const [inputValue, setInputValue] = React.useState("");
@@ -155,7 +156,19 @@ export default function SearchBar({
       setInputValue(focusedMarker.info);
     } else if (focusedCluster) {
       if (!suggestingFor) setInputValue("Multiple Activities");
-      else setInputValue("Suggested Activities Near " + suggestingFor.info);
+      else
+        setInputValue(
+          "Suggested Activities Near " +
+            (suggestingFor.markers
+              ? suggestingFor.markers.map((m, i) => {
+                  if (i === suggestingFor.markers.length - 1)
+                    return " and " + m.info;
+                  else return i === 0 ? m.info : ", " + m.info;
+                })
+              : suggestingFor.day
+              ? "Day " + suggestingFor.day + " Activities"
+              : suggestingFor.info)
+        );
     } else {
       setInputValue("");
     }
@@ -196,7 +209,9 @@ export default function SearchBar({
     );
   if (days)
     options.push(
-      ...days.map((day, i) => ({ label: "Day: " + day, id: "day-" + i }))
+      ...days
+        .filter((day) => day !== currentDayFilter)
+        .map((day, i) => ({ label: "Day: " + day, id: "day-" + i }))
     );
 
   options.sort((a, b) => {
@@ -265,8 +280,8 @@ export default function SearchBar({
                   option.label.toLowerCase() === inputValue.toLowerCase()
               )
             ) {
-              setInputValue("");
-              onSearch("");
+              // setInputValue("");
+              // onSearch("");
             } else {
               setInputValue(
                 options.find(
@@ -275,9 +290,10 @@ export default function SearchBar({
                 ).label
               );
             }
-          } else {
-            onSearch("");
           }
+          //  else {
+          //   onSearch("");
+          // }
         }}
         onOpen={() => {
           setOpen(true);

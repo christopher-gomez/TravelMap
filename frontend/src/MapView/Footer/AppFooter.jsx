@@ -3,7 +3,15 @@ import MapFAB from "./MapFAB";
 import SwipeableEdgeDrawer from "../../Util/SwipeableEdgeDrawer";
 import MapDrawer from "./MapDrawer";
 import { isTouchDevice } from "../../Util/Utils";
-import { GpsFixed } from "@mui/icons-material";
+import {
+  CenterFocusStrong,
+  CropFree,
+  FlashlightOff,
+  FlashlightOn,
+  GpsFixed,
+  Lock,
+  LockOpen,
+} from "@mui/icons-material";
 import ToolTipSpeedDial from "../../Util/SpeedDial";
 
 export default function AppFooter({
@@ -13,23 +21,11 @@ export default function AppFooter({
   setCurrentMapStyle,
   focusedMarker,
   focusedCluster,
-  // onDrawerClose,
-  // setFocusedMarker,
+  timelineActivities,
   mapLocked,
   setMapLocked,
   googleAccount,
-  // setLoginPopupOpen,
   setErrorPopupOpen,
-  // allMarkers,
-  // offsetCenter,
-  // onUpdateDate,
-  // calculateDay,
-  // onUpdateTitle,
-  // allTags,
-  // onTagsUpdated,
-  // allTimes,
-  // onTimeUpdated,
-  // currentDayFilter,
   onRecenterMap,
   setShouldVignette,
   shouldVignette,
@@ -51,12 +47,52 @@ export default function AppFooter({
   return (
     <>
       <ToolTipSpeedDial
-        icon={<GpsFixed />}
+        icon={
+          <GpsFixed
+            onClick={() => {
+              if (onRecenterMap) onRecenterMap();
+            }}
+          />
+        }
         // position={{ bottom: 16 + drawerHeight, left: 16 }}
-        tooltip={{ title: "Recenter Map", placement: "right" }}
-        onClick={() => {
-          if (onRecenterMap) onRecenterMap();
-        }}
+        // tooltip={ { title: "Recenter Map",  placement: 'right-end'}
+        // }
+        open={
+          focusedMarker ||
+          focusedCluster ||
+          (timelineActivities && timelineActivities.length > 0)
+            ? true
+            : undefined
+        }
+        direction="up"
+        actions={[
+          {
+            icon: mapLocked ? <LockOpen /> : <Lock />,
+            name: mapLocked ? "Unlock Map Control" : "Lock Map Control",
+            tooltipPlacement: "right",
+            onClick: () => setMapLocked(!mapLocked),
+          },
+          {
+            icon: shouldKeepFocusCentered ? (
+              <CenterFocusStrong />
+            ) : (
+              <CropFree />
+            ),
+            tooltipPlacement: "right",
+            name: shouldKeepFocusCentered
+              ? "Disable Focus Center Lock"
+              : "Enable Focus Center Lock",
+            onClick: () => setShouldKeepFocusCentered(!shouldKeepFocusCentered),
+          },
+          {
+            icon: shouldVignette ? <FlashlightOn /> : <FlashlightOff />,
+            tooltipPlacement: "right",
+            name: shouldVignette
+              ? "Disable Focus Spotlight"
+              : "Enable Focus Spotlight",
+            onClick: () => setShouldVignette(!shouldVignette),
+          },
+        ]}
       />
       <MapFAB
         currentRenderType={currentRenderType}
@@ -70,10 +106,6 @@ export default function AppFooter({
         setMapLocked={setMapLocked}
         googleAccount={googleAccount}
         setErrorPopupOpen={setErrorPopupOpen}
-        setShouldVignette={setShouldVignette}
-        shouldVignette={shouldVignette}
-        shouldKeepFocusCentered={shouldKeepFocusCentered}
-        setShouldKeepFocusCentered={setShouldKeepFocusCentered}
       />
       {/* <MapDrawer
         onHeightChange={(height, open) => {

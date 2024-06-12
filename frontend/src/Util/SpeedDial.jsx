@@ -4,6 +4,7 @@ import SpeedDialIcon from "@mui/material/SpeedDialIcon";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
 import { isTouchDevice } from "./Utils";
 import { Tooltip } from "@mui/material";
+import { isMobile } from "mobile-device-detect";
 
 export default function ToolTipSpeedDial({
   actions,
@@ -11,22 +12,43 @@ export default function ToolTipSpeedDial({
   position = { bottom: 16, left: 16 },
   tooltip,
   direction = "up",
+  open,
+  onSetOpen,
   ...others
 }) {
-  const [open, setOpen] = React.useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const [_open, setOpen] = React.useState(false);
+
+  const [hadOpenProp, setHadOpenProp] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open !== undefined) setOpen(open);
+    if (open !== undefined) setHadOpenProp(true);
+
+    if (open === undefined && hadOpenProp) setOpen(false);
+    if (open === undefined) setHadOpenProp(false);
+  }, [open]);
+
+  React.useEffect(() => {
+    if (onSetOpen) onSetOpen(_open);
+  }, [_open]);
+
+  const handleOpen = () => {
+    if (open === undefined) setOpen(true);
+  };
+  const handleClose = () => {
+    if (open === undefined) setOpen(false);
+  };
 
   if (!position) position = { bottom: 16, left: 16 };
 
   const fab = (
     <SpeedDial
-      ariaLabel="SpeedDial tooltip example"
+      ariaLabel="SpeedDial tooltip"
       sx={{ position: "absolute", ...position, transition: "all 0.5s ease" }}
       icon={icon ?? <SpeedDialIcon />}
       onClose={handleClose}
       onOpen={handleOpen}
-      open={open}
+      open={_open}
       direction={direction}
       {...others}
     >
@@ -37,7 +59,10 @@ export default function ToolTipSpeedDial({
             key={action.name}
             icon={action.icon}
             tooltipTitle={action.name}
-            tooltipOpen={isTouchDevice()}
+            tooltipPlacement={
+              action.tooltipPlacement ? action.tooltipPlacement : undefined
+            }
+            tooltipOpen={isMobile ? false : undefined}
             onClick={() => {
               if (action.onClick) action.onClick();
               handleClose();

@@ -7,11 +7,11 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
-import Typography from "@mui/material/Typography";
 import MultipleSelectChip, { ChipSelectMenu } from "../../Util/MultipleSelect";
 import { Box, Chip, Grid, Stack } from "@mui/material";
 import { FilterAlt } from "@mui/icons-material";
-import { arraysEqual, objArraysEqual } from "../../Util/Utils";
+import { objArraysEqual } from "../../Util/Utils";
+import { ItinerarySuggestions } from "../MiscComponents/ItinerarySuggestions";
 
 const BootstrapDialog = styled(Dialog)(({ theme }) => ({
   "& .MuiDialogContent-root": {
@@ -508,6 +508,20 @@ export default function FilterDialog({
   );
 }
 
+const StyledGrid = styled(Grid)(({ theme }) => ({
+  display: "flex",
+  placeItems: "center",
+  flexWrap: "wrap",
+  
+  "@media (max-width: 600px)": {
+    placeContent: "center",
+  },
+
+  "@media (min-width: 600px)": {
+    placeContent: "flex-start",
+  }
+}));
+
 export function Filters({
   allTags,
   allDays,
@@ -517,6 +531,22 @@ export function Filters({
   setFocusedMarker,
   setFocusedCluster,
   currentFilters,
+  focusedCluster,
+  timelineActivities,
+  focusedActivity,
+  mapsService,
+  onActivityClick,
+  allMarkers,
+  onSetSuggested,
+  onActivityMouseOver,
+  onActivityMouseOut,
+  placesService,
+  createOverlay,
+  geocoderService,
+  googleAccount,
+  setLoginPopupOpen,
+  onSetSuggesting,
+  suggestingFor,
 }) {
   const [filters, setFilters] = React.useState([]);
   const filterRef = React.useRef(filters);
@@ -579,6 +609,8 @@ export function Filters({
   }, []);
 
   const renderChipFilter = (property) => {
+    if (focusedActivity || focusedCluster) return null;
+
     let targetStateUpdate;
     let targetState;
     targetState = filters.find((filter) => {
@@ -606,7 +638,10 @@ export function Filters({
               <Grid item key={property + "-filter-grid-item-" + index}>
                 <Chip
                   variant="filled"
-                  sx={{ backgroundColor: "white" }}
+                  sx={{
+                    backgroundColor: "white",
+                    boxShadow: "0px 1px 10px 0px rgba(0, 0, 0, 0.5)",
+                  }}
                   key={property + "-filter-grid-item-chip-" + index}
                   label={
                     property.charAt(0).toUpperCase() +
@@ -710,12 +745,35 @@ export function Filters({
         flexWrap: "wrap",
       }}
     >
-      <Grid
+      <StyledGrid
         container
         alignItems="center"
         spacing={1}
-        style={{ flexWrap: "wrap" }}
       >
+        {!suggestingFor &&
+          (focusedActivity ||
+            focusedCluster ||
+            (timelineActivities && timelineActivities.length > 0)) && (
+            <Grid item>
+              <ItinerarySuggestions
+                timelineActivities={timelineActivities}
+                focusedActivity={focusedActivity}
+                focusedCluster={focusedCluster}
+                mapsService={mapsService}
+                onActivityClick={onActivityClick}
+                allMarkers={allMarkers}
+                onSetSuggested={onSetSuggested}
+                onActivityMouseOver={onActivityMouseOver}
+                onActivityMouseOut={onActivityMouseOut}
+                placesService={placesService}
+                createOverlay={createOverlay}
+                geocoderService={geocoderService}
+                googleAccount={googleAccount}
+                setLoginPopupOpen={setLoginPopupOpen}
+                onSetSuggesting={onSetSuggesting}
+              />
+            </Grid>
+          )}
         {/* Days */}
         {renderChipFilter(FILTER_PROPERTIES.day)}
         {/* Times */}
@@ -724,7 +782,7 @@ export function Filters({
         {renderChipFilter(FILTER_PROPERTIES.city)}
         {/* Tags */}
         {renderChipFilter(FILTER_PROPERTIES.tags)}
-      </Grid>
+      </StyledGrid>
     </Box>
   );
 }

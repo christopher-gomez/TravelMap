@@ -10,6 +10,7 @@ import Chip from "@mui/material/Chip";
 import "./MultipleSelect.css";
 import Checkbox from "@mui/material/Checkbox";
 import ListItemText from "@mui/material/ListItemText";
+import { ClickAwayListener, Paper, Popper } from "@mui/material";
 
 const ITEM_HEIGHT = 36;
 const ITEM_PADDING_TOP = 4;
@@ -48,6 +49,7 @@ export default function MultipleSelectChip({
   multiple,
   value,
   disabled,
+  chipSx,
 }) {
   const theme = useTheme();
   const [personName, setPersonName] = React.useState([]);
@@ -72,6 +74,10 @@ export default function MultipleSelectChip({
   };
 
   const [open, setOpen] = React.useState(false);
+
+  if (!chipSx) {
+    chipSx = {};
+  }
 
   return (
     <Box sx={{ display: "flex", flexFlow: "column" }}>
@@ -191,6 +197,7 @@ export function ChipSelectMenu({
   onDelete,
   openOnDelete = false,
   elRef,
+  chipSx,
 }) {
   const theme = useTheme();
   const [personName, setPersonName] = React.useState([]);
@@ -233,6 +240,10 @@ export function ChipSelectMenu({
     }
   }, [chipRef.current, elRef, open]);
 
+  if (!chipSx) {
+    chipSx = {};
+  }
+
   return (
     <Box sx={{ display: "flex", flexFlow: "column" }}>
       <Chip
@@ -253,6 +264,8 @@ export function ChipSelectMenu({
           "> .MuiChip-deleteIcon": {
             color: "rgba(0,0,0,.54) !important",
           },
+          boxShadow: "0px 1px 10px 0px rgba(0, 0, 0, 0.5)",
+          ...chipSx,
         }}
       />
       <FormControl
@@ -290,7 +303,9 @@ export function ChipSelectMenu({
           labelId="demo-multiple-chip-label"
           id="demo-multiple-chip"
           multiple={multiple}
-          value={value ? Array.isArray(value) && value.length > 0 ? value : "": ""}
+          value={
+            value ? (Array.isArray(value) && value.length > 0 ? value : "") : ""
+          }
           onChange={handleChange}
           open={open}
           onClose={() => setOpen(false)}
@@ -363,5 +378,89 @@ export function ChipSelectMenu({
         </Select>
       </FormControl>
     </Box>
+  );
+}
+
+export function ChipPopperMenu({
+  icon,
+  children,
+  label,
+  onDelete,
+  deleteIcon,
+  openOnDelete = false,
+  onToggledOpen,
+  onClick,
+  chipSx,
+  open,
+}) {
+  const theme = useTheme();
+  const [_open, setOpen] = React.useState(open);
+  const chipRef = React.useRef(null);
+
+  const handleToggle = () => {
+    setOpen((prevOpen) => !prevOpen);
+  };
+
+  const handleClose = (event) => {
+    if (chipRef.current && chipRef.current.contains(event.target)) {
+      return;
+    }
+    setOpen(false);
+  };
+
+  React.useEffect(() => {
+    if (onToggledOpen) {
+      onToggledOpen(open);
+    }
+  }, [_open]);
+
+  React.useEffect(() => {
+    setOpen(open);
+  }, [open]);
+
+  if (!chipSx) {
+    chipSx = {};
+  }
+
+  return (
+    <ClickAwayListener onClickAway={handleClose}>
+      <Box sx={{ display: "flex", flexFlow: "column", position: "relative" }}>
+        <Chip
+          icon={icon}
+          deleteIcon={deleteIcon}
+          onDelete={
+            onDelete ? onDelete : openOnDelete ? handleToggle : undefined
+          }
+          ref={chipRef}
+          label={label}
+          onClick={onClick !== undefined ? onClick : handleToggle}
+          variant="filled"
+          sx={{
+            backgroundColor: "white !important",
+            overflow: "visible !important",
+            ":hover": { backgroundColor: "white !important" },
+            ":focus": { backgroundColor: "white !important" },
+            boxShadow: "0px 1px 10px 0px rgba(0, 0, 0, 0.5)",
+            ...chipSx,
+          }}
+        />
+        <Popper
+          open={_open}
+          anchorEl={chipRef.current}
+          placement="bottom"
+          sx={{ zIndex: 10000000000 + 1 }}
+        >
+          <Paper
+            sx={{
+              p: 1,
+              mt: 1,
+              boxShadow: "0px 1px 10px 0px rgba(0, 0, 0, 0.5)",
+            }}
+          >
+            {children}
+          </Paper>
+        </Popper>
+      </Box>
+    </ClickAwayListener>
   );
 }

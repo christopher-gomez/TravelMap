@@ -64,16 +64,21 @@ export default function StandardDrawer({
             "> .MuiPaper-root": {
               pointerEvents: "all",
               overflowY: contentHovered ? "auto" : "hidden",
+              overflowX: "hidden",
               display: "flex", // Make this a flex container
               flexDirection: "column", // Stack children vertically
               // borderRadius: "0em 1em 0em 0em",
               padding: "0",
-              pr: contentHovered ? "-.5em" : 0, // Reserve space for scrollbar
+              // pr: contentHovered ? "-5em" : 0, // Reserve space for scrollbar
               minWidth: "420px",
               maxWidth: "420px",
               height: "100%", // Set the height to 100% of the viewport
               position: "relative",
-              boxShadow: 'inset -2px 10px 20px rgba(0, 0, 0, 0.9)',
+              boxShadow: '-2px 10px 20px rgba(0, 0, 0, 0.9)',
+              pr: contentHovered ? "-.5em" : ".5em", // Reserve space for scrollbar
+              flex: "1 1 auto",
+              boxSizing: "border-box",
+              overflowY: contentHovered ? "auto" : "hidden",
               "&::-webkit-scrollbar": {
                 width: "0.5em",
                 height: "0.5em",

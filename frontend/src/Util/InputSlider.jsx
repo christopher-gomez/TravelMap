@@ -45,7 +45,7 @@ export default function InputSlider({
   };
 
   return (
-    <Box sx={{ width: "75%", mt: 1, mb: 1 }}>
+    <Box sx={{ width: "75%", m: 0 }}>
       <Typography
         id="input-slider"
         sx={{ textAlign: "center", fontFamily: "'Fredoka', sans-serif" }}
@@ -54,7 +54,7 @@ export default function InputSlider({
       >
         {label}
       </Typography>
-      <Grid container spacing={2} alignItems="center" sx={{mt: .5}}>
+      <Grid container spacing={2} alignItems="center" sx={{ mt: 0.5 }}>
         {icon && <Grid item>{icon}</Grid>}
         <Grid item xs sx={{ pt: "0 !important" }}>
           <Slider
