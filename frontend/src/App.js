@@ -4,6 +4,7 @@ import Div100vh from "react-div-100vh";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { StackNavigationProvider } from "./Util/StackNavigation";
+import { RouteDataStoreProvider } from "./MapView/MiscComponents/RouteDataStore";
 
 function App() {
   return (
@@ -19,7 +20,9 @@ function App() {
         >
           <CssBaseline />
           <StackNavigationProvider>
-            <MapView />
+            <RouteDataStoreProvider>
+              <MapView />
+            </RouteDataStoreProvider>
           </StackNavigationProvider>
         </div>
       </Div100vh>

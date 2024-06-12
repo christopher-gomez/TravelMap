@@ -32,7 +32,7 @@ import GoogleSignIn from "../Util/GoogleSignIn";
 import ItineraryTimeline, {
   timeOrder,
   timeOverrideKeys,
-} from "./ItineraryTimeline";
+} from "./MiscComponents/ItineraryTimeline";
 import {
   createCompositeIcon,
   createEmojiIcon,
@@ -41,6 +41,7 @@ import {
 import { Typography } from "@mui/material";
 import MapDrawer from "./Footer/MapDrawer";
 import { useStackNavigation } from "../Util/StackNavigation";
+import { useRouteDataStore } from "./MiscComponents/RouteDataStore";
 
 // import {
 //   findLocationLngLat,
@@ -461,7 +462,7 @@ const MapView = () => {
       // leftDrawerWidth = leftDrawer.clientWidth;
     }
 
-    if(swipeDrawer) {
+    if (swipeDrawer) {
       swipeDrawerHeight = swipeDrawer.clientHeight * 100;
     }
 
@@ -745,7 +746,13 @@ const MapView = () => {
     }
 
     const adjustWindow = () => {
-      centerMap(undefined, undefined, undefined, undefined, true);
+      centerMap(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        shouldKeepFocusCentered
+      );
     };
 
     window.addEventListener("resize", adjustWindow);
@@ -1709,6 +1716,13 @@ const MapView = () => {
       overlayToShow.setMap(active ? mapRef.current : null); // Show the overlay associated with the marker
   }
 
+  const { state: routeData, setData: setRouteData } = useRouteDataStore();
+  const routeDataRef = React.useRef(routeData);
+
+  useEffect(() => {
+    routeDataRef.current = routeData;
+  }, [routeData.data]);
+
   function renderOverlays() {
     if (
       !clusteredMarkersManagerRef.current ||
@@ -1747,6 +1761,9 @@ const MapView = () => {
     );
 
     clusteredMarkersManagerRef.current.clusters.forEach((cluster) => {
+      const isClusterInRoute =
+        routeDataRef.current.data.includes(cluster.marker) ||
+        cluster.markers.some((m) => routeDataRef.current.data.includes(m));
       const isClusterHovered =
         cluster.marker.hovered || cluster.markers.some((m) => m.hovered);
       const isInFocusedCluster =
@@ -1800,7 +1817,11 @@ const MapView = () => {
           cluster.marker.setZIndex(undefined);
           toggleClusterOverlay(false, cluster);
           cluster.markers.forEach((m) => toggleOverlay(false, m));
-        } else if (isInFocusedCluster || isClusterInSuggested) {
+        } else if (
+          isInFocusedCluster ||
+          isClusterInSuggested ||
+          isClusterInRoute
+        ) {
           cluster.marker.setOptions({
             opacity: anyMarkerHovered && !cluster.marker.hovered ? 0.2 : 1.0,
             //  : 0.2,
@@ -1820,23 +1841,29 @@ const MapView = () => {
             cluster
           );
 
-          if (cluster.markers.length === 1)
-            cluster.markers.forEach((m) =>
-              toggleOverlay(
-                (anyMarkerHovered && !m.hovered) ||
-                  focusedClusterRef.current?.markers.includes(cluster.marker) ||
-                  isClusterInSuggested
-                  ? false
-                  : true,
-                m
-              )
-            );
-          else {
-            cluster.markers.forEach((m) => {
-              if (focusedMarkerRef.current === m && !anyMarkerHovered)
-                toggleOverlay(true, m);
-              else toggleOverlay(false, m);
-            });
+          cluster.markers.forEach((m) => {
+            if (focusedMarkerRef.current === m && !anyMarkerHovered)
+              toggleOverlay(true, m);
+            else toggleOverlay(false, m);
+          });
+
+          if (cluster.markers.length === 1) {
+            // cluster.markers.forEach((m) =>
+            //   toggleOverlay(
+            //     (anyMarkerHovered && !m.hovered) ||
+            //       focusedClusterRef.current?.markers.includes(cluster.marker) ||
+            //       isClusterInSuggested
+            //       ? true
+            //       : false,
+            //     m
+            //   )
+            // );
+          } else {
+            // cluster.markers.forEach((m) => {
+            //   if (focusedMarkerRef.current === m && !anyMarkerHovered)
+            //     toggleOverlay(true, m);
+            //   else toggleOverlay(false, m);
+            // });
           }
         } else {
           cluster.marker.setOptions({
@@ -1981,6 +2008,14 @@ const MapView = () => {
 
     focusedMarkerRef.current = focusedMarker;
 
+    if (renderedSuggestedMarkers.length > 0) {
+      renderedSuggestedMarkers.forEach((m) => m.setMap(null));
+      setRenderedSuggestedMarkers([]);
+
+      clusteredMarkersManagerRef.current.clearMarkers();
+      clusteredMarkersManagerRef.current.addMarkers(renderedMarkers);
+    }
+
     if (focusedMarker) {
       // annoying hack
       focusedMarker.hovered = false;
@@ -1997,13 +2032,25 @@ const MapView = () => {
             cluster.markers,
             focusedMarker.position,
             undefined,
-            true
+            shouldKeepFocusCentered
           );
         } else {
-          centerMap(false, [focusedMarker], undefined, undefined, true);
+          centerMap(
+            false,
+            [focusedMarker],
+            undefined,
+            undefined,
+            shouldKeepFocusCentered
+          );
         }
       } else {
-        centerMap(false, [focusedMarker], undefined, undefined, true);
+        centerMap(
+          false,
+          [focusedMarker],
+          undefined,
+          undefined,
+          shouldKeepFocusCentered
+        );
       }
     } else {
       canAdjustMapCenter.current = false;
@@ -2039,6 +2086,7 @@ const MapView = () => {
     //     setSuggestedMarkers([]);
     //   }
     // }
+    
 
     renderOverlays();
   }, [focusedMarker]);
@@ -2048,6 +2096,15 @@ const MapView = () => {
 
   useEffect(() => {
     focusedClusterRef.current = focusedCluster;
+
+    if (renderedSuggestedMarkers.length > 0) {
+      renderedSuggestedMarkers.forEach((m) => m.setMap(null));
+      setRenderedSuggestedMarkers([]);
+
+      clusteredMarkersManagerRef.current.clearMarkers();
+      clusteredMarkersManagerRef.current.addMarkers(renderedMarkers);
+    }
+    
     if (focusedCluster) {
       setFocusedMarker(null);
       setSuggestedMarkers([]);
@@ -2057,7 +2114,13 @@ const MapView = () => {
         m["hovered"] = false;
       });
 
-      centerMap(true, focusedCluster.markers, undefined, undefined, true);
+      centerMap(
+        true,
+        focusedCluster.markers,
+        undefined,
+        undefined,
+        shouldKeepFocusCentered
+      );
     } else {
       canAdjustMapCenter.current = false;
     }
@@ -2119,6 +2182,11 @@ const MapView = () => {
   const onMarkerClick = (marker) => {
     // Get the marker's position
     if (!mapRef.current) return;
+
+    if (disableMarkerFocusingRef.current) {
+      console.log("marker focusing disabled");
+      return;
+    }
 
     setFocusedCluster(null);
     setFocusedMarker(marker);
@@ -2568,7 +2636,13 @@ const MapView = () => {
     shouldVignetteRef.current = shouldVignette;
 
     if (prev !== shouldVignetteRef.current)
-      centerMap(undefined, undefined, undefined, undefined, true);
+      centerMap(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        shouldKeepFocusCentered
+      );
   }, [shouldVignette]);
 
   const [shouldKeepFocusCentered, setShouldKeepFocusCentered] = useState(false);
@@ -2580,6 +2654,15 @@ const MapView = () => {
     if (shouldKeepFocusCentered === true)
       centerMap(undefined, undefined, undefined, undefined, true);
   }, [shouldKeepFocusCentered]);
+
+  const [routing, setRouting] = useState(false);
+  const [travelMode, setTravelMode] = useState("DRIVING");
+
+  const [disableMarkerFocusing, setDisableMarkerFocusing] = useState(false);
+  const disableMarkerFocusingRef = React.useRef(false);
+  useEffect(() => {
+    disableMarkerFocusingRef.current = disableMarkerFocusing;
+  }, [disableMarkerFocusing]);
 
   if (!fetchedAPIKey) return null;
 
@@ -2678,6 +2761,15 @@ const MapView = () => {
         googleAccount={googleAccount}
         setLoginPopupOpen={setLoginPopupOpen}
         currentDayFilter={currentDayFilter}
+        routing={routing}
+        setRouting={setRouting}
+        travelMode={travelMode}
+        map={map}
+        directionsRenderer={directionsRenderer}
+        directionsService={directionsService}
+        setTravelMode={setTravelMode}
+        disableMarkerFocusing={disableMarkerFocusing}
+        setDisableMarkerFocusing={setDisableMarkerFocusing}
       />
       <div
         style={{
@@ -2731,6 +2823,10 @@ const MapView = () => {
                 open={timelineOpen}
                 onSetOpen={setTimelineVisible}
                 englishDate={currentEnglishDate}
+                routing={routing}
+                setRouting={setRouting}
+                travelMode={travelMode}
+                setTravelMode={setTravelMode}
               />
             )
         }

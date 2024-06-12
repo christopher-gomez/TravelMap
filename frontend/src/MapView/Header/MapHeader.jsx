@@ -3,19 +3,20 @@ import * as React from "react";
 import SearchBar from "./SearchBar";
 import FilterDialog, { Filters } from "./FilterDialog";
 import DevDialog from "./DevDialog";
+import ItineraryRouting from "../MiscComponents/ItineraryRouting";
 
 const StyledGrid = styled(Grid)(({ theme }) => ({
   display: "flex",
   placeItems: "center",
   flexWrap: "wrap",
-  
+
   "@media (max-width: 600px)": {
     placeContent: "center",
   },
 
   "@media (min-width: 600px)": {
     placeContent: "flex-start",
-  }
+  },
 }));
 
 export default function AppHeader({
@@ -47,7 +48,16 @@ export default function AppHeader({
   googleAccount,
   setLoginPopupOpen,
   onSetSuggesting,
-  currentDayFilter
+  currentDayFilter,
+  map,
+  directionsRenderer,
+  directionsService,
+  routing,
+  setRouting,
+  travelMode,
+  setTravelMode,
+  disableMarkerFocusing,
+  setDisableMarkerFocusing,
 }) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [devOpen, setDevOpen] = React.useState(false);
@@ -120,40 +130,53 @@ export default function AppHeader({
                   },
                 }}
               >
-                {/* <Chip
-                  label={
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                      Tags
-                    </Typography>
-                  }
-                  sx={{ backgroundColor: "white" }}
-                /> */}
-                <Filters
-                  allCities={allCities}
-                  allTags={allTags}
-                  allDays={markerDays}
-                  allTimes={allTimes}
-                  onFilterEdit={onFilterEdit}
-                  setFocusedCluster={setFocusedCluster}
-                  setFocusedMarker={setFocusedMarker}
-                  currentFilters={currentFilters}
-                  focusedActivity={focusedMarker}
-                  focusedCluster={focusedCluster}
-                  timelineActivities={timelineActivities}
-                  mapsService={mapsService}
-                  onActivityClick={onActivityClick}
-                  allMarkers={allMarkers}
-                  onSetSuggested={onSetSuggested}
-                  onActivityMouseOver={onActivityMouseOver}
-                  onActivityMouseOut={onActivityMouseOut}
-                  placesService={placesService}
-                  createOverlay={createOverlay}
-                  geocoderService={geocoderService}
-                  googleAccount={googleAccount}
-                  setLoginPopupOpen={setLoginPopupOpen}
-                  onSetSuggesting={onSetSuggesting}
-                  suggestingFor={suggestingFor}
-                />
+                <StyledGrid container spacing={1.5}>
+                  <Grid item>
+                    <ItineraryRouting
+                      map={map}
+                      mapsService={mapsService}
+                      timelineActivities={timelineActivities}
+                      directionsRenderer={directionsRenderer}
+                      directionsService={directionsService}
+                      currentDayFilter={currentDayFilter}
+                      routing={routing}
+                      setRouting={setRouting}
+                      travelMode={travelMode}
+                      setTravelMode={setTravelMode}
+                      focusedCluster={focusedCluster}
+                      focusedMarker={focusedMarker}
+                      markers={markers}
+                      disableMarkerFocusing={disableMarkerFocusing}
+                      setDisableMarkerFocusing={setDisableMarkerFocusing}
+                    />
+                  </Grid>
+                  <Filters
+                    allCities={allCities}
+                    allTags={allTags}
+                    allDays={markerDays}
+                    allTimes={allTimes}
+                    onFilterEdit={onFilterEdit}
+                    setFocusedCluster={setFocusedCluster}
+                    setFocusedMarker={setFocusedMarker}
+                    currentFilters={currentFilters}
+                    focusedActivity={focusedMarker}
+                    focusedCluster={focusedCluster}
+                    timelineActivities={timelineActivities}
+                    mapsService={mapsService}
+                    onActivityClick={onActivityClick}
+                    allMarkers={allMarkers}
+                    onSetSuggested={onSetSuggested}
+                    onActivityMouseOver={onActivityMouseOver}
+                    onActivityMouseOut={onActivityMouseOut}
+                    placesService={placesService}
+                    createOverlay={createOverlay}
+                    geocoderService={geocoderService}
+                    googleAccount={googleAccount}
+                    setLoginPopupOpen={setLoginPopupOpen}
+                    onSetSuggesting={onSetSuggesting}
+                    suggestingFor={suggestingFor}
+                  />
+                </StyledGrid>
               </Grid>
             )}
           </StyledGrid>

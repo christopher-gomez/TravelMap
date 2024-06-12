@@ -387,21 +387,38 @@ export function ChipPopperMenu({
   label,
   onDelete,
   deleteIcon,
-  openOnDelete = false,
+  openOnDelete,
   onToggledOpen,
   onClick,
   chipSx,
   open,
+  color,
+  canOpen = true,
+  disableClickAway = false,
 }) {
   const theme = useTheme();
   const [_open, setOpen] = React.useState(open);
   const chipRef = React.useRef(null);
 
+  React.useEffect(() => {
+    console.log("canOpen", canOpen);
+  }, [canOpen])
+
   const handleToggle = () => {
+    if (
+      (canOpen !== undefined && !canOpen) ||
+      (openOnDelete !== undefined && !openOnDelete)
+    )
+      return;
+
     setOpen((prevOpen) => !prevOpen);
   };
 
   const handleClose = (event) => {
+    if (disableClickAway) {
+      return;
+    }
+    
     if (chipRef.current && chipRef.current.contains(event.target)) {
       return;
     }
@@ -415,6 +432,12 @@ export function ChipPopperMenu({
   }, [_open]);
 
   React.useEffect(() => {
+    // if (!canOpen && open) {
+    //   console.log('cant open');
+    //   setOpen(false);
+    //   return;
+    // }
+
     setOpen(open);
   }, [open]);
 
@@ -429,17 +452,17 @@ export function ChipPopperMenu({
           icon={icon}
           deleteIcon={deleteIcon}
           onDelete={
-            onDelete ? onDelete : openOnDelete ? handleToggle : undefined
+            !deleteIcon ? undefined : onDelete ? onDelete : handleToggle
           }
           ref={chipRef}
           label={label}
           onClick={onClick !== undefined ? onClick : handleToggle}
           variant="filled"
           sx={{
-            backgroundColor: "white !important",
+            backgroundColor: color ? color : "white !important",
             overflow: "visible !important",
-            ":hover": { backgroundColor: "white !important" },
-            ":focus": { backgroundColor: "white !important" },
+            ":hover": { backgroundColor: color ? color : "white !important" },
+            ":focus": { backgroundColor: color ? color : "white !important" },
             boxShadow: "0px 1px 10px 0px rgba(0, 0, 0, 0.5)",
             ...chipSx,
           }}

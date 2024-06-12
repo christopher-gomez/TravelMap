@@ -512,14 +512,14 @@ const StyledGrid = styled(Grid)(({ theme }) => ({
   display: "flex",
   placeItems: "center",
   flexWrap: "wrap",
-  
+
   "@media (max-width: 600px)": {
     placeContent: "center",
   },
 
   "@media (min-width: 600px)": {
     placeContent: "flex-start",
-  }
+  },
 }));
 
 export function Filters({
@@ -736,53 +736,55 @@ export function Filters({
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexFlow: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        flexWrap: "wrap",
-      }}
-    >
-      <StyledGrid
-        container
-        alignItems="center"
-        spacing={1}
-      >
-        {!suggestingFor &&
-          (focusedActivity ||
-            focusedCluster ||
-            (timelineActivities && timelineActivities.length > 0)) && (
-            <Grid item>
-              <ItinerarySuggestions
-                timelineActivities={timelineActivities}
-                focusedActivity={focusedActivity}
-                focusedCluster={focusedCluster}
-                mapsService={mapsService}
-                onActivityClick={onActivityClick}
-                allMarkers={allMarkers}
-                onSetSuggested={onSetSuggested}
-                onActivityMouseOver={onActivityMouseOver}
-                onActivityMouseOut={onActivityMouseOut}
-                placesService={placesService}
-                createOverlay={createOverlay}
-                geocoderService={geocoderService}
-                googleAccount={googleAccount}
-                setLoginPopupOpen={setLoginPopupOpen}
-                onSetSuggesting={onSetSuggesting}
-              />
-            </Grid>
-          )}
-        {/* Days */}
-        {renderChipFilter(FILTER_PROPERTIES.day)}
-        {/* Times */}
-        {renderChipFilter(FILTER_PROPERTIES.time)}
-        {/* Cities */}
-        {renderChipFilter(FILTER_PROPERTIES.city)}
-        {/* Tags */}
-        {renderChipFilter(FILTER_PROPERTIES.tags)}
-      </StyledGrid>
-    </Box>
+    // <Box
+    //   sx={{
+    //     display: "flex",
+    //     flexFlow: "row",
+    //     justifyContent: "center",
+    //     alignItems: "center",
+    //     flexWrap: "wrap",
+    //   }}
+    // >
+    //   <StyledGrid
+    //     container
+    //     alignItems="center"
+    //     spacing={1}
+    //   >
+    <>
+      {!suggestingFor &&
+        (focusedActivity ||
+          focusedCluster ||
+          (timelineActivities && timelineActivities.length > 0)) && (
+          <Grid item>
+            <ItinerarySuggestions
+              timelineActivities={timelineActivities}
+              focusedActivity={focusedActivity}
+              focusedCluster={focusedCluster}
+              mapsService={mapsService}
+              onActivityClick={onActivityClick}
+              allMarkers={allMarkers}
+              onSetSuggested={onSetSuggested}
+              onActivityMouseOver={onActivityMouseOver}
+              onActivityMouseOut={onActivityMouseOut}
+              placesService={placesService}
+              createOverlay={createOverlay}
+              geocoderService={geocoderService}
+              googleAccount={googleAccount}
+              setLoginPopupOpen={setLoginPopupOpen}
+              onSetSuggesting={onSetSuggesting}
+            />
+          </Grid>
+        )}
+      {/* Days */}
+      {renderChipFilter(FILTER_PROPERTIES.day)}
+      {/* Times */}
+      {renderChipFilter(FILTER_PROPERTIES.time)}
+      {/* Cities */}
+      {renderChipFilter(FILTER_PROPERTIES.city)}
+      {/* Tags */}
+      {renderChipFilter(FILTER_PROPERTIES.tags)}
+    </>
+    // </StyledGrid>
+    // </Box>
   );
 }
