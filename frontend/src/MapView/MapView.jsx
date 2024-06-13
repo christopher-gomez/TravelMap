@@ -400,11 +400,53 @@ const MapView = () => {
 
   const CustomOverlayFactory = useRef(null);
 
+  const userLocationMarker = useRef(null);
+  const curUserLocation = useRef(null);
+
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition((position) => {
+        const pos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+
+        curUserLocation.current = pos;
+
+        if (userLocationMarker.current) {
+          userLocationMarker.current.setPosition(pos);
+        } else {
+          userLocationMarker.current = new maps.Marker({
+            position: pos,
+            map: map,
+            icon: {
+              url: ICON_KEYS["currentLocation"].url,
+              scaledSize: new maps.Size(
+                ICON_KEYS["currentLocation"].scaledSize[0],
+                ICON_KEYS["currentLocation"].scaledSize[1]
+              ),
+            },
+          });
+
+          userLocationMarker.current.setMap(map);
+        }
+      });
+    }
+  };
+
   useEffect(() => {
     if (itineraryData !== null && map !== undefined && maps !== undefined) {
       CustomOverlayFactory.current = new CustomOverlayContainerFactory(maps);
       const places = parseItineraryDataLocations(itineraryData);
       createMarkers(places, map, maps);
+    }
+
+    if (
+      map !== undefined &&
+      maps !== undefined &&
+      !userLocationMarker.current
+    ) {
+      getUserLocation();
     }
   }, [itineraryData, map, maps]);
 
@@ -816,24 +858,25 @@ const MapView = () => {
 
   const calculateDayFromDate = (date) => {
     if (!tripDateRange.current.start) return null;
-  
+
     const tripStart = dayjs(tripDateRange.current.start);
     const tripEnd = dayjs(tripDateRange.current.end);
     const currentDate = dayjs(date ? date : tripDateRange.current.start);
-  
+
     // If the current date is before the trip start date
     if (currentDate.isBefore(tripStart)) {
       return null;
     }
-  
+
     // If the current date is after the trip end date
     if (tripEnd && currentDate.isAfter(tripEnd)) {
       return null;
     }
-  
+
     // Calculate the day number
-    const currentDay = Math.floor((currentDate - tripStart) / (1000 * 60 * 60 * 24)) + 1;
-  
+    const currentDay =
+      Math.floor((currentDate - tripStart) / (1000 * 60 * 60 * 24)) + 1;
+
     return currentDay;
   };
 
@@ -2110,7 +2153,6 @@ const MapView = () => {
     //     setSuggestedMarkers([]);
     //   }
     // }
-    
 
     renderOverlays();
   }, [focusedMarker]);
@@ -2128,7 +2170,7 @@ const MapView = () => {
       clusteredMarkersManagerRef.current.clearMarkers();
       clusteredMarkersManagerRef.current.addMarkers(renderedMarkers);
     }
-    
+
     if (focusedCluster) {
       setFocusedMarker(null);
       setSuggestedMarkers([]);
@@ -2914,6 +2956,13 @@ const MapView = () => {
           onRecenterMap={() =>
             centerMap(undefined, undefined, undefined, undefined, true)
           }
+          centerOnUserLocation={() => {
+            if (curUserLocation.current) {
+              map.panTo(curUserLocation.current);
+            } else {
+              getUserLocation();
+            }
+          }}
           setShouldVignette={setShouldVignette}
           shouldVignette={shouldVignette}
           setShouldKeepFocusCentered={setShouldKeepFocusCentered}

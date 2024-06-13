@@ -9,8 +9,10 @@ import {
   FlashlightOff,
   FlashlightOn,
   GpsFixed,
+  LocationOn,
   Lock,
   LockOpen,
+  MyLocation,
 } from "@mui/icons-material";
 import ToolTipSpeedDial from "../../Util/SpeedDial";
 
@@ -31,6 +33,7 @@ export default function AppFooter({
   shouldVignette,
   shouldKeepFocusCentered,
   setShouldKeepFocusCentered,
+  centerOnUserLocation
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -48,7 +51,7 @@ export default function AppFooter({
     <>
       <ToolTipSpeedDial
         icon={
-          <GpsFixed
+          <LocationOn
             onClick={() => {
               if (onRecenterMap) onRecenterMap();
             }}
@@ -66,6 +69,14 @@ export default function AppFooter({
         }
         direction="up"
         actions={[
+          {
+            icon: <MyLocation/>,
+            name: 'Center on Current Location',
+            tooltipPlacement: "right",
+            onClick: () => {
+              centerOnUserLocation();
+            }
+          },
           {
             icon: mapLocked ? <LockOpen /> : <Lock />,
             name: mapLocked ? "Unlock Map Control" : "Lock Map Control",
