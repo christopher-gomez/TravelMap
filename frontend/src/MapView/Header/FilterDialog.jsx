@@ -532,21 +532,7 @@ export function Filters({
   setFocusedCluster,
   currentFilters,
   focusedCluster,
-  timelineActivities,
   focusedActivity,
-  mapsService,
-  onActivityClick,
-  allMarkers,
-  onSetSuggested,
-  onActivityMouseOver,
-  onActivityMouseOut,
-  placesService,
-  createOverlay,
-  geocoderService,
-  googleAccount,
-  setLoginPopupOpen,
-  onSetSuggesting,
-  suggestingFor,
 }) {
   const [filters, setFilters] = React.useState([]);
   const filterRef = React.useRef(filters);
@@ -751,30 +737,7 @@ export function Filters({
     //     spacing={1}
     //   >
     <>
-      {!suggestingFor &&
-        (focusedActivity ||
-          focusedCluster ||
-          (timelineActivities && timelineActivities.length > 0)) && (
-          <Grid item>
-            <ItinerarySuggestions
-              timelineActivities={timelineActivities}
-              focusedActivity={focusedActivity}
-              focusedCluster={focusedCluster}
-              mapsService={mapsService}
-              onActivityClick={onActivityClick}
-              allMarkers={allMarkers}
-              onSetSuggested={onSetSuggested}
-              onActivityMouseOver={onActivityMouseOver}
-              onActivityMouseOut={onActivityMouseOut}
-              placesService={placesService}
-              createOverlay={createOverlay}
-              geocoderService={geocoderService}
-              googleAccount={googleAccount}
-              setLoginPopupOpen={setLoginPopupOpen}
-              onSetSuggesting={onSetSuggesting}
-            />
-          </Grid>
-        )}
+
       {/* Days */}
       {renderChipFilter(FILTER_PROPERTIES.day)}
       {/* Times */}

@@ -16,6 +16,7 @@ import { isElementOverflowing } from "../../Util/Utils";
 import ActivityTimeline from "../../Util/Timeline";
 import { CustomInfoWindowFactory } from "../POI/CustomOverlayContainerClass";
 import { useRouteDataStore } from "./RouteDataStore";
+import { isMobile } from "mobile-device-detect";
 
 export const timeOrder = {
   Morning: 0,
@@ -73,9 +74,14 @@ export default function ItineraryTimeline({
         id="itinerary-menu"
         style={{
           position: "fixed",
-          bottom: "50%",
+          bottom: isMobile ? 0 : "50%",
+          top: isMobile ? 0 : 'unset',
           transform: timelineOpen
-            ? "translateX(0) translateY(50%)"
+            ? isMobile
+              ? "unset"
+              : "translateX(0) translateY(50%)"
+            : isMobile
+            ? "translateX(calc(100% + 20px)) translateY(25%)"
             : "translateX(calc(100% + 20px)) translateY(50%)",
           right: 0,
           zIndex: 99999,
@@ -84,7 +90,8 @@ export default function ItineraryTimeline({
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           transition: "transform 0.3s ease-in-out",
-          maxWidth: "25vw",
+          maxWidth: isMobile ? "100vw" : "25vw",
+          minWidth: isMobile ? "100vw" : "unset",
           display: "flex",
           flexDirection: "row",
           // overflowY: "auto",
@@ -95,6 +102,8 @@ export default function ItineraryTimeline({
             position: !timelineOpen ? "absolute" : "relative",
             top: 0,
             bottom: 0,
+            minHeight: isMobile ? (timelineOpen ? "100%" : "50%") : "unset",
+            maxHeight: isMobile ? (timelineOpen ? "100%" : "50%") : "unset",
             left: !timelineOpen ? -55 : 0,
             // padding: "10px",
             // cursor: "pointer",

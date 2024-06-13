@@ -1,9 +1,16 @@
 import { AppBar, Chip, Grid, Toolbar, Typography, styled } from "@mui/material";
 import * as React from "react";
 import SearchBar from "./SearchBar";
-import FilterDialog, { Filters } from "./FilterDialog";
+import FilterDialog, {
+  FILTER_PROPERTIES,
+  FILTER_TYPE,
+  Filters,
+} from "./FilterDialog";
 import DevDialog from "./DevDialog";
 import ItineraryRouting from "../MiscComponents/ItineraryRouting";
+import { ChipPopperMenu } from "../../Util/MultipleSelect";
+import { ViewTimeline } from "@mui/icons-material";
+import { ItinerarySuggestions } from "../MiscComponents/ItinerarySuggestions";
 
 const StyledGrid = styled(Grid)(({ theme }) => ({
   display: "flex",
@@ -58,6 +65,7 @@ export default function AppHeader({
   setTravelMode,
   disableMarkerFocusing,
   setDisableMarkerFocusing,
+  calculateDayFromDate
 }) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [devOpen, setDevOpen] = React.useState(false);
@@ -131,6 +139,32 @@ export default function AppHeader({
                 }}
               >
                 <StyledGrid container spacing={1.5}>
+                  {(currentDayFilter === "All" ||
+                    currentDayFilter === "Not Set") && (
+                    <Grid item>
+                      <ChipPopperMenu
+                        canOpen={false}
+                        icon={
+                          <ViewTimeline
+                            sx={{ color: "white", ">*": { color: "white" } }}
+                          />
+                        }
+                        label={"Itinerary Timeline"}
+                        color={"#4285F4"}
+                        onClick={() => {
+                          onFilterEdit([
+                            ...currentFilters,
+                            {
+                              type: FILTER_TYPE.INCLUDE,
+                              property: FILTER_PROPERTIES.day,
+                              value: [calculateDayFromDate() === null ? 1 : calculateDayFromDate()],
+                            },
+                          ]);
+                        }}
+                        chipSx={{ color: "white" }}
+                      />
+                    </Grid>
+                  )}
                   <Grid item>
                     <ItineraryRouting
                       map={map}
@@ -150,6 +184,31 @@ export default function AppHeader({
                       setDisableMarkerFocusing={setDisableMarkerFocusing}
                     />
                   </Grid>
+                  {!suggestingFor &&
+                    (focusedMarker ||
+                      focusedCluster ||
+                      (timelineActivities &&
+                        timelineActivities.length > 0)) && (
+                      <Grid item>
+                        <ItinerarySuggestions
+                          timelineActivities={timelineActivities}
+                          focusedActivity={focusedMarker}
+                          focusedCluster={focusedCluster}
+                          mapsService={mapsService}
+                          onActivityClick={onActivityClick}
+                          allMarkers={allMarkers}
+                          onSetSuggested={onSetSuggested}
+                          onActivityMouseOver={onActivityMouseOver}
+                          onActivityMouseOut={onActivityMouseOut}
+                          placesService={placesService}
+                          createOverlay={createOverlay}
+                          geocoderService={geocoderService}
+                          googleAccount={googleAccount}
+                          setLoginPopupOpen={setLoginPopupOpen}
+                          onSetSuggesting={onSetSuggesting}
+                        />
+                      </Grid>
+                    )}
                   <Filters
                     allCities={allCities}
                     allTags={allTags}

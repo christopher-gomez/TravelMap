@@ -814,6 +814,29 @@ const MapView = () => {
     return date.format("dddd, MMM D"); // Adjust the date format as needed
   };
 
+  const calculateDayFromDate = (date) => {
+    if (!tripDateRange.current.start) return null;
+  
+    const tripStart = dayjs(tripDateRange.current.start);
+    const tripEnd = dayjs(tripDateRange.current.end);
+    const currentDate = dayjs(date ? date : tripDateRange.current.start);
+  
+    // If the current date is before the trip start date
+    if (currentDate.isBefore(tripStart)) {
+      return null;
+    }
+  
+    // If the current date is after the trip end date
+    if (tripEnd && currentDate.isAfter(tripEnd)) {
+      return null;
+    }
+  
+    // Calculate the day number
+    const currentDay = Math.floor((currentDate - tripStart) / (1000 * 60 * 60 * 24)) + 1;
+  
+    return currentDay;
+  };
+
   const tripDateRange = useRef(null);
 
   const [markerDays, setMarkerDays] = useState([]);
@@ -1025,9 +1048,10 @@ const MapView = () => {
 
     renderedMarkers.forEach((m) => {
       if (m.isPlacesPOI) {
-        m.overlay?.setMap(null);
         m.setMap(null);
       }
+
+      m.overlay?.setMap(null);
     });
 
     let dayFilters = markerPropertyFilters.filter(
@@ -2770,6 +2794,7 @@ const MapView = () => {
         setTravelMode={setTravelMode}
         disableMarkerFocusing={disableMarkerFocusing}
         setDisableMarkerFocusing={setDisableMarkerFocusing}
+        calculateDayFromDate={calculateDayFromDate}
       />
       <div
         style={{

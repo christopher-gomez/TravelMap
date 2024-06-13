@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { CustomInfoWindowFactory } from "../POI/CustomOverlayContainerClass";
 import { ChipPopperMenu } from "../../Util/MultipleSelect";
-import { Alert, Box, Snackbar, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  CircularProgress,
+  Snackbar,
+  Typography,
+} from "@mui/material";
 import {
   Cancel,
   Directions,
@@ -33,6 +39,7 @@ export default function ItineraryRouting({
 
   useEffect(() => {
     if (!routing) {
+      setFetchingRoute(false);
       setRoutingData([]);
       //   setRouteDriveTime(null);
       //   setRouteDriveDistance(null);
@@ -156,6 +163,8 @@ export default function ItineraryRouting({
     }
   }, [travelMode]);
 
+  const [fetchingRoute, setFetchingRoute] = useState(false);
+
   async function calculateSegmentRoute(start, end, travelMode) {
     return new Promise((resolve, reject) => {
       directionsService.route(
@@ -199,6 +208,8 @@ export default function ItineraryRouting({
 
   async function calculateRoute(start, end, waypoints) {
     if (!directionsService || !directionsRenderer) return;
+
+    setFetchingRoute(true);
 
     // const travelMode = "DRIVING"; // or "WALKING", "BICYCLING", etc.
 
@@ -366,9 +377,17 @@ export default function ItineraryRouting({
     if (polylineRef.current.length === 0) {
       setNoRouteFound(true);
     }
+
+    setFetchingRoute(false);
   }
 
   const [noRouteFound, setNoRouteFound] = useState(false);
+
+  useEffect(() => {
+    if (noRouteFound) {
+      setFetchingRoute(false);
+    }
+  }, [noRouteFound]);
 
   function generateColor(index, total) {
     const hue = (index / total) * 360;
@@ -377,6 +396,7 @@ export default function ItineraryRouting({
 
   useEffect(() => {
     return () => {
+      setFetchingRoute(false);
       polylineRef.current.forEach((poly) => poly.setMap(null));
       polylineRef.current = [];
       infoWindowsRef.current.forEach((infoWindow) => {
@@ -441,6 +461,7 @@ export default function ItineraryRouting({
       });
       setDisableMarkerFocusing(false);
       setTargetMarkers([]);
+      setRouting(false);
     }
   }, [menuOpen]);
 
@@ -449,7 +470,10 @@ export default function ItineraryRouting({
       <ChipPopperMenu
         disableClickAway={true}
         icon={
-          routing ? (
+          menuOpen || (!fetchingRoute &&
+          (routing ||
+            (routingData.data && routingData.data.length >= 2) ||
+            targetMarkers.length > 0)) ? (
             <Cancel sx={{ ">*": { color: "white" } }} />
           ) : (
             <Directions sx={{ ">*": { color: "white" } }} />
@@ -459,14 +483,19 @@ export default function ItineraryRouting({
         color={"#4285F4"}
         chipSx={{ color: "white" }}
         onClick={() => {
+          if(menuOpen) {
+            setMenuOpen(false);
+            return;
+          }
+
           if (
-            // focusedMarker &&
-            !routingData.data ||
-            routingData.data.length < 2
+            focusedMarker &&
+            (!routingData.data || routingData.data.length < 2)
           ) {
             setMenuOpen(true);
             return;
           }
+
           setRouting(!routing);
         }}
         open={menuOpen}
@@ -481,33 +510,39 @@ export default function ItineraryRouting({
                 pl: 0,
               }}
             >
-              <DirectionsWalk
-                sx={{
-                  fontSize: "1em",
-                  color:
-                    routing && travelMode === "WALKING"
-                      ? "white"
-                      : "rgba(0,0,0,.35)",
-                }}
-                onClick={() => {
-                  if (routing) {
-                    setTravelMode("WALKING");
-                  }
-                }}
-              />
-              <DirectionsCar
-                sx={{
-                  color:
-                    routing && travelMode === "DRIVING"
-                      ? "white"
-                      : "rgba(0,0,0,.35)",
-                }}
-                onClick={() => {
-                  if (routing) {
-                    setTravelMode("DRIVING");
-                  }
-                }}
-              />
+              {!fetchingRoute ? (
+                <>
+                  <DirectionsWalk
+                    sx={{
+                      fontSize: "1em",
+                      color:
+                        routing && travelMode === "WALKING"
+                          ? "white"
+                          : "rgba(0,0,0,.35)",
+                    }}
+                    onClick={() => {
+                      if (routing) {
+                        setTravelMode("WALKING");
+                      }
+                    }}
+                  />
+                  <DirectionsCar
+                    sx={{
+                      color:
+                        routing && travelMode === "DRIVING"
+                          ? "white"
+                          : "rgba(0,0,0,.35)",
+                    }}
+                    onClick={() => {
+                      if (routing) {
+                        setTravelMode("DRIVING");
+                      }
+                    }}
+                  />
+                </>
+              ) : (
+                <CircularProgress sx={{">*:": {color: 'white !important'}, color: 'white !important', height: '20px !important', width: '20px !important', m: '12px', ml: '2px', mr: '2px'}}/>
+              )}
             </Box>
           ) : undefined
         }
