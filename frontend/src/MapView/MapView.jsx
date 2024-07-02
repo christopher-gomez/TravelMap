@@ -671,7 +671,8 @@ const MapView = () => {
   //   mapRef.current.panTo(center);
   // }
 
-  const hasAddedIdle = useRef(false);
+  const hasAddedBoundsIdle = useRef(false);
+  const hasAddedZoomIdle = useRef(false);
 
   useEffect(() => {
     mapsRef.current = maps;
@@ -684,22 +685,22 @@ const MapView = () => {
         // Logger.Trace();
         // Logger.EndLog();
 
-        if (!hasAddedIdle.current) {
-          hasAddedIdle.current = true;
+        if (!hasAddedBoundsIdle.current) {
+          hasAddedBoundsIdle.current = true;
 
           mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
             // Logger.Log("bounds_changed -> idle");
             // updateVignette();
 
             if (!shouldKeepFocusCenteredRef.current) {
-              hasAddedIdle.current = false;
+              hasAddedBoundsIdle.current = false;
               return;
             }
 
             const realCenter = calculateRealCenter();
 
             if (!realCenter) {
-              hasAddedIdle.current = false;
+              hasAddedBoundsIdle.current = false;
               return;
             }
 
@@ -821,135 +822,139 @@ const MapView = () => {
               }
             }
 
-            hasAddedIdle.current = false;
+            hasAddedBoundsIdle.current = false;
           });
         }
       });
 
       map.addListener("zoom_changed", () => {
-        Logger.BeginLog("zoom_changed");
-        // Logger.Trace();
+        if (!hasAddedZoomIdle.current) {
+          hasAddedZoomIdle.current = true;
+          mapsRef.current.event.addListenerOnce(mapRef.current, "idle", () => {
+            Logger.BeginLog("zoom_changed -> idle");
+            // Logger.Trace();
 
-        if (!markerClusterersRef.current) {
-          hasAddedIdle.current = false;
-          return;
-        }
-
-        const zoomLevel = mapRef.current.getZoom();
-        const maxZoom = mapRef.current.mapTypes.get(
-          mapRef.current.getMapTypeId()
-        ).maxZoom;
-        const minZoom = 3;
-        // mapRef.current.mapTypes.get(
-        //   mapRef.current.getMapTypeId()
-        // ).minZoom;
-        // Normalize the zoom level to a range between 0 and 1
-        let t = (zoomLevel - minZoom) / (maxZoom - minZoom);
-        // const factor = 1 / 2;
-        // t = Math.pow(t, factor);
-
-        Logger.BeginLog(
-          "Setting new icon sizes",
-          "\n",
-          "Zoom Level:",
-          zoomLevel,
-          "\n",
-          "Max Zoom:",
-          maxZoom,
-          "\n",
-          "Min Zoom:",
-          minZoom,
-          "\n",
-          "T:",
-          t
-        );
-
-        const setNewIconSize = (marker) => {
-          // if (!marker || !marker.map || !marker.visible) return;
-
-          Logger.BeginLog(
-            "Setting new icon size for marker",
-            marker.info
-          );
-
-          let minSize, maxSize;
-
-          if (marker.iconType === "emoji") {
-            minSize = new mapsRef.current.Size(75, 75);
-            maxSize = new mapsRef.current.Size(100, 100);
-          } else if (marker.iconType === "custom") {
-            minSize = new mapsRef.current.Size(
-              ICON_KEYS[marker.iconKey].scaledSize[0] / 1.3,
-              ICON_KEYS[marker.iconKey].scaledSize[1] / 1.3
-            );
-            maxSize = new mapsRef.current.Size(
-              ICON_KEYS[marker.iconKey].scaledSize[0],
-              ICON_KEYS[marker.iconKey].scaledSize[1]
-            );
-          } else {
-            minSize = new mapsRef.current.Size(20 / 1.3, 34 / 1.3);
-            maxSize = new mapsRef.current.Size(20, 34); // Default size (width, height)
-          }
-
-          // Calculate the interpolated size
-          const width = lerp(minSize.width, maxSize.width, t);
-          const height = lerp(minSize.height, maxSize.height, t);
-
-          const newSize = new mapsRef.current.Size(width, height);
-          const newAnchor =
-            marker.iconType === "emoji"
-              ? new mapsRef.current.Point(width / 2, height / 2)
-              : marker.iconType === "default"
-              ? new mapsRef.current.Point(width / 2, height)
-              : marker.icon.anchor;
-
-          Logger.Log(
-            "marker.iconType:",
-            marker.iconType,
-            "\n",
-            "marker.iconKey:",
-            marker.iconKey,
-            "\n",
-            "minSize:",
-            minSize,
-            "\n",
-            "maxSize:",
-            maxSize,
-            "\n",
-            "newSize:",
-            newSize,
-            "\n",
-            "newAnchor:",
-            newAnchor
-          );
-
-          // Set the new icon size
-          marker.setIcon({
-            ...marker.icon,
-            size: newSize,
-            scaledSize: newSize,
-            anchor: newAnchor,
-          });
-
-          Logger.Log("new icon size set", marker.icon);
-          Logger.EndLog();
-        };
-
-        markerClusterersRef.current.forEach((mc) =>
-          mc.clusters.forEach((c) => {
-            setNewIconSize(c.marker);
-
-            if (c.markers.length > 1) {
-              c.markers.forEach((m) => {
-                setNewIconSize(m);
-              });
+            if (!markerClusterersRef.current) {
+              hasAddedZoomIdle.current = false;
+              return;
             }
-          })
-        );
 
-        Logger.EndLog();
+            const zoomLevel = mapRef.current.getZoom();
+            const maxZoom = mapRef.current.mapTypes.get(
+              mapRef.current.getMapTypeId()
+            ).maxZoom;
+            const minZoom = 3;
+            // mapRef.current.mapTypes.get(
+            //   mapRef.current.getMapTypeId()
+            // ).minZoom;
+            // Normalize the zoom level to a range between 0 and 1
+            let t = (zoomLevel - minZoom) / (maxZoom - minZoom);
+            // const factor = 1 / 2;
+            // t = Math.pow(t, factor);
 
-        Logger.EndLog();
+            Logger.BeginLog(
+              "Setting new icon sizes",
+              "\n",
+              "Zoom Level:",
+              zoomLevel,
+              "\n",
+              "Max Zoom:",
+              maxZoom,
+              "\n",
+              "Min Zoom:",
+              minZoom,
+              "\n",
+              "T:",
+              t
+            );
+
+            const setNewIconSize = (marker) => {
+              // if (!marker || !marker.map || !marker.visible) return;
+
+              Logger.BeginLog("Setting new icon size for marker", marker.info);
+
+              let minSize, maxSize;
+
+              if (marker.iconType === "emoji") {
+                minSize = new mapsRef.current.Size(75, 75);
+                maxSize = new mapsRef.current.Size(100, 100);
+              } else if (marker.iconType === "custom") {
+                minSize = new mapsRef.current.Size(
+                  ICON_KEYS[marker.iconKey].scaledSize[0] / 1.3,
+                  ICON_KEYS[marker.iconKey].scaledSize[1] / 1.3
+                );
+                maxSize = new mapsRef.current.Size(
+                  ICON_KEYS[marker.iconKey].scaledSize[0],
+                  ICON_KEYS[marker.iconKey].scaledSize[1]
+                );
+              } else {
+                minSize = new mapsRef.current.Size(20 / 1.3, 34 / 1.3);
+                maxSize = new mapsRef.current.Size(20, 34); // Default size (width, height)
+              }
+
+              // Calculate the interpolated size
+              const width = lerp(minSize.width, maxSize.width, t);
+              const height = lerp(minSize.height, maxSize.height, t);
+
+              const newSize = new mapsRef.current.Size(width, height);
+              const newAnchor =
+                marker.iconType === "emoji"
+                  ? new mapsRef.current.Point(width / 2, height / 2)
+                  : marker.iconType === "default"
+                  ? new mapsRef.current.Point(width / 2, height)
+                  : marker.icon.anchor;
+
+              Logger.Log(
+                "marker.iconType:",
+                marker.iconType,
+                "\n",
+                "marker.iconKey:",
+                marker.iconKey,
+                "\n",
+                "minSize:",
+                minSize,
+                "\n",
+                "maxSize:",
+                maxSize,
+                "\n",
+                "newSize:",
+                newSize,
+                "\n",
+                "newAnchor:",
+                newAnchor
+              );
+
+              // Set the new icon size
+              marker.setIcon({
+                ...marker.icon,
+                size: newSize,
+                scaledSize: newSize,
+                anchor: newAnchor,
+              });
+
+              Logger.Log("new icon size set", marker.icon);
+              Logger.EndLog();
+            };
+
+            markerClusterersRef.current.forEach((mc) =>
+              mc.clusters.forEach((c) => {
+                setNewIconSize(c.marker);
+
+                if (c.markers.length > 1) {
+                  c.markers.forEach((m) => {
+                    setNewIconSize(m);
+                  });
+                }
+              })
+            );
+
+            Logger.EndLog();
+
+            Logger.EndLog();
+
+            hasAddedZoomIdle.current = false;
+          });
+        }
       });
     }
 
@@ -1505,12 +1510,7 @@ const MapView = () => {
   const vignetteRef = useRef(null);
 
   function smoothFitBounds(finalBounds, onComplete) {
-    Logger.BeginLog(
-      "smoothFitBounds()",
-      "\n",
-      "finalBounds:",
-      finalBounds
-    );
+    Logger.BeginLog("smoothFitBounds()", "\n", "finalBounds:", finalBounds);
     Logger.Trace();
     Logger.EndLog();
 
@@ -1743,11 +1743,22 @@ const MapView = () => {
     //     )) ||
     //   (isFilteringSingleDay.current && boundMarkers.length > 1)
     // ) {
-    smoothFitBounds(fitToBounds ? bounds : undefined, () => {
-      if (!firstRender.current) canAdjustMapCenter.current = true;
-      else firstRender.current = false;
-      updateVignette();
-    }); // Adjust the viewport if any marker is outside the current view
+    smoothFitBounds(
+      fitToBounds ||
+        (focusedMarkerRef.current && suggestedMarkersRef.current.length > 0) ||
+        (boundMarkers.length > 1 &&
+          !boundMarkers.every((marker) =>
+            mapRef.current.getBounds().contains(marker.position)
+          )) ||
+        (isFilteringSingleDay.current && boundMarkers.length > 1)
+        ? bounds
+        : undefined,
+      () => {
+        if (!firstRender.current) canAdjustMapCenter.current = true;
+        else firstRender.current = false;
+        updateVignette();
+      }
+    ); // Adjust the viewport if any marker is outside the current view
     // } else {
     //   if (!firstRender.current) canAdjustMapCenter.current = true;
     //   else firstRender.current = false;
@@ -3041,8 +3052,8 @@ const MapView = () => {
 
   // const [filtersOpen, setFiltersOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
-  const [timelineVisible, setTimelineVisible] = useState(false);
-  const timelineVisibleRef = React.useRef(false);
+  const [timelineVisible, setTimelineVisible] = useState(true);
+  const timelineVisibleRef = React.useRef(true);
 
   useEffect(() => {
     if (!map || !maps) return;
@@ -3336,7 +3347,7 @@ const MapView = () => {
           currentDayFilter={currentDayFilter}
           onRecenterMap={() => {
             Logger.Log("onRecenterMap()");
-            centerMap(false, null);
+            centerMap(true, null);
           }}
           centerOnUserLocation={() => {
             if (curUserLocation.current) {
