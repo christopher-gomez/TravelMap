@@ -1,4 +1,5 @@
 import { createPage, deletePage, updatePage } from "../Api/Notion";
+import { Logger } from "../Util/Utils";
 
 /**
  *
@@ -23,7 +24,7 @@ export const updateLocationProperties = async (loc, googleAccount) => {
         },
       });
 
-      // console.log(response);
+      // Logger.Log(response);
       return response;
     });
   } else {
@@ -41,7 +42,7 @@ export const updateLocationProperties = async (loc, googleAccount) => {
       },
     });
 
-    // console.log(response);
+    // Logger.Log(response);
     return response;
   }
 };
@@ -54,33 +55,33 @@ export const updateLocationProperties = async (loc, googleAccount) => {
 //     let numLocations = location.length;
 //     const lnglats = {};
 //     location.forEach(async (loc) => {
-//       console.log("finding " + loc + "placeID in maps");
+//       Logger.Log("finding " + loc + "placeID in maps");
 //       autoCompleteService.getPlacePredictions(
 //         { input: loc },
 //         (predictions, status) => {
 //           if (status === "OK") {
-//             // console.log(predictions);
+//             // Logger.Log(predictions);
 
 //             if (predictions.length === 0) return numLocations--;
 
 //             const placeId = predictions[0].place_id;
 
-//             // console.log('PlaceId for ' + loc + ' is ' + placeId);
+//             // Logger.Log('PlaceId for ' + loc + ' is ' + placeId);
 
-//             // console.log('getting ' + loc + ' lnglt in maps');
+//             // Logger.Log('getting ' + loc + ' lnglt in maps');
 
 //             geocoder.geocode({ placeId: placeId }, (results, status) => {
 //               if (status === "OK") {
-//                 // console.log(results[0]);
+//                 // Logger.Log(results[0]);
 //                 lnglats[loc] = results[0].geometry.location;
 //               } else {
-//                 // console.log("Geocode was not successful for the following reason: " + status);
+//                 // Logger.Log("Geocode was not successful for the following reason: " + status);
 //               }
 
 //               numLocations--;
 //             });
 //           } else {
-//             // console.log("AutoComplete was not successful for the following reason: " + status);
+//             // Logger.Log("AutoComplete was not successful for the following reason: " + status);
 
 //             numLocations--;
 //           }
@@ -88,10 +89,10 @@ export const updateLocationProperties = async (loc, googleAccount) => {
 //       );
 //       // geocoder.geocode({ placeId: loc }, (results, status) => {
 //       //     if (status === "OK") {
-//       //         console.log(results[0].geometry.location);
+//       //         Logger.Log(results[0].geometry.location);
 //       //         lnglats[loc] = results[0];
 //       //     } else {
-//       //         console.log("Geocode was not successful for the following reason: " + status);
+//       //         Logger.Log("Geocode was not successful for the following reason: " + status);
 //       //     }
 
 //       //     numLocations--;
@@ -110,34 +111,34 @@ export const updateLocationProperties = async (loc, googleAccount) => {
 //     let lnglat;
 
 //     const promise = new Promise((res, rej) => {
-//       // console.log('getting ' + location + ' placeID in maps');
+//       // Logger.Log('getting ' + location + ' placeID in maps');
 
 //       autoCompleteService.getPlacePredictions(
 //         { input: location },
 //         (predictions, status) => {
 //           if (status === "OK") {
-//             // console.log(predictions);
+//             // Logger.Log(predictions);
 
 //             if (predictions.length === 0) return rej("No predictions found");
 
 //             const placeId = predictions[0].place_id;
 
-//             // console.log('PlaceId for ' + location + ' is ' + placeId);
+//             // Logger.Log('PlaceId for ' + location + ' is ' + placeId);
 
-//             // console.log('getting ' + location + ' lnglt in maps');
+//             // Logger.Log('getting ' + location + ' lnglt in maps');
 
 //             geocoder.geocode({ placeId: placeId }, (results, status) => {
 //               if (status === "OK") {
-//                 // console.log(results[0]);
+//                 // Logger.Log(results[0]);
 //                 lnglat = results[0].geometry.location;
 //                 res(lnglat);
 //               } else {
-//                 // console.log("Geocode was not successful for the following reason: " + status);
+//                 // Logger.Log("Geocode was not successful for the following reason: " + status);
 //                 rej(status);
 //               }
 //             });
 //           } else {
-//             // console.log("AutoComplete was not successful for the following reason: " + status);
+//             // Logger.Log("AutoComplete was not successful for the following reason: " + status);
 
 //             rej(status);
 //           }
@@ -228,7 +229,7 @@ export const updateActivityTime = async (activity, googleAccount) => {
 export const createNewActivity = async (activity, googleAccount) => {
   if (!googleAccount) return;
 
-  console.log("creating new activity", activity);
+  Logger.Log("creating new activity", activity);
 
   const response = await createPage({
     properties: {

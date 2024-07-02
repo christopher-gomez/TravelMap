@@ -14,6 +14,7 @@ export default function ToolTipSpeedDial({
   direction = "up",
   open,
   onSetOpen,
+  onClick,
   ...others
 }) {
   const [_open, setOpen] = React.useState(false);
@@ -46,6 +47,11 @@ export default function ToolTipSpeedDial({
       ariaLabel="SpeedDial tooltip"
       sx={{ position: "absolute", ...position, transition: "all 0.5s ease" }}
       icon={icon ?? <SpeedDialIcon />}
+      onClick={() => {
+        if(_open) {
+          if(onClick) onClick();
+        }
+      }}
       onClose={handleClose}
       onOpen={handleOpen}
       open={_open}

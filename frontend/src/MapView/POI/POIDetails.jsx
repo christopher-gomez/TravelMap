@@ -28,6 +28,7 @@ import { ChipSelectMenu } from "../../Util/MultipleSelect";
 import { createNewActivity } from "../UpdateLocationProperties";
 import EmojiPicker from "emoji-picker-react";
 import Popup from "../../Util/Popup";
+import { Logger } from "../../Util/Utils";
 
 var options = { weekday: "short", month: "short", day: "numeric" };
 
@@ -50,7 +51,7 @@ const DateComponent = ({
   const [dateControl, setDateControl] = useState({ start: null, end: null });
 
   useEffect(() => {
-    // console.log("date effect: ", date);
+    // Logger.Log("date effect: ", date);
     if (date && date.end) {
       setHasEndDate(true);
     }
@@ -902,10 +903,10 @@ export const POIDetails = ({
           onUpdateDate={(date) => {
             if (!calculateDay) return;
 
-            // console.log("on update date: ", date);
+            // Logger.Log("on update date: ", date);
 
             if (!date.start && !date.end) {
-              // console.log("date has no start or end");
+              // Logger.Log("date has no start or end");
               if (_date && (_date.start !== null || _date.end !== null)) {
                 if (canEdit && marker) {
                   marker["date"] = date;
@@ -1456,10 +1457,10 @@ export const POIDetailsMobile = ({
           onUpdateDate={(date) => {
             if (!calculateDay) return;
 
-            // console.log("on update date: ", date);
+            // Logger.Log("on update date: ", date);
 
             if (!date.start && !date.end) {
-              // console.log("date has no start or end");
+              // Logger.Log("date has no start or end");
               if (_date && (_date.start !== null || _date.end !== null)) {
                 if (canEdit && marker) {
                   marker["date"] = date;
@@ -1900,10 +1901,10 @@ export const POIDetailsTitle = ({
           onUpdateDate={(date) => {
             if (!calculateDay) return;
 
-            // console.log("on update date: ", date);
+            // Logger.Log("on update date: ", date);
 
             if (!date.start && !date.end) {
-              // console.log("date has no start or end");
+              // Logger.Log("date has no start or end");
               if (_date && (_date.start !== null || _date.end !== null)) {
                 if (canEdit && marker) {
                   marker["date"] = date;

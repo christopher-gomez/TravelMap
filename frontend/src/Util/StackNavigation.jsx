@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { deepEqual } from "./Utils";
+import { Logger, deepEqual } from "./Utils";
 
 // Create a context for the navigation state
 const NavigationContext = createContext();
@@ -20,21 +20,21 @@ export function StackNavigationProvider({ children }) {
 
   useEffect(() => {
     backStackRef.current = backStack;
-    // console.log("backStack updated", backStack);
+    // Logger.Log("backStack updated", backStack);
   }, [backStack]);
 
   useEffect(() => {
     currentRef.current = current;
-    // console.log("current updated", current);
+    // Logger.Log("current updated", current);
   }, [current]);
 
   useEffect(() => {
     forwardStackRef.current = forwardStack;
-    // console.log("forwardStack updated", forwardStack);
+    // Logger.Log("forwardStack updated", forwardStack);
   }, [forwardStack]);
 
   const push = (page) => {
-    // console.log("pushing page", page, currentRef.current);
+    // Logger.Log("pushing page", page, currentRef.current);
     if (currentRef.current !== null && page !== currentRef.current) {
       setBackStack([...backStackRef.current, currentRef.current]);
       setForwardStack([]);
@@ -45,7 +45,7 @@ export function StackNavigationProvider({ children }) {
       backStackRef.current.length > 0 &&
       deepEqual(page, backStackRef.current[backStackRef.current.length - 1])
     ) {
-      // console.log("found same object at top of backstack");
+      // Logger.Log("found same object at top of backstack");
       const newBackStack = [...backStackRef.current];
       newBackStack.pop();
       setBackStack(newBackStack);
@@ -67,10 +67,10 @@ export function StackNavigationProvider({ children }) {
 
       setCurrent(previousPage);
       setBackStack(newBackStack);
-      //   console.log(`Went back to: ${previousPage}`);
+      //   Logger.Log(`Went back to: ${previousPage}`);
     }
     // else {
-    //   console.log("No pages in back history.");
+    //   Logger.Log("No pages in back history.");
     // }
   };
 
@@ -81,10 +81,10 @@ export function StackNavigationProvider({ children }) {
       const nextPage = newForwardStack.shift();
       setCurrent(nextPage);
       setForwardStack(newForwardStack);
-      //   console.log(`Went forward to: ${nextPage}`);
+      //   Logger.Log(`Went forward to: ${nextPage}`);
     }
     // else {
-    //   console.log("No pages in forward history.");
+    //   Logger.Log("No pages in forward history.");
     // }
   };
 
@@ -92,11 +92,11 @@ export function StackNavigationProvider({ children }) {
     setBackStack([]);
     setForwardStack([]);
     setCurrent(null);
-    // console.log("cleared stack");
+    // Logger.Log("cleared stack");
   };
 
   const moveForwardToBack = () => {
-    // console.log(
+    // Logger.Log(
     //   "moving forward to back",
     //   currentRef.current,
     //   forwardStackRef.current

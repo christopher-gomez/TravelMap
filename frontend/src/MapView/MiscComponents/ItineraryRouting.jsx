@@ -15,6 +15,7 @@ import {
   DirectionsWalk,
 } from "@mui/icons-material";
 import { useRouteDataStore } from "./RouteDataStore";
+import { Logger } from "../../Util/Utils";
 
 export default function ItineraryRouting({
   timelineActivities,
@@ -247,7 +248,7 @@ export default function ItineraryRouting({
           );
           routeCache.current[cacheKey] = result;
         } catch (error) {
-          console.error(`Error calculating segment ${i}:`, error);
+          Logger.Error(`Error calculating segment ${i}:`, error);
           continue; // Skip this segment and continue with the next one
         }
       }
@@ -412,7 +413,6 @@ export default function ItineraryRouting({
   const [targetMarkers, setTargetMarkers] = useState([]);
 
   useEffect(() => {
-    console.log("targetMarkers", targetMarkers);
     if (targetMarkers.length === 2) {
       setRoutingData(targetMarkers);
       setMenuOpen(false);

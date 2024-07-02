@@ -1,5 +1,6 @@
 import ReactDOM from "react-dom";
 import "./OverlayStyles.css";
+import { Logger, arraysEqual } from "../../Util/Utils";
 
 export default class CustomOverlayContainerFactory {
   constructor(maps) {
@@ -77,7 +78,7 @@ export default class CustomOverlayContainerFactory {
         // float above the map and markers.
         var panes = this.getPanes();
 
-        // console.log(panes);
+        // Logger.Log(panes);
 
         if (this.onClick === undefined) {
           if (!(this.currentPaneType in panes))
@@ -233,7 +234,7 @@ export class CustomVignetteOverlayFactory {
           }
         }
         // else {
-        //   console.log("No label overlay found");
+        //   Logger.Log("No label overlay found");
         // }
 
         const requiredSize = Math.max(requiredWidth, requiredHeight);
@@ -252,7 +253,7 @@ export class CustomVignetteOverlayFactory {
       }
 
       onRemove() {
-        console.log("removing vignette overlay");
+        Logger.Log("removing vignette overlay");
         if (this.div) {
           this.div.parentNode.removeChild(this.div);
           this.div = null;
@@ -271,6 +272,305 @@ export class CustomVignetteOverlayFactory {
     }
 
     this.class = VignetteOverlay;
+  }
+}
+
+/**
+ * CustomInfoWindowFactory
+ *
+ * This factory creates a custom Overlay that extends google.maps.OverlayView.
+ * Given markers, it creates a shaded overlay that covers the area of the markers.
+ *  *
+ * @export
+ * @class CustomDistrictOverlayFactory
+ * @typedef {CustomDistrictOverlayFactory}
+ */
+export class CustomDistrictOverlayFactory {
+  constructor(maps) {
+    class DistrictOverlay extends maps.OverlayView {
+      constructor(markers, map) {
+        Logger.Log("DistrictOverlay created");
+        Logger.Log("Markers:", markers);
+        super();
+        this.directionsService = new maps.DirectionsService();
+        this.routeCache = {}; // Initialize the route cache
+        this.markers = markers;
+        this.map = map;
+        this.div = null;
+
+        this.setMap(map);
+      }
+
+      onAdd() {
+        const div = document.createElement("div");
+        // div.style.borderStyle = "solid";
+        // div.style.borderWidth = "2px";
+        // div.style.borderColor = "blue";
+        div.style.position = "absolute";
+        div.style.zIndex = 9999;
+
+        div.id = "district-overlay";
+
+        // Create the shaded area overlay
+        // const shadedOverlay = document.createElement("div");
+        // shadedOverlay.style.width = "100%";
+        // shadedOverlay.style.height = "100%";
+        // shadedOverlay.style.backgroundColor = "rgba(0, 0, 255, 0.2)";
+        // shadedOverlay.style.position = "absolute";
+        // shadedOverlay.style.top = "0";
+        // shadedOverlay.style.left = "0";
+        // shadedOverlay.style.pointerEvents = "none";
+
+        // div.appendChild(shadedOverlay);
+        this.div = div;
+
+        this.div.id = "district-overlay";
+
+        const panes = this.getPanes();
+        panes.mapPane.appendChild(div);
+
+        this.draw();
+      }
+
+      async draw() {
+        if (!this.div) return;
+
+        Logger.BeginLog("DistrictOverlay.draw()");
+        const overlayProjection = this.getProjection();
+        Logger.Log("markers:", this.markers);
+
+        let points = this.markers.map((marker) => {
+          const latLng = marker.getPosition();
+          return {
+            type: "marker",
+            point: window.turf.point([latLng.lng(), latLng.lat()]),
+            city: marker.city,
+          };
+        });
+
+        // Log the points for debugging
+        Logger.Log("Points:", points);
+
+        // Adjust the buffer sizes based on the zoom level
+        const bufferSize = 1.75 / 1;
+        const routeBufferSize = 1.05 / 1;
+
+        // Buffer the marker points
+        let bufferedPoints = points.map((point) =>
+          window.turf.buffer(point.point, bufferSize, { units: "kilometers" })
+        );
+
+        // Get the route between markers only if their buffer areas do not touch and they are in the same city
+        let routes = [];
+        for (let i = 0; i < this.markers.length - 1; i++) {
+          if (!arraysEqual(this.markers[i].city, this.markers[i + 1].city))
+            continue;
+
+          const start = this.markers[i].getPosition();
+          const end = this.markers[i + 1].getPosition();
+          const startBuffer = window.turf.buffer(
+            window.turf.point([start.lng(), start.lat()]),
+            bufferSize,
+            { units: "kilometers" }
+          );
+          const endBuffer = window.turf.buffer(
+            window.turf.point([end.lng(), end.lat()]),
+            bufferSize,
+            { units: "kilometers" }
+          );
+
+          if (!window.turf.booleanIntersects(startBuffer, endBuffer)) {
+            const route = await this.getCachedRoute(start, end);
+            let accumulatedDistance = 0;
+
+            for (let j = 1; j < route.length; j++) {
+              const prevLatLng = route[j - 1];
+              const currentLatLng = route[j];
+              const prevPoint = window.turf.point([
+                prevLatLng.lng(),
+                prevLatLng.lat(),
+              ]);
+              const currentPoint = window.turf.point([
+                currentLatLng.lng(),
+                currentLatLng.lat(),
+              ]);
+
+              const distance = window.turf.distance(prevPoint, currentPoint, {
+                units: "kilometers",
+              });
+              accumulatedDistance += distance;
+
+              if (accumulatedDistance >= routeBufferSize) {
+                routes.push({ type: "route", point: currentPoint });
+                accumulatedDistance = 0;
+              }
+            }
+          }
+        }
+
+        let bufferedRoutes = routes.map((route) =>
+          window.turf.buffer(route.point, routeBufferSize, { units: "kilometers" })
+        );
+
+        let routeUnion = bufferedRoutes[0];
+        for (let i = 1; i < bufferedRoutes.length; i++) {
+          routeUnion = window.turf.union(routeUnion, bufferedRoutes[i]);
+        }
+
+        if(routeUnion) {
+          routeUnion = window.turf.simplify(routeUnion, { tolerance: 0.0075, highQuality: false });
+        }
+
+        // points = points.concat(routes);
+
+        // Create a buffer around each point
+        bufferedPoints = points.map((point) =>
+          window.turf.buffer(
+            point.point,
+            point.type === "route" ? routeBufferSize : bufferSize,
+            { units: "kilometers" }
+          )
+        );
+
+        // Union the buffered points to create a single polygon
+        let union = bufferedPoints[0];
+        for (let i = 1; i < bufferedPoints.length; i++) {
+          union = window.turf.union(union, bufferedPoints[i]);
+        }
+
+        union = window.turf.union(union, routeUnion);
+
+        if (!union) {
+          Logger.Error("Cannot create union of buffered points");
+          Logger.EndLog();
+          return;
+        }
+
+        Logger.Log("Union:", union);
+
+        Logger.Trace();
+        Logger.EndLog();
+
+        // Handle both Polygon and MultiPolygon types
+        let coordinates;
+        if (union.geometry.type === "MultiPolygon") {
+          // Flatten the coordinates of the MultiPolygon into a single array
+          coordinates = union.geometry.coordinates.flat(2);
+        } else {
+          coordinates = union.geometry.coordinates[0];
+        }
+
+        // Transform the union coordinates to pixel positions
+        const pixelPoints = coordinates.map((coord) => {
+          const latLng1 = new maps.LatLng(coord[1], coord[0]);
+          return overlayProjection.fromLatLngToDivPixel(latLng1);
+        });
+
+        // Calculate the bounds of the polygon
+        const xs = pixelPoints.map((p) => p.x);
+        const ys = pixelPoints.map((p) => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        // Draw the polygon
+        const div = this.div;
+        if (!div) return;
+
+        div.style.left = `${minX}px`;
+        div.style.top = `${minY}px`;
+        div.style.width = `${maxX - minX}px`;
+        div.style.height = `${maxY - minY}px`;
+
+        let svg = div.querySelector("svg");
+        let createNewSvg = false;
+        const svgNS = "http://www.w3.org/2000/svg";
+        if (!svg) {
+          createNewSvg = true;
+          svg = document.createElementNS(svgNS, "svg");
+        }
+
+        if (!svg) return;
+
+        svg.setAttribute("width", `${maxX - minX}`);
+        svg.setAttribute("height", `${maxY - minY}`);
+        svg.style.position = "absolute";
+        svg.style.top = "0";
+        svg.style.left = "0";
+
+        let polygon = svg.querySelector("polygon");
+
+        if (!polygon || createNewSvg) {
+          polygon = document.createElementNS(svgNS, "polygon");
+        }
+
+        if(!this.map) return;
+
+        const pointsString = pixelPoints
+          .map((p) => `${p.x - minX},${p.y - minY}`)
+          .join(" ");
+        polygon.setAttribute("points", pointsString);
+        polygon.style.fill = "rgba(0, 0, 255, 0.2)";
+        polygon.style.stroke = "blue";
+        polygon.style.strokeWidth = "2";
+
+        if (createNewSvg) {
+          svg.appendChild(polygon);
+          div.innerHTML = "";
+          div.appendChild(svg);
+        }
+      }
+
+      async getCachedRoute(start, end) {
+        const startKey = `${start.lat()}_${start.lng()}`;
+        const endKey = `${end.lat()}_${end.lng()}`;
+        const cacheKey = `${startKey}_${endKey}`;
+
+        if (this.routeCache[cacheKey]) {
+          Logger.Log(`Using cached route for ${cacheKey}`);
+          return this.routeCache[cacheKey];
+        }
+
+        return new Promise((resolve, reject) => {
+          const request = {
+            origin: start,
+            destination: end,
+            travelMode: "DRIVING",
+          };
+
+          this.directionsService.route(request, (result, status) => {
+            if (status === "OK") {
+              const route = result.routes[0].overview_path;
+              this.routeCache[cacheKey] = route;
+              resolve(route);
+            } else {
+              reject(`Directions request failed due to ${status}`);
+            }
+          });
+        });
+      }
+
+      onRemove() {
+        if (this.div) {
+          this.div.parentNode.removeChild(this.div);
+          this.div = null;
+        }
+      }
+
+      updateAndRedraw(markers, map) {
+        this.markers = markers;
+
+        if (!this.map) {
+          this.map = map;
+          this.setMap(map);
+        } else {
+          this.draw();
+        }
+      }
+    }
+
+    this.class = DistrictOverlay;
   }
 }
 
@@ -298,14 +598,14 @@ export class CustomInfoWindowFactory {
         this.div = null;
         this.stemDiv = null;
 
-        console.groupCollapsed("CustomInfoWindow created");
-        console.log("Options:", options);
-        console.log("position:", this.position);
-        console.log("content:", this.content);
-        console.log("boxStyle:", this.boxStyle);
-        console.log("pixelOffset:", this.pixelOffset);
-        console.log("visible:", this.visible);
-        console.groupEnd();
+        Logger.BeginLog("CustomInfoWindow created");
+        Logger.Log("Options:", options);
+        Logger.Log("position:", this.position);
+        Logger.Log("content:", this.content);
+        Logger.Log("boxStyle:", this.boxStyle);
+        Logger.Log("pixelOffset:", this.pixelOffset);
+        Logger.Log("visible:", this.visible);
+        Logger.EndLog();
       }
 
       getPosition() {
@@ -318,20 +618,20 @@ export class CustomInfoWindowFactory {
           this.div.className = "custom-info-window";
           this.div.style.position = "absolute";
           this.div.style.zIndex = 9999 + 1;
-          this.div.style.display = 'flex';
-          this.div.style.flexDirection = 'row';
-          this.div.style.alignItems = 'center';
-          this.div.style.justifyContent = 'center';
-          this.div.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-          this.div.style.backdropFilter = 'blur(10px)';
-          this.div.style.borderRadius = '5px';
-          this.div.style.padding = '5px';
+          this.div.style.display = "flex";
+          this.div.style.flexDirection = "row";
+          this.div.style.alignItems = "center";
+          this.div.style.justifyContent = "center";
+          this.div.style.backgroundColor = "rgba(255, 255, 255, 1)";
+          this.div.style.backdropFilter = "blur(10px)";
+          this.div.style.borderRadius = "5px";
+          this.div.style.padding = "5px";
 
-          this.div.addEventListener('pointerover', () => {
+          this.div.addEventListener("pointerover", () => {
             if (this.onHover) this.onHover(this);
           });
 
-          this.div.addEventListener('pointerleave', () => {
+          this.div.addEventListener("pointerleave", () => {
             if (this.onHover) this.onHover(null);
           });
 
@@ -364,12 +664,12 @@ export class CustomInfoWindowFactory {
           const mapWidth = mapDiv.offsetWidth;
 
           if (pixel.x < mapWidth / 2) {
-            console.log("Positioning to the right of the point");
+            Logger.Log("Positioning to the right of the point");
             // Position to the right of the point
             this.div.style.left = pixel.x + this.pixelOffset.width + "px";
             this.stemDiv.style.left = "-10px"; // Position stem to the left of the div
           } else {
-            console.log("Positioning to the left of the point");
+            Logger.Log("Positioning to the left of the point");
             // Position to the left of the point
             this.div.style.left =
               pixel.x - this.div.offsetWidth - this.pixelOffset.width + "px";
@@ -453,9 +753,9 @@ export class CustomInfoWindowFactory {
         // closeBox.style.position = "absolute";
         closeBox.style.right = this.customOptions.closeBoxMargin || "2px";
         closeBox.style.top = 0;
-        closeBox.style.margin = '2px';
-        closeBox.style.marginLeft = '.5em';
-        closeBox.style.alignSelf = 'start';
+        closeBox.style.margin = "2px";
+        closeBox.style.marginLeft = ".5em";
+        closeBox.style.alignSelf = "start";
         closeBox.style.cursor = "pointer";
         closeBox.style.display = "flex";
         closeBox.style.alignItems = "center";

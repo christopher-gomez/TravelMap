@@ -4,6 +4,7 @@ import { Box, Button, IconButton, Typography } from "@mui/material";
 import { Google } from "@mui/icons-material";
 import { PromptSignIn } from "./GooglePrompt";
 import { getFamilyGoogleUsers } from "../Api/Google";
+import { Logger } from "./Utils";
 
 export default ({
   onGoogleAccount,
@@ -42,10 +43,10 @@ export default ({
       const jwt = localStorage.getItem("googleSignInToken");
       const { exp } = JSON.parse(atob(jwt.split(".")[1]));
       if (exp * 1000 < Date.now()) {
-        console.log("previous sign in token expired");
+        Logger.Log("previous sign in token expired");
         localStorage.removeItem("googleSignInToken");
       } else {
-        console.log("previous valid sign in token found");
+        Logger.Log("previous valid sign in token found");
         setSignInToken(jwt);
       }
     }
@@ -59,11 +60,11 @@ export default ({
       const data = JSON.parse(atob(signInToken.split(".")[1]));
       const users = await getFamilyGoogleUsers();
       if (users.includes(data.email)) {
-        console.log("Got google id");
+        Logger.Log("Got google id");
         setGoogleAccount(data);
         localStorage.setItem("googleSignInToken", signInToken);
       } else {
-        console.log("Invalid google id");
+        Logger.Log("Invalid google id");
         setSignInToken(null);
         if (setErrorPopupOpen) setErrorPopupOpen(true);
       }
@@ -72,7 +73,7 @@ export default ({
     if (signInToken) {
       validateToken();
     } else if (!signInToken && googleAccount) {
-      console.log("No google id");
+      Logger.Log("No google id");
       setGoogleAccount(null);
       localStorage.removeItem("googleSignInToken");
     }

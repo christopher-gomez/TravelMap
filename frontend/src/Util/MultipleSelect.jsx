@@ -400,10 +400,6 @@ export function ChipPopperMenu({
   const [_open, setOpen] = React.useState(open);
   const chipRef = React.useRef(null);
 
-  React.useEffect(() => {
-    console.log("canOpen", canOpen);
-  }, [canOpen])
-
   const handleToggle = () => {
     if (
       (canOpen !== undefined && !canOpen) ||
@@ -432,12 +428,6 @@ export function ChipPopperMenu({
   }, [_open]);
 
   React.useEffect(() => {
-    // if (!canOpen && open) {
-    //   console.log('cant open');
-    //   setOpen(false);
-    //   return;
-    // }
-
     setOpen(open);
   }, [open]);
 

@@ -33,7 +33,7 @@ export default function AppFooter({
   shouldVignette,
   shouldKeepFocusCentered,
   setShouldKeepFocusCentered,
-  centerOnUserLocation
+  centerOnUserLocation,
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -50,13 +50,10 @@ export default function AppFooter({
   return (
     <>
       <ToolTipSpeedDial
-        icon={
-          <LocationOn
-            onClick={() => {
-              if (onRecenterMap) onRecenterMap();
-            }}
-          />
-        }
+        onClick={() => {
+          if (onRecenterMap) onRecenterMap();
+        }}
+        icon={<LocationOn />}
         // position={{ bottom: 16 + drawerHeight, left: 16 }}
         // tooltip={ { title: "Recenter Map",  placement: 'right-end'}
         // }
@@ -70,12 +67,12 @@ export default function AppFooter({
         direction="up"
         actions={[
           {
-            icon: <MyLocation/>,
-            name: 'Center on Current Location',
+            icon: <MyLocation />,
+            name: "Center on Current Location",
             tooltipPlacement: "right",
             onClick: () => {
               centerOnUserLocation();
-            }
+            },
           },
           {
             icon: mapLocked ? <LockOpen /> : <Lock />,

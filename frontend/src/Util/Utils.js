@@ -493,7 +493,12 @@ export function deepEqual(obj1, obj2) {
       return true;
     }
 
-    if (typeof val1 !== "object" || val1 === null || typeof val2 !== "object" || val2 === null) {
+    if (
+      typeof val1 !== "object" ||
+      val1 === null ||
+      typeof val2 !== "object" ||
+      val2 === null
+    ) {
       return false;
     }
 
@@ -511,7 +516,10 @@ export function deepEqual(obj1, obj2) {
     }
 
     for (let i = 0; i < keys1.length; i++) {
-      if (!Object.prototype.hasOwnProperty.call(val2, keys1[i]) || !compare(val1[keys1[i]], val2[keys1[i]])) {
+      if (
+        !Object.prototype.hasOwnProperty.call(val2, keys1[i]) ||
+        !compare(val1[keys1[i]], val2[keys1[i]])
+      ) {
         return false;
       }
     }
@@ -520,4 +528,122 @@ export function deepEqual(obj1, obj2) {
   }
 
   return compare(obj1, obj2);
+}
+
+export function getBounds(markers, maps) {
+  const bounds = new maps.LatLngBounds();
+  markers.forEach((marker) => {
+    bounds.extend(marker.position);
+  });
+
+  return bounds;
+}
+
+async function calculateSegmentRoute(
+  start,
+  end,
+  directionsService,
+  travelMode
+) {
+  return new Promise((resolve, reject) => {
+    directionsService.route(
+      {
+        origin: start,
+        destination: end,
+        travelMode,
+      },
+      (result, status) => {
+        if (status === "OK") {
+          resolve(result);
+        } else {
+          reject(status);
+        }
+      }
+    );
+  });
+}
+
+const routeCache = {};
+export async function calculateRoute(
+  start,
+  end,
+  waypoints,
+  onResult,
+  directionsService,
+  travelMode = "DRIVING"
+) {
+  if (!directionsService) return;
+
+  // const travelMode = "DRIVING"; // or "WALKING", "BICYCLING", etc.
+
+  // Split waypoints into individual segments
+  const segments = [];
+  let previousPoint = start;
+  waypoints?.forEach((waypoint) => {
+    segments.push({ start: previousPoint, end: waypoint.location });
+    previousPoint = waypoint.location;
+  });
+  segments.push({ start: previousPoint, end: end });
+
+  // Calculate routes for each segment
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    const cacheKey = `${travelMode} ${segment.start.lat()}_${segment.start.lng()}_${segment.end.lat()}_${segment.end.lng()}`;
+
+    let result;
+    if (routeCache[cacheKey]) {
+      result = routeCache[cacheKey];
+    } else {
+      try {
+        result = await calculateSegmentRoute(
+          segment.start,
+          segment.end,
+          directionsService,
+          travelMode
+        );
+        routeCache[cacheKey] = result;
+      } catch (error) {
+        Logger.Error(`Error calculating segment ${i}:`, error);
+        continue; // Skip this segment and continue with the next one
+      }
+    }
+
+    onResult(result, i);
+  }
+}
+
+export function lerp(start, end, t) {
+  return start * (1 - t) + end * t;
+}
+
+export class Logger {
+  static BeginLog(...args) {
+    if (process.env.NODE_ENV !== "development") return;
+
+    console.groupCollapsed(...args);
+  }
+
+  static Log(...args) {
+    if (process.env.NODE_ENV !== "development") return;
+
+    console.log(...args);
+  }
+
+  static EndLog() {
+    if (process.env.NODE_ENV !== "development") return;
+
+    console.groupEnd();
+  }
+
+  static Trace() {
+    if (process.env.NODE_ENV !== "development") return;
+
+    console.trace();
+  }
+
+  static Error(...args) {
+    if (process.env.NODE_ENV !== "development") return;
+
+    console.error(...args);
+  }
 }
