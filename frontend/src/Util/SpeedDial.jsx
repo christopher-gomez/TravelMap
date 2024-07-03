@@ -69,8 +69,8 @@ export default function ToolTipSpeedDial({
               action.tooltipPlacement ? action.tooltipPlacement : undefined
             }
             tooltipOpen={isMobile ? false : undefined}
-            onClick={() => {
-              if (action.onClick) action.onClick();
+            onClick={(e) => {
+              if (action.onClick) action.onClick(e);
               handleClose();
             }}
           />

@@ -849,8 +849,8 @@ const MapView = () => {
             // ).minZoom;
             // Normalize the zoom level to a range between 0 and 1
             let t = (zoomLevel - minZoom) / (maxZoom - minZoom);
-            // const factor = 1 / 2;
-            // t = Math.pow(t, factor);
+            const factor = 1 / 1;
+            t = Math.pow(t, factor);
 
             Logger.BeginLog(
               "Setting new icon sizes",
@@ -876,19 +876,19 @@ const MapView = () => {
               let minSize, maxSize;
 
               if (marker.iconType === "emoji") {
-                minSize = new mapsRef.current.Size(75, 75);
+                minSize = new mapsRef.current.Size(50, 50);
                 maxSize = new mapsRef.current.Size(100, 100);
               } else if (marker.iconType === "custom") {
                 minSize = new mapsRef.current.Size(
-                  ICON_KEYS[marker.iconKey].scaledSize[0] / 1.3,
-                  ICON_KEYS[marker.iconKey].scaledSize[1] / 1.3
+                  ICON_KEYS[marker.iconKey].scaledSize[0] / 2,
+                  ICON_KEYS[marker.iconKey].scaledSize[1] / 2
                 );
                 maxSize = new mapsRef.current.Size(
                   ICON_KEYS[marker.iconKey].scaledSize[0],
                   ICON_KEYS[marker.iconKey].scaledSize[1]
                 );
               } else {
-                minSize = new mapsRef.current.Size(20 / 1.3, 34 / 1.3);
+                minSize = new mapsRef.current.Size(20 / 2, 34 / 2);
                 maxSize = new mapsRef.current.Size(20, 34); // Default size (width, height)
               }
 
@@ -902,7 +902,7 @@ const MapView = () => {
                   ? new mapsRef.current.Point(width / 2, height / 2)
                   : marker.iconType === "default"
                   ? new mapsRef.current.Point(width / 2, height)
-                  : marker.icon.anchor;
+                  : new mapsRef.current.Point(width / 2, height / 2);
 
               Logger.Log(
                 "marker.iconType:",
@@ -925,12 +925,20 @@ const MapView = () => {
               );
 
               // Set the new icon size
-              marker.setIcon({
-                ...marker.icon,
-                size: newSize,
-                scaledSize: newSize,
-                anchor: newAnchor,
-              });
+              let icon = marker.icon;
+              if (icon)
+                marker.setIcon({
+                  ...icon,
+                  size: newSize,
+                  scaledSize: newSize,
+                  anchor: newAnchor,
+                });
+              else
+                marker.setIcon({
+                  size: newSize,
+                  scaledSize: newSize,
+                  anchor: newAnchor,
+                });
 
               Logger.Log("new icon size set", marker.icon);
               Logger.EndLog();
@@ -1771,10 +1779,12 @@ const MapView = () => {
   const renderedMarkersRef = React.useRef(renderedMarkers);
   const [timelineActivities, setTimelineActivities] = useState([]);
 
-  useEffect(() => {
-    //   Logger.Log("timelineActivities:", timelineActivities);
-    return;
-    if (timelineActivities.length > 0 && isFilteringSingleDay.current) {
+  const toggleAreasofExploration = () => {
+    if (
+      timelineActivities.length > 0 &&
+      isFilteringSingleDay.current &&
+      shouldShowAreasOfExplorationRef.current
+    ) {
       if (itineraryOverlayRef.current) {
         itineraryOverlayRef.current.updateAndRedraw(
           timelineActivities.map((a) => a.marker),
@@ -1793,6 +1803,11 @@ const MapView = () => {
         itineraryOverlayRef.current = null;
       }
     }
+  };
+
+  useEffect(() => {
+    //   Logger.Log("timelineActivities:", timelineActivities);
+    toggleAreasofExploration();
   }, [timelineActivities]);
 
   useEffect(() => {
@@ -1940,6 +1955,15 @@ const MapView = () => {
   const vignetteFactoryRef = useRef(null);
   const itineraryOverlayFactoryRef = useRef(null);
   const itineraryOverlayRef = useRef(null);
+
+  const [shouldShowAreasOfExploration, setShouldShowAreasOfExploration] =
+    useState(false);
+  const shouldShowAreasOfExplorationRef = useRef(shouldShowAreasOfExploration);
+
+  useEffect(() => {
+    shouldShowAreasOfExplorationRef.current = shouldShowAreasOfExploration;
+    toggleAreasofExploration();
+  }, [shouldShowAreasOfExploration]);
 
   useEffect(() => {
     placesServiceRef.current = placesService;
@@ -2829,6 +2853,12 @@ const MapView = () => {
           : count + " markers";
 
         m["parentMarker"] = important ? important : closestMarker;
+        m["childMarkers"] = markers;
+
+        markers.forEach((marker) => {
+          marker["parentMarker"] = m;
+        });
+
         m.addListener("mouseover", () => {
           m["parentMarker"]["clusterHovered"] = true;
           onMarkerMouseOver(m);
@@ -2930,6 +2960,15 @@ const MapView = () => {
                 }
               } else {
                 // Delay the removal of old group markers to avoid flickering.
+                if (
+                  cluster.marker !== null &&
+                  cluster.marker !== undefined &&
+                  cluster.marker.childMarkers
+                ) {
+                  cluster.marker.childMarkers.forEach((marker) => {
+                    marker.parentMarker = null;
+                  });
+                }
                 groupMarkers.push(cluster.marker);
               }
             }
@@ -2940,9 +2979,9 @@ const MapView = () => {
             // Delayed removal of the markers of the former groups.
             setTimeout(
               () =>
-                groupMarkers.forEach((marker) =>
-                  MarkerUtils.setMap(marker, null)
-                ),
+                groupMarkers.forEach((marker) => {
+                  MarkerUtils.setMap(marker, null);
+                }),
               100
             );
           }
@@ -3360,6 +3399,8 @@ const MapView = () => {
           shouldVignette={shouldVignette}
           setShouldKeepFocusCentered={setShouldKeepFocusCentered}
           shouldKeepFocusCentered={shouldKeepFocusCentered}
+          shouldShowAreasOfExploration={shouldShowAreasOfExploration}
+          setShouldShowAreasOfExploration={setShouldShowAreasOfExploration}
         />
       </div>
       <MapDrawer

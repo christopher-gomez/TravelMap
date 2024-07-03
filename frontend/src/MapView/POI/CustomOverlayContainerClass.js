@@ -107,6 +107,9 @@ export default class CustomOverlayContainerFactory {
       }
 
       draw() {
+        // Logger.BeginLog("CustomOverlay.draw()");
+        // Logger.Trace();
+        // Logger.EndLog();
         // Access the div from the property
         var div = this.div;
 
@@ -214,7 +217,7 @@ export class CustomVignetteOverlayFactory {
         );
 
         let padding = 100; // Padding in pixels
-        if (!this.labelOverlay) padding = 125;
+        if (!this.labelOverlay) padding = 200;
         sw.x -= padding;
         sw.y += padding;
         ne.x += padding;
@@ -253,7 +256,7 @@ export class CustomVignetteOverlayFactory {
       }
 
       onRemove() {
-        Logger.Log("removing vignette overlay");
+        // Logger.Log("removing vignette overlay");
         if (this.div) {
           this.div.parentNode.removeChild(this.div);
           this.div = null;
@@ -278,7 +281,7 @@ export class CustomVignetteOverlayFactory {
 /**
  * CustomInfoWindowFactory
  *
- * This factory creates a custom Overlay that extends google.maps.OverlayView.
+ * This factory creates a custom Overlay that extends maps.OverlayView.
  * Given markers, it creates a shaded overlay that covers the area of the markers.
  *  *
  * @export
@@ -289,8 +292,8 @@ export class CustomDistrictOverlayFactory {
   constructor(maps) {
     class DistrictOverlay extends maps.OverlayView {
       constructor(markers, map) {
-        Logger.Log("DistrictOverlay created");
-        Logger.Log("Markers:", markers);
+        // Logger.Log("DistrictOverlay created");
+        // Logger.Log("Markers:", markers);
         super();
         this.directionsService = new maps.DirectionsService();
         this.routeCache = {}; // Initialize the route cache
@@ -327,199 +330,354 @@ export class CustomDistrictOverlayFactory {
         this.div.id = "district-overlay";
 
         const panes = this.getPanes();
-        panes.mapPane.appendChild(div);
+        panes.overlayLayer.appendChild(div);
 
         this.draw();
       }
 
+      // async draw() {
+      //   if (!this.div) return;
+
+      //   // Logger.BeginLog("DistrictOverlay.draw()");
+      //   const overlayProjection = this.getProjection();
+      //   // Logger.Log("markers:", this.markers);
+
+      //   let points = this.markers.map((marker) => {
+      //     const latLng = marker.getPosition();
+      //     return {
+      //       type: "marker",
+      //       point: window.turf.point([latLng.lng(), latLng.lat()]),
+      //       city: marker.city,
+      //     };
+      //   });
+
+      //   // Log the points for debugging
+      //   // Logger.Log("Points:", points);
+
+      //   // Adjust the buffer sizes based on the zoom level
+      //   const bufferSize = 1.75 / 1;
+      //   const routeBufferSize = 1.05 / 1;
+
+      //   // Buffer the marker points
+      //   let bufferedPoints = points.map((point) =>
+      //     window.turf.buffer(point.point, bufferSize, { units: "kilometers" })
+      //   );
+
+      //   // Get the route between markers only if their buffer areas do not touch and they are in the same city
+      //   let routes = [];
+      //   for (let i = 0; i < this.markers.length - 1; i++) {
+      //     if (!arraysEqual(this.markers[i].city, this.markers[i + 1].city))
+      //       continue;
+
+      //     const start = this.markers[i].getPosition();
+      //     const end = this.markers[i + 1].getPosition();
+      //     const startBuffer = window.turf.buffer(
+      //       window.turf.point([start.lng(), start.lat()]),
+      //       bufferSize,
+      //       { units: "kilometers" }
+      //     );
+      //     const endBuffer = window.turf.buffer(
+      //       window.turf.point([end.lng(), end.lat()]),
+      //       bufferSize,
+      //       { units: "kilometers" }
+      //     );
+
+      //     if (!window.turf.booleanIntersects(startBuffer, endBuffer)) {
+      //       const route = await this.getCachedRoute(start, end);
+      //       let accumulatedDistance = 0;
+
+      //       for (let j = 1; j < route.length; j++) {
+      //         const prevLatLng = route[j - 1];
+      //         const currentLatLng = route[j];
+      //         const prevPoint = window.turf.point([
+      //           prevLatLng.lng(),
+      //           prevLatLng.lat(),
+      //         ]);
+      //         const currentPoint = window.turf.point([
+      //           currentLatLng.lng(),
+      //           currentLatLng.lat(),
+      //         ]);
+
+      //         const distance = window.turf.distance(prevPoint, currentPoint, {
+      //           units: "kilometers",
+      //         });
+      //         accumulatedDistance += distance;
+
+      //         if (accumulatedDistance >= routeBufferSize) {
+      //           routes.push({ type: "route", point: currentPoint });
+      //           accumulatedDistance = 0;
+      //         }
+      //       }
+      //     }
+      //   }
+
+      //   // let bufferedRoutes = routes.map((route) =>
+      //   //   window.turf.buffer(route.point, routeBufferSize, { units: "kilometers" })
+      //   // );
+
+      //   // let routeUnion = bufferedRoutes[0];
+      //   // for (let i = 1; i < bufferedRoutes.length; i++) {
+      //   //   routeUnion = window.turf.union(routeUnion, bufferedRoutes[i]);
+      //   // }
+
+      //   // if(routeUnion) {
+      //   //   routeUnion = window.turf.simplify(routeUnion, { tolerance: 0.0075, highQuality: false });
+      //   // }
+
+      //   // points = points.concat(routes);
+
+      //   // Create a buffer around each point
+      //   bufferedPoints = points.map((point) =>
+      //     window.turf.buffer(
+      //       point.point,
+      //       point.type === "route" ? routeBufferSize : bufferSize,
+      //       { units: "kilometers" }
+      //     )
+      //   );
+
+      //   // Union the buffered points to create a single polygon
+      //   let union = bufferedPoints[0];
+      //   for (let i = 1; i < bufferedPoints.length; i++) {
+      //     union = window.turf.union(union, bufferedPoints[i]);
+      //   }
+
+      //   // union = window.turf.union(union, routeUnion);
+
+      //   if (!union) {
+      //     // Logger.Error("Cannot create union of buffered points");
+      //     // Logger.EndLog();
+      //     return;
+      //   }
+
+      //   // Logger.Log("Union:", union);
+
+      //   // Logger.Trace();
+      //   // Logger.EndLog();
+
+      //   // Handle both Polygon and MultiPolygon types
+      //   let coordinates;
+      //   if (union.geometry.type === "MultiPolygon") {
+      //     // Flatten the coordinates of the MultiPolygon into a single array
+      //     coordinates = union.geometry.coordinates.flat(2);
+      //   } else {
+      //     coordinates = union.geometry.coordinates[0];
+      //   }
+
+      //   // Transform the union coordinates to pixel positions
+      //   const pixelPoints = coordinates.map((coord) => {
+      //     const latLng1 = new maps.LatLng(coord[1], coord[0]);
+      //     return overlayProjection.fromLatLngToDivPixel(latLng1);
+      //   });
+
+      //   // Calculate the bounds of the polygon
+      //   const xs = pixelPoints.map((p) => p.x);
+      //   const ys = pixelPoints.map((p) => p.y);
+      //   const minX = Math.min(...xs);
+      //   const maxX = Math.max(...xs);
+      //   const minY = Math.min(...ys);
+      //   const maxY = Math.max(...ys);
+
+      //   // Draw the polygon
+      //   const div = this.div;
+      //   if (!div) return;
+
+      //   div.style.left = `${minX}px`;
+      //   div.style.top = `${minY}px`;
+      //   div.style.width = `${maxX - minX}px`;
+      //   div.style.height = `${maxY - minY}px`;
+
+      //   let svg = div.querySelector("svg");
+      //   let createNewSvg = false;
+      //   const svgNS = "http://www.w3.org/2000/svg";
+      //   if (!svg) {
+      //     createNewSvg = true;
+      //     svg = document.createElementNS(svgNS, "svg");
+      //   }
+
+      //   if (!svg) return;
+
+      //   svg.setAttribute("width", `${maxX - minX}`);
+      //   svg.setAttribute("height", `${maxY - minY}`);
+      //   svg.style.position = "absolute";
+      //   svg.style.top = "0";
+      //   svg.style.left = "0";
+
+      //   let polygon = svg.querySelector("polygon");
+
+      //   if (!polygon || createNewSvg) {
+      //     polygon = document.createElementNS(svgNS, "polygon");
+      //   }
+
+      //   if(!this.map) return;
+
+      //   const pointsString = pixelPoints
+      //     .map((p) => `${p.x - minX},${p.y - minY}`)
+      //     .join(" ");
+      //   polygon.setAttribute("points", pointsString);
+      //   polygon.style.fill = "rgba(0, 0, 255, 0.2)";
+      //   polygon.style.stroke = "blue";
+      //   polygon.style.strokeWidth = "2";
+
+      //   if (createNewSvg) {
+      //     svg.appendChild(polygon);
+      //     div.innerHTML = "";
+      //     div.appendChild(svg);
+      //   }
+      // }
+
       async draw() {
         if (!this.div) return;
 
-        Logger.BeginLog("DistrictOverlay.draw()");
         const overlayProjection = this.getProjection();
-        Logger.Log("markers:", this.markers);
+        const map = this.getMap();
+        const zoomLevel = map.getZoom();
 
-        let points = this.markers.map((marker) => {
-          const latLng = marker.getPosition();
-          return {
-            type: "marker",
-            point: window.turf.point([latLng.lng(), latLng.lat()]),
-            city: marker.city,
-          };
-        });
-
-        // Log the points for debugging
-        Logger.Log("Points:", points);
-
-        // Adjust the buffer sizes based on the zoom level
-        const bufferSize = 1.75 / 1;
-        const routeBufferSize = 1.05 / 1;
-
-        // Buffer the marker points
-        let bufferedPoints = points.map((point) =>
-          window.turf.buffer(point.point, bufferSize, { units: "kilometers" })
-        );
-
-        // Get the route between markers only if their buffer areas do not touch and they are in the same city
-        let routes = [];
-        for (let i = 0; i < this.markers.length - 1; i++) {
-          if (!arraysEqual(this.markers[i].city, this.markers[i + 1].city))
-            continue;
-
-          const start = this.markers[i].getPosition();
-          const end = this.markers[i + 1].getPosition();
-          const startBuffer = window.turf.buffer(
-            window.turf.point([start.lng(), start.lat()]),
-            bufferSize,
-            { units: "kilometers" }
+        // Desired radius in pixels
+        const pixelRadius = 75;
+        const minBufferSize = 1; // Minimum buffer size in kilometers
+        // const maxBufferSize = 10; // Maximum buffer size in kilometers
+        // Function to convert pixel distance to geographic distance (in kilometers)
+        const pixelToKm = (pixels, zoomLevel, centerLatLng) => {
+          const scale = Math.pow(2, zoomLevel);
+          const worldCoordCenter =
+            overlayProjection.fromLatLngToDivPixel(centerLatLng);
+          const worldCoordEdge = new maps.Point(
+            worldCoordCenter.x + pixels,
+            worldCoordCenter.y
           );
-          const endBuffer = window.turf.buffer(
-            window.turf.point([end.lng(), end.lat()]),
-            bufferSize,
-            { units: "kilometers" }
+          const latLngEdge =
+            overlayProjection.fromDivPixelToLatLng(worldCoordEdge);
+          const distance = maps.geometry.spherical.computeDistanceBetween(
+            centerLatLng,
+            latLngEdge
           );
+          return Math.max(distance / 1000, minBufferSize);
+          // return Math.min(maxBufferSize, Math.max(distance / 1000, minBufferSize)); // Convert to kilometers and ensure minimum size
+        };
 
-          if (!window.turf.booleanIntersects(startBuffer, endBuffer)) {
-            const route = await this.getCachedRoute(start, end);
-            let accumulatedDistance = 0;
+        // Track unique parent markers
+        const uniqueParentMarkers = new Set();
 
-            for (let j = 1; j < route.length; j++) {
-              const prevLatLng = route[j - 1];
-              const currentLatLng = route[j];
-              const prevPoint = window.turf.point([
-                prevLatLng.lng(),
-                prevLatLng.lat(),
-              ]);
-              const currentPoint = window.turf.point([
-                currentLatLng.lng(),
-                currentLatLng.lat(),
-              ]);
+        let points = this.markers
+          .map((marker) => {
+            const parentMarker = marker.parentMarker
+              ? marker.parentMarker
+              : marker;
 
-              const distance = window.turf.distance(prevPoint, currentPoint, {
-                units: "kilometers",
-              });
-              accumulatedDistance += distance;
-
-              if (accumulatedDistance >= routeBufferSize) {
-                routes.push({ type: "route", point: currentPoint });
-                accumulatedDistance = 0;
-              }
+            if (uniqueParentMarkers.has(parentMarker)) {
+              return null;
             }
-          }
-        }
+            uniqueParentMarkers.add(parentMarker);
+            const latLng = parentMarker.getPosition();
+            return {
+              type: "marker",
+              point: window.turf.point([latLng.lng(), latLng.lat()]),
+              city: marker.city,
+              latLng: latLng,
+            };
+          })
+          .filter((point) => point !== null);
 
-        let bufferedRoutes = routes.map((route) =>
-          window.turf.buffer(route.point, routeBufferSize, { units: "kilometers" })
-        );
-
-        let routeUnion = bufferedRoutes[0];
-        for (let i = 1; i < bufferedRoutes.length; i++) {
-          routeUnion = window.turf.union(routeUnion, bufferedRoutes[i]);
-        }
-
-        if(routeUnion) {
-          routeUnion = window.turf.simplify(routeUnion, { tolerance: 0.0075, highQuality: false });
-        }
-
-        // points = points.concat(routes);
-
-        // Create a buffer around each point
-        bufferedPoints = points.map((point) =>
-          window.turf.buffer(
-            point.point,
-            point.type === "route" ? routeBufferSize : bufferSize,
-            { units: "kilometers" }
-          )
-        );
-
-        // Union the buffered points to create a single polygon
-        let union = bufferedPoints[0];
-        for (let i = 1; i < bufferedPoints.length; i++) {
-          union = window.turf.union(union, bufferedPoints[i]);
-        }
-
-        union = window.turf.union(union, routeUnion);
-
-        if (!union) {
-          Logger.Error("Cannot create union of buffered points");
-          Logger.EndLog();
-          return;
-        }
-
-        Logger.Log("Union:", union);
-
-        Logger.Trace();
-        Logger.EndLog();
-
-        // Handle both Polygon and MultiPolygon types
-        let coordinates;
-        if (union.geometry.type === "MultiPolygon") {
-          // Flatten the coordinates of the MultiPolygon into a single array
-          coordinates = union.geometry.coordinates.flat(2);
-        } else {
-          coordinates = union.geometry.coordinates[0];
-        }
-
-        // Transform the union coordinates to pixel positions
-        const pixelPoints = coordinates.map((coord) => {
-          const latLng1 = new maps.LatLng(coord[1], coord[0]);
-          return overlayProjection.fromLatLngToDivPixel(latLng1);
+        // Calculate buffer size for each marker based on zoom level
+        let bufferedPoints = points.map((point) => {
+          const bufferSize = pixelToKm(pixelRadius, zoomLevel, point.latLng);
+          return window.turf.buffer(point.point, bufferSize, {
+            units: "kilometers",
+          });
         });
 
-        // Calculate the bounds of the polygon
-        const xs = pixelPoints.map((p) => p.x);
-        const ys = pixelPoints.map((p) => p.y);
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
+        // Create an array to store each connected component's unioned polygons
+        let unions = [];
 
-        // Draw the polygon
+        // Process buffered points into connected components and union them
+        while (bufferedPoints.length > 0) {
+          let component = [bufferedPoints.pop()];
+          let i = 0;
+          while (i < component.length) {
+            let currentBuffer = component[i];
+            bufferedPoints = bufferedPoints.filter((buffer) => {
+              if (window.turf.booleanIntersects(currentBuffer, buffer)) {
+                component.push(buffer);
+                return false;
+              }
+              return true;
+            });
+            i++;
+          }
+
+          // Union the current component
+          let union = component[0];
+          for (let j = 1; j < component.length; j++) {
+            union = window.turf.union(union, component[j]);
+          }
+          unions.push(union);
+        }
+
+        // Draw each union as a separate polygon
         const div = this.div;
-        if (!div) return;
+        div.innerHTML = ""; // Clear the previous content
 
-        div.style.left = `${minX}px`;
-        div.style.top = `${minY}px`;
-        div.style.width = `${maxX - minX}px`;
-        div.style.height = `${maxY - minY}px`;
+        const mapSize = map.getDiv().getBoundingClientRect();
+        div.style.left = "0px";
+        div.style.top = "0px";
+        div.style.width = `${mapSize.width}px`;
+        div.style.height = `${mapSize.height}px`;
 
-        let svg = div.querySelector("svg");
-        let createNewSvg = false;
-        const svgNS = "http://www.w3.org/2000/svg";
-        if (!svg) {
-          createNewSvg = true;
-          svg = document.createElementNS(svgNS, "svg");
-        }
+        unions.forEach((union) => {
+          if (!union) return;
 
-        if (!svg) return;
+          let coordinates;
+          if (union.geometry.type === "MultiPolygon") {
+            coordinates = union.geometry.coordinates.flat(2);
+          } else {
+            coordinates = union.geometry.coordinates[0];
+          }
 
-        svg.setAttribute("width", `${maxX - minX}`);
-        svg.setAttribute("height", `${maxY - minY}`);
-        svg.style.position = "absolute";
-        svg.style.top = "0";
-        svg.style.left = "0";
+          const pixelPoints = coordinates.map((coord) => {
+            const latLng = new maps.LatLng(coord[1], coord[0]);
+            return overlayProjection.fromLatLngToDivPixel(latLng);
+          });
 
-        let polygon = svg.querySelector("polygon");
+          const xs = pixelPoints.map((p) => p.x);
+          const ys = pixelPoints.map((p) => p.y);
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
 
-        if (!polygon || createNewSvg) {
-          polygon = document.createElementNS(svgNS, "polygon");
-        }
+          const childDiv = document.createElement("div");
+          childDiv.style.position = "absolute";
+          childDiv.style.left = `${minX}px`;
+          childDiv.style.top = `${minY}px`;
+          childDiv.style.width = `${maxX - minX}px`;
+          childDiv.style.height = `${maxY - minY}px`;
 
-        if(!this.map) return;
+          const svg = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg"
+          );
+          svg.setAttribute("width", `${maxX - minX}`);
+          svg.setAttribute("height", `${maxY - minY}`);
+          svg.style.position = "absolute";
+          svg.style.top = "0";
+          svg.style.left = "0";
 
-        const pointsString = pixelPoints
-          .map((p) => `${p.x - minX},${p.y - minY}`)
-          .join(" ");
-        polygon.setAttribute("points", pointsString);
-        polygon.style.fill = "rgba(0, 0, 255, 0.2)";
-        polygon.style.stroke = "blue";
-        polygon.style.strokeWidth = "2";
+          const polygon = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "polygon"
+          );
+          const pointsString = pixelPoints
+            .map((p) => `${p.x - minX},${p.y - minY}`)
+            .join(" ");
+          polygon.setAttribute("points", pointsString);
+          polygon.style.fill = "rgba(255, 255, 255, 0.1)";
+          polygon.style.stroke = "green";
+          polygon.style.strokeWidth = "2";
 
-        if (createNewSvg) {
           svg.appendChild(polygon);
-          div.innerHTML = "";
-          div.appendChild(svg);
-        }
+          childDiv.appendChild(svg);
+          div.appendChild(childDiv);
+        });
       }
 
       async getCachedRoute(start, end) {
@@ -528,7 +686,7 @@ export class CustomDistrictOverlayFactory {
         const cacheKey = `${startKey}_${endKey}`;
 
         if (this.routeCache[cacheKey]) {
-          Logger.Log(`Using cached route for ${cacheKey}`);
+          // Logger.Log(`Using cached route for ${cacheKey}`);
           return this.routeCache[cacheKey];
         }
 
@@ -577,7 +735,7 @@ export class CustomDistrictOverlayFactory {
 /**
  * CustomInfoWindowFactory
  *
- * This factory creates a custom InfoWindow that extends google.maps.OverlayView.
+ * This factory creates a custom InfoWindow that extends maps.OverlayView.
  * It provides more control over the InfoWindow behavior and styling.
  */
 export class CustomInfoWindowFactory {
@@ -598,14 +756,14 @@ export class CustomInfoWindowFactory {
         this.div = null;
         this.stemDiv = null;
 
-        Logger.BeginLog("CustomInfoWindow created");
-        Logger.Log("Options:", options);
-        Logger.Log("position:", this.position);
-        Logger.Log("content:", this.content);
-        Logger.Log("boxStyle:", this.boxStyle);
-        Logger.Log("pixelOffset:", this.pixelOffset);
-        Logger.Log("visible:", this.visible);
-        Logger.EndLog();
+        // Logger.BeginLog("CustomInfoWindow created");
+        // Logger.Log("Options:", options);
+        // Logger.Log("position:", this.position);
+        // Logger.Log("content:", this.content);
+        // Logger.Log("boxStyle:", this.boxStyle);
+        // Logger.Log("pixelOffset:", this.pixelOffset);
+        // Logger.Log("visible:", this.visible);
+        // Logger.EndLog();
       }
 
       getPosition() {
@@ -664,12 +822,12 @@ export class CustomInfoWindowFactory {
           const mapWidth = mapDiv.offsetWidth;
 
           if (pixel.x < mapWidth / 2) {
-            Logger.Log("Positioning to the right of the point");
+            // Logger.Log("Positioning to the right of the point");
             // Position to the right of the point
             this.div.style.left = pixel.x + this.pixelOffset.width + "px";
             this.stemDiv.style.left = "-10px"; // Position stem to the left of the div
           } else {
-            Logger.Log("Positioning to the left of the point");
+            // Logger.Log("Positioning to the left of the point");
             // Position to the left of the point
             this.div.style.left =
               pixel.x - this.div.offsetWidth - this.pixelOffset.width + "px";

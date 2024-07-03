@@ -616,33 +616,34 @@ export function lerp(start, end, t) {
   return start * (1 - t) + end * t;
 }
 
+const disableLogs = false;
 export class Logger {
   static BeginLog(...args) {
-    if (process.env.NODE_ENV !== "development") return;
+    if (process.env.NODE_ENV !== "development" || disableLogs) return;
 
     console.groupCollapsed(...args);
   }
 
   static Log(...args) {
-    if (process.env.NODE_ENV !== "development") return;
+    if (process.env.NODE_ENV !== "development" || disableLogs) return;
 
     console.log(...args);
   }
 
   static EndLog() {
-    if (process.env.NODE_ENV !== "development") return;
+    if (process.env.NODE_ENV !== "development" || disableLogs) return;
 
     console.groupEnd();
   }
 
   static Trace() {
-    if (process.env.NODE_ENV !== "development") return;
+    if (process.env.NODE_ENV !== "development" || disableLogs) return;
 
     console.trace();
   }
 
   static Error(...args) {
-    if (process.env.NODE_ENV !== "development") return;
+    if (process.env.NODE_ENV !== "development" || disableLogs) return;
 
     console.error(...args);
   }

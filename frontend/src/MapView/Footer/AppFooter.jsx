@@ -6,6 +6,8 @@ import { isTouchDevice } from "../../Util/Utils";
 import {
   CenterFocusStrong,
   CropFree,
+  Explore,
+  ExploreOff,
   FlashlightOff,
   FlashlightOn,
   GpsFixed,
@@ -34,6 +36,8 @@ export default function AppFooter({
   shouldKeepFocusCentered,
   setShouldKeepFocusCentered,
   centerOnUserLocation,
+  shouldShowAreasOfExploration,
+  setShouldShowAreasOfExploration,
 }) {
   const [DRAWER_HEADER_HEIGHT, setDRAWER_HEADER_HEIGHT] = React.useState(0);
   const [drawerHeight, setDrawerHeight] = React.useState(0);
@@ -46,6 +50,68 @@ export default function AppFooter({
   React.useEffect(() => {
     setDrawerHeight(DRAWER_HEADER_HEIGHT);
   }, [DRAWER_HEADER_HEIGHT]);
+
+  const actions = [
+    {
+      icon: <MyLocation />,
+      name: "Center on Current Location",
+      tooltipPlacement: "right",
+      onClick: (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        centerOnUserLocation();
+      },
+    },
+    {
+      icon: mapLocked ? <LockOpen /> : <Lock />,
+      name: mapLocked ? "Unlock Map Control" : "Lock Map Control",
+      tooltipPlacement: "right",
+      onClick: (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setMapLocked(!mapLocked);
+      },
+    },
+    {
+      icon: shouldKeepFocusCentered ? <CenterFocusStrong /> : <CropFree />,
+      tooltipPlacement: "right",
+      name: shouldKeepFocusCentered
+        ? "Disable Focus Center Lock"
+        : "Enable Focus Center Lock",
+      onClick: (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setShouldKeepFocusCentered(!shouldKeepFocusCentered);
+      },
+    },
+    {
+      icon: shouldVignette ? <FlashlightOn /> : <FlashlightOff />,
+      tooltipPlacement: "right",
+      name: shouldVignette
+        ? "Disable Focus Spotlight"
+        : "Enable Focus Spotlight",
+      onClick: (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setShouldVignette(!shouldVignette);
+      },
+    },
+  ];
+
+  if (timelineActivities && timelineActivities.length > 0) {
+    actions.push({
+      icon: shouldShowAreasOfExploration ? <Explore /> : <ExploreOff />,
+      tooltipPlacement: "right",
+      name: shouldShowAreasOfExploration
+        ? "Hide Areas of Exploration"
+        : "Show Areas of Exploration",
+      onClick: (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setShouldShowAreasOfExploration(!shouldShowAreasOfExploration);
+      },
+    });
+  }
 
   return (
     <>
@@ -65,42 +131,7 @@ export default function AppFooter({
             : undefined
         }
         direction="up"
-        actions={[
-          {
-            icon: <MyLocation />,
-            name: "Center on Current Location",
-            tooltipPlacement: "right",
-            onClick: () => {
-              centerOnUserLocation();
-            },
-          },
-          {
-            icon: mapLocked ? <LockOpen /> : <Lock />,
-            name: mapLocked ? "Unlock Map Control" : "Lock Map Control",
-            tooltipPlacement: "right",
-            onClick: () => setMapLocked(!mapLocked),
-          },
-          {
-            icon: shouldKeepFocusCentered ? (
-              <CenterFocusStrong />
-            ) : (
-              <CropFree />
-            ),
-            tooltipPlacement: "right",
-            name: shouldKeepFocusCentered
-              ? "Disable Focus Center Lock"
-              : "Enable Focus Center Lock",
-            onClick: () => setShouldKeepFocusCentered(!shouldKeepFocusCentered),
-          },
-          {
-            icon: shouldVignette ? <FlashlightOn /> : <FlashlightOff />,
-            tooltipPlacement: "right",
-            name: shouldVignette
-              ? "Disable Focus Spotlight"
-              : "Enable Focus Spotlight",
-            onClick: () => setShouldVignette(!shouldVignette),
-          },
-        ]}
+        actions={actions}
       />
       <MapFAB
         currentRenderType={currentRenderType}
